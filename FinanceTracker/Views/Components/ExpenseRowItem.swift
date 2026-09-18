@@ -16,6 +16,7 @@ struct ExpenseRowItem: View {
         case condensed
     }
 
+    @Environment(\.relativeDateReference) private var referenceDate
     @Environment(\.categoryColors) private var categoryColors
     @Environment(\.self) private var environment
     @Environment(AppConfiguration.self) private var config
@@ -29,7 +30,7 @@ struct ExpenseRowItem: View {
             expense.name,
             expense.amount.currencyString(code: config.ledgerCurrencyCode),
             expense.category.rawValue,
-            expense.date.relative()
+            expense.date.relative(to: referenceDate)
         ]
         let tagNames = tags.filter { !$0.isDeleted }.map(\.name)
         if !tagNames.isEmpty {
@@ -79,7 +80,7 @@ struct ExpenseRowItem: View {
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text(expense.date.relative())
+                    Text(expense.date.relative(to: referenceDate))
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
@@ -128,7 +129,7 @@ struct ExpenseRowItem: View {
 
             Spacer()
 
-            Text(expense.date.relative())
+            Text(expense.date.relative(to: referenceDate))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize()
