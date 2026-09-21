@@ -116,6 +116,66 @@ final class FinanceTrackerUITests: XCTestCase {
         assertReminderSettings(recurringEnabled: false, dailyEnabled: true, in: app)
     }
 
+    func testOnboardingPayFrequencyUpdatesMonthlyBudget() {
+        let app = launchApp(showsOnboarding: true, launchArguments: ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"])
+        tap("onboarding-get-started-button", in: app)
+        let field = app.textFields["onboarding-income-field"]
+        XCTAssertTrue(field.waitForExistence(timeout: timeout))
+        tap(field, named: "income")
+        field.typeText("2400")
+        tap("onboarding-keyboard-done-button", in: app)
+
+        let picker = app.segmentedControls["onboarding-income-frequency-picker"]
+        let equivalent = app.staticTexts["onboarding-monthly-equivalent"]
+        XCTAssertFalse(equivalent.exists, "Monthly input does not need a conversion strip.")
+        tap(picker.buttons["Biweekly"], named: "Biweekly")
+        XCTAssertEqual(equivalent.label, "$5,200")
+        tap(picker.buttons["Weekly"], named: "Weekly")
+        XCTAssertEqual(equivalent.label, "$10,400")
+        tap(picker.buttons["Biweekly"], named: "Biweekly")
+        tap("onboarding-budget-continue-button", in: app)
+        tap("onboarding-back-button", in: app)
+        XCTAssertEqual(field.value as? String, "2400")
+        XCTAssertTrue(picker.buttons["Biweekly"].isSelected)
+        XCTAssertEqual(equivalent.label, "$5,200")
+        tap("onboarding-budget-continue-button", in: app)
+        tap("onboarding-allocation-continue-button", in: app)
+        tap("onboarding-sync-continue-button", in: app)
+        tap("onboarding-tags-continue-button", in: app)
+        tap("onboarding-reminders-continue-button", in: app)
+        XCTAssertEqual(app.staticTexts["onboarding-plan-total"].label, "$5,200")
+    }
+
+    func testOnboardingConversionStripAppearsAboveKeyboard() {
+        let app = launchApp(showsOnboarding: true)
+        tap("onboarding-get-started-button", in: app)
+        let picker = app.segmentedControls["onboarding-income-frequency-picker"]
+        let equivalent = app.staticTexts["onboarding-monthly-equivalent"]
+        tap(picker.buttons["Biweekly"], named: "Biweekly")
+        XCTAssertFalse(equivalent.exists)
+        let field = app.textFields["onboarding-income-field"]
+        field.tap()
+        // Do not tap the field again or scroll while typing; that can conceal a layout bug.
+        app.typeText("2400")
+        XCTAssertTrue(equivalent.waitForExistence(timeout: timeout))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Income strip with keyboard"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+        let visible = NSPredicate { _, _ in
+            let keyboard = app.keyboards.firstMatch.frame
+            return keyboard.minY < app.frame.maxY
+                && equivalent.isHittable
+                && equivalent.frame.maxY < app.buttons["onboarding-budget-continue-button"].frame.minY - 16
+                && equivalent.frame.maxY < keyboard.minY
+        }
+        expectation(for: visible, evaluatedWith: app)
+        waitForExpectations(timeout: timeout)
+        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4))
+        XCTAssertTrue(equivalent.waitForNonExistence(timeout: timeout))
+    }
+
     func testOnboardingIncomeKeyboardStaysOpenAndCanBeReopened() {
         let app = launchApp(showsOnboarding: true)
         tap("onboarding-get-started-button", in: app)

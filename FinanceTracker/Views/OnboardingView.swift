@@ -24,6 +24,9 @@ struct OnboardingView: View {
 
     @State private var currentStep: OnboardingStep = .welcome
     @State private var incomeText = ""
+    @State private var incomeHeaderHeight: CGFloat?
+    @State private var incomeFrequency: IncomeFrequency = .monthly
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var selectedCurrencyCode = LedgerCurrency.suggestedCode()
     @State private var didLoadCurrency = false
     @State private var needsPercent: Double = 50
@@ -59,8 +62,13 @@ struct OnboardingView: View {
     }
 
     private var savingsPercent: Double { round(max(0, 100 - needsPercent - wantsPercent)) }
-    private var monthlyIncome: Int? { Int(incomeText) }
+    private var monthlyIncome: Int? {
+        Int(incomeText).map { incomeFrequency.monthlyIncome(for: $0) }
+    }
     private var income: Double { Double(monthlyIncome ?? 0) }
+    private var showsMonthlyEquivalent: Bool {
+        incomeFrequency != .monthly && (monthlyIncome ?? 0) > 0
+    }
 
     init(step: OnboardingStep = .welcome, onCompletion: (() -> Void)? = nil) {
         _currentStep = State(initialValue: step)
@@ -70,19 +78,39 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Keep one field instance when the keyboard changes the available height.
-                ScrollView {
-                    pageContent
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                Group {
+                    if currentStep == .budget {
+                        budgetPage
+                    } else {
+                        ScrollView {
+                            pageContent
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .defaultScrollAnchor(.center, for: .alignment)
+                        .scrollBounceBehavior(.basedOnSize)
+                        .id(currentStep)
+                    }
                 }
-                .defaultScrollAnchor(.center, for: .alignment)
-                .scrollBounceBehavior(.basedOnSize)
-                .scrollDismissesKeyboard(.interactively)
-                .id(currentStep)
                 .frame(maxWidth: 520, alignment: .leading)
                 .padding(.horizontal, 24)
                 .padding(.vertical, 16)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                VStack(spacing: 0) {
+                    primaryAction
+                    // Keep actions outside the scroll viewport so they cannot cover the income strip.
+                    if incomeFocused {
+                        HStack {
+                            Spacer()
+                            Button("Done") { incomeFocused = false }
+                                .buttonStyle(.glass)
+                                .accessibilityIdentifier("onboarding-keyboard-done-button")
+                        }
+                        .frame(maxWidth: 520)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                    }
+                }
             }
             .background {
                 ZStack(alignment: .topTrailing) {
@@ -96,23 +124,6 @@ struct OnboardingView: View {
                     }
                 }
                 .ignoresSafeArea()
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(spacing: 0) {
-                    primaryAction
-                    // Keep dismissal in the safe-area layout instead of the keyboard toolbar.
-                    if incomeFocused {
-                        HStack {
-                            Spacer()
-                            Button("Done") { incomeFocused = false }
-                                .buttonStyle(.glass)
-                                .accessibilityIdentifier("onboarding-keyboard-done-button")
-                        }
-                        .frame(maxWidth: 520)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 12)
-                    }
-                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: currentStep)
@@ -238,10 +249,56 @@ struct OnboardingView: View {
     }
 
     private var budgetPage: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            heading("monthly income", subtitle: "How much do you take home each month?")
+        VStack(spacing: 28) {
+            // Only the introduction yields space to the keyboard. The entire income
+            // card, including its reserved footer, stays above the navigation row.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    heading("your income", subtitle: "Enter your take-home pay. We'll work out your monthly budget.")
 
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("How often are you paid?")
+                            .font(.headline)
+                        if dynamicTypeSize.isAccessibilitySize {
+                            incomeFrequencyPicker.pickerStyle(.menu)
+                        } else {
+                            incomeFrequencyPicker.pickerStyle(.segmented)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    incomeHeaderHeight = height
+                }
+            }
+            .defaultScrollAnchor(.bottom)
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: incomeHeaderHeight)
+            .layoutPriority(-1)
+
+            incomeCard
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private var incomeCard: some View {
+        VStack(spacing: -24) {
             VStack(spacing: 12) {
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        Text("Take-home pay")
+                            .font(.headline)
+                        Spacer()
+                        currencyPicker
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Take-home pay")
+                            .font(.headline)
+                        currencyPicker
+                    }
+                }
+
                 TextField("0", text: $incomeText)
                     .font(.system(size: incomeFontSize, weight: .bold, design: .rounded))
                     .monospacedDigit()
@@ -250,31 +307,86 @@ struct OnboardingView: View {
                     .keyboardType(.numberPad)
                     .focused($incomeFocused)
                     .tint(.sage)
-                    .accessibilityLabel("Monthly take-home income")
-                    .accessibilityHint("Enter your monthly income in whole currency units")
+                    .accessibilityLabel("Take-home income")
+                    .accessibilityHint("Enter your income in whole currency units, \(incomeFrequency.periodDescription)")
                     .accessibilityIdentifier("onboarding-income-field")
                     .onChange(of: incomeText) { _, newValue in
                         incomeText = String(newValue.filter { $0.isASCII && $0.isNumber }.prefix(8))
                     }
-                Text("\(currencyCode) per month, after tax")
+                Text(incomeFrequency.periodDescription)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.vertical, 16)
+            .padding(.horizontal, 24)
+            .padding(.top, 10)
+            .padding(.bottom, 24)
+            .background(Color.cardBackground, in: .rect(cornerRadius: 24))
+            .zIndex(1)
 
-            Picker("Currency", selection: $selectedCurrencyCode) {
-                ForEach(LedgerCurrency.supportedCodes, id: \.self) { code in
-                    Text("\(code) - \(Locale.current.localizedString(forCurrencyCode: code) ?? code)")
-                        .tag(code)
-                        .accessibilityIdentifier("onboarding-currency-\(code)")
+            LabeledContent {
+                Group {
+                    if showsMonthlyEquivalent {
+                        Text(income, format: .currency(code: currencyCode).precision(.fractionLength(0)))
+                            .accessibilityIdentifier("onboarding-monthly-equivalent")
+                    } else {
+                        Text(" ").accessibilityHidden(true)
+                    }
                 }
+                .font(.subheadline.bold())
+                .monospacedDigit()
+                .fixedSize(horizontal: false, vertical: true)
+            } label: {
+                Text("Monthly equivalent")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .pickerStyle(.menu)
-            .frame(minHeight: 44)
-            .accessibilityIdentifier("onboarding-currency-picker")
-            .accessibilityValue(currencyCode)
-            .onChange(of: selectedCurrencyCode) { incomeFocused = false }
+            .accessibilityHint(incomeFrequency.calculationDescription)
+            .padding(.horizontal, 16)
+            .padding(.top, 36)
+            .padding(.bottom, 12)
+            .background(Color.sage.opacity(0.12), in: .rect(cornerRadius: 20))
+            .padding(.horizontal, 12)
+            // Reserve the strip's space so entering the first digit cannot move the card.
+            .visualEffect { content, geometry in
+                content.offset(y: showsMonthlyEquivalent || reduceMotion ? 0 : -geometry.size.height)
+            }
+            .opacity(showsMonthlyEquivalent ? 1 : 0)
+            .accessibilityElement(children: .contain)
+            .accessibilityHidden(!showsMonthlyEquivalent)
+            .allowsHitTesting(showsMonthlyEquivalent)
         }
+        .clipped()
+        .animation(reduceMotion ? nil : .spring(response: 0.45, dampingFraction: 0.78), value: showsMonthlyEquivalent)
+    }
+
+    private var incomeFrequencyPicker: some View {
+        Picker("Pay frequency", selection: $incomeFrequency) {
+            ForEach(IncomeFrequency.allCases) { frequency in
+                Text(frequency.rawValue).tag(frequency)
+            }
+        }
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("onboarding-income-frequency-picker")
+    }
+
+    private var currencyPicker: some View {
+        Picker("Currency", selection: $selectedCurrencyCode) {
+            ForEach(LedgerCurrency.supportedCodes, id: \.self) { code in
+                Text("\(code) - \(Locale.current.localizedString(forCurrencyCode: code) ?? code)")
+                    .tag(code)
+                    .accessibilityIdentifier("onboarding-currency-\(code)")
+            }
+        } currentValueLabel: {
+            Text(currencyCode)
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("onboarding-currency-picker")
+        .accessibilityValue(currencyCode)
+        .onChange(of: selectedCurrencyCode) { incomeFocused = false }
     }
 
     private var allocationPage: some View {
