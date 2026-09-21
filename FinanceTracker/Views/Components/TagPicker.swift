@@ -19,9 +19,27 @@ struct TagPicker: View {
 
     @State private var newTagSheetIsPresented: Bool = false
 
-    /// Alphabetical and deliberately never reordered: chips stay put as they're tapped, so
-    /// positions are predictable and nothing moves out from under a finger.
-    @Query(sort: \ExpenseTag.name) var expenseTags: [ExpenseTag]
+    /// Alphabetical, including hidden tags only while they are selected.
+    @Query private var expenseTags: [ExpenseTag]
+
+    init(
+        selectedTags: Binding<Array<ExpenseTag>>,
+        aiSuggestedTagIDs: Set<UUID> = [],
+        onInteraction: @escaping () -> Void = {}
+    ) {
+        self._selectedTags = selectedTags
+        self.aiSuggestedTagIDs = aiSuggestedTagIDs
+        self.onInteraction = onInteraction
+
+        let selectedTagIDs = selectedTags.wrappedValue.map(\.id)
+        let descriptor = FetchDescriptor<ExpenseTag>(
+            predicate: #Predicate { tag in
+                !tag.isHiddenFromExpenseEntry || selectedTagIDs.contains(tag.id)
+            },
+            sortBy: [SortDescriptor(\ExpenseTag.name)]
+        )
+        self._expenseTags = Query(descriptor)
+    }
 
     private func isSelected(_ tag: ExpenseTag) -> Bool {
         selectedTags.contains { $0.id == tag.id }

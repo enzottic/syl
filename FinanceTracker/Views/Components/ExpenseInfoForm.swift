@@ -20,7 +20,8 @@ struct ExpenseInfoForm: View {
     @Environment(AppConfiguration.self) private var config
     @Environment(\.categoryColors) private var categoryColors
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Query(sort: \ExpenseTag.name) private var expenseTags: [ExpenseTag]
+    @Query(filter: #Predicate<ExpenseTag> { !$0.isHiddenFromExpenseEntry }, sort: \ExpenseTag.name)
+    private var expenseTags: [ExpenseTag]
     @Query(sort: \Expense.date, order: .reverse) private var expenses: [Expense]
 
     @Binding var name: String
@@ -370,7 +371,7 @@ struct ExpenseInfoForm: View {
                 smartTaggingMode: config.smartTaggingMode
             ) {
                 await MainActor.run {
-                    if tags.isEmpty, let suggested = expenseTags.first(where: { $0.name == result.tagName }) {
+                    if tags.isEmpty, let suggested = expenseTags.first(where: { $0.name == result.tagName && !$0.isHiddenFromExpenseEntry }) {
                         tags = [suggested]
                         if result.source == .ai {
                             aiSuggestedTagIDs = [suggested.id]

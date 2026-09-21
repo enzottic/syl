@@ -19,6 +19,10 @@ struct TagsSettingsSection: View {
     @State private var tagToEdit: ExpenseTag? = nil
     @State private var tagPendingDelete: ExpenseTag? = nil
     @State private var deleteErrorMessage: String?
+    @State private var tagPendingHide: ExpenseTag?
+    @State private var showHideConfirmation = false
+    @State private var visibilityErrorMessage: String?
+    @State private var showVisibilityError = false
 
     /// This month's spend against `tag` versus its cap. Over-budget reads in red.
     @ViewBuilder
@@ -88,44 +92,15 @@ struct TagsSettingsSection: View {
             }
 
             Section("Tags") {
-                ForEach(expenseTags.filter { !$0.isDeleted }) { tag in
-                    Button {
-                        tagToEdit = tag
-                    } label: {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle()
-                                        .fill(tag.color)
-                                        .frame(width: 35, height: 35)
-                                    // The circle is filled with the tag color, so a symbol has to
-                                    // be knocked out in white rather than tinted to match.
-                                    TagGlyphView(tag: tag)
-                                        .font(.system(size: 18))
-                                        .foregroundStyle(.white)
-                                }
-                                Text(tag.name)
-                                    .foregroundStyle(.primary)
-                                Spacer()
-                            }
-
-                            if let budget = tag.budget, budget > 0 {
-                                budgetProgress(for: tag, budget: budget)
-                            }
-                        }
-                    }
-                    .tint(.primary)
-                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                ForEach(visibleTags) { tag in
+                    tagRow(for: tag)
                 }
-                .onDelete { indexSet in
-                    let visible = expenseTags.filter { !$0.isDeleted }
-                    for index in indexSet {
-                        let tag = visible[index]
-                        if (tag.taggedExpenses ?? []).isEmpty {
-                            deleteTag(tag)
-                        } else {
-                            tagPendingDelete = tag
-                        }
+            }
+
+            if !hiddenTags.isEmpty {
+                Section("Hidden Tags") {
+                    ForEach(hiddenTags) { tag in
+                        tagRow(for: tag)
                     }
                 }
             }
@@ -172,6 +147,22 @@ struct TagsSettingsSection: View {
                 Text("\(count) expenses have the \(tag.name) tag. Deleting it will remove the tag from those expenses.")
             }
         }
+        .alert("Hide Tag?", isPresented: $showHideConfirmation, presenting: tagPendingHide) { tag in
+            Button("Hide Tag") {
+                setHidden(true, for: tag)
+                tagPendingHide = nil
+            }
+            Button("Cancel", role: .cancel) {
+                tagPendingHide = nil
+            }
+        } message: { tag in
+            Text("\(tag.name) will still appear on existing expenses, but will be hidden from the expense creator. You can show it again in tag settings.")
+        }
+        .alert("Could not update tag", isPresented: $showVisibilityError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(visibilityErrorMessage ?? "Please try again.")
+        }
         .alert("Could not delete tag", isPresented: Binding(
             get: { deleteErrorMessage != nil },
             set: { if !$0 { deleteErrorMessage = nil } }
@@ -182,6 +173,64 @@ struct TagsSettingsSection: View {
         }
     }
 
+    private var visibleTags: [ExpenseTag] {
+        expenseTags.filter { !$0.isDeleted && !$0.isHiddenFromExpenseEntry }
+    }
+
+    private var hiddenTags: [ExpenseTag] {
+        expenseTags.filter { !$0.isDeleted && $0.isHiddenFromExpenseEntry }
+    }
+
+    private func tagRow(for tag: ExpenseTag) -> some View {
+        Button {
+            tagToEdit = tag
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(tag.color)
+                            .frame(width: 35, height: 35)
+                        // The circle is filled with the tag color, so a symbol has to
+                        // be knocked out in white rather than tinted to match.
+                        TagGlyphView(tag: tag)
+                            .font(.system(size: 18))
+                            .foregroundStyle(.white)
+                    }
+                    Text(tag.name)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    if tag.isHiddenFromExpenseEntry {
+                        Label("Hidden", systemImage: "eye.slash")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let budget = tag.budget, budget > 0 {
+                    budgetProgress(for: tag, budget: budget)
+                }
+            }
+        }
+        .tint(.primary)
+        .contextMenu {
+            visibilityButton(for: tag)
+        }
+        .swipeActions {
+            Button("Delete") {
+                if (tag.taggedExpenses ?? []).isEmpty {
+                    deleteTag(tag)
+                } else {
+                    tagPendingDelete = tag
+                }
+            }
+            .tint(.red)
+            visibilityButton(for: tag)
+                .tint(.indigo)
+        }
+        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+    }
+
     private func deleteTag(_ tag: ExpenseTag) {
         modelContext.delete(tag)
         do {
@@ -189,6 +238,30 @@ struct TagsSettingsSection: View {
         } catch {
             modelContext.rollback()
             deleteErrorMessage = "Syl could not delete this tag. Please try again."
+        }
+    }
+
+    private func visibilityButton(for tag: ExpenseTag) -> some View {
+        Button(tag.isHiddenFromExpenseEntry ? "Show" : "Hide",
+               systemImage: tag.isHiddenFromExpenseEntry ? "eye" : "eye.slash") {
+            if tag.isHiddenFromExpenseEntry {
+                setHidden(false, for: tag)
+            } else {
+                tagPendingHide = tag
+                showHideConfirmation = true
+            }
+        }
+    }
+
+    private func setHidden(_ hidden: Bool, for tag: ExpenseTag) {
+        let previousValue = tag.isHiddenFromExpenseEntry
+        tag.isHiddenFromExpenseEntry = hidden
+        do {
+            try modelContext.save()
+        } catch {
+            tag.isHiddenFromExpenseEntry = previousValue
+            visibilityErrorMessage = "The tag's visibility could not be saved. Please try again."
+            showVisibilityError = true
         }
     }
 }
