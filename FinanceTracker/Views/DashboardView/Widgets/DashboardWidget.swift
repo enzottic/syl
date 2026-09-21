@@ -2,7 +2,7 @@
 //  DashboardWidget.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 7/12/26.
+//  Created by Enzo on 7/12/26.
 //
 import Foundation
 import SageKit

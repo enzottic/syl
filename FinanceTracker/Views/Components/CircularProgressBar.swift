@@ -2,7 +2,7 @@
 //  CircularProgressView.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 12/24/25.
+//  Created by Enzo on 12/24/25.
 //
 
 import SwiftUI

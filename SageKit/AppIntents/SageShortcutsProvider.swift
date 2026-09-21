@@ -2,7 +2,7 @@
 //  AddExpenseShortcut.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 10/4/25.
+//  Created by Enzo on 10/4/25.
 //
 
 import Foundation

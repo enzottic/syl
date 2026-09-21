@@ -2,7 +2,7 @@
 //  CategorySpotlightWidget.swift
 //  FinanceTrackerWidgetExtension
 //
-//  Created by Tyler McCormick on 5/20/26.
+//  Created by Enzo on 5/20/26.
 //
 
 import SwiftUI

@@ -2,7 +2,7 @@
 //  AppearancePicker.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 10/15/25.
+//  Created by Enzo on 10/15/25.
 //
 import SwiftUI
 import SageKit

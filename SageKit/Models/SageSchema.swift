@@ -2,7 +2,7 @@
 //  SageSchema.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 3/7/26.
+//  Created by Enzo on 3/7/26.
 //
 import SwiftData
 import Foundation

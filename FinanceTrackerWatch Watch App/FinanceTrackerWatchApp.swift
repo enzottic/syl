@@ -2,7 +2,7 @@
 //  FinanceTrackerWatchApp.swift
 //  FinanceTrackerWatch Watch App
 //
-//  Created by Tyler McCormick on 9/10/26.
+//  Created by Enzo on 9/10/26.
 //
 
 import SwiftUI

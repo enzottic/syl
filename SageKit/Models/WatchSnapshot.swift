@@ -2,7 +2,7 @@
 //  ExpenseWatchSnapshot.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 9/10/26.
+//  Created by Enzo on 9/10/26.
 //
 import Foundation
 import SwiftUI

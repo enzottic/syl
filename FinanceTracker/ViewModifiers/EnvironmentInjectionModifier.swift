@@ -2,7 +2,7 @@
 //  EnvironmentInjectionModifier.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 5/19/26.
+//  Created by Enzo on 5/19/26.
 //
 import SwiftUI
 import SwiftData

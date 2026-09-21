@@ -2,7 +2,7 @@
 //  DailyChartWidget.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 9/6/26.
+//  Created by Enzo on 9/6/26.
 //
 
 import SwiftUI

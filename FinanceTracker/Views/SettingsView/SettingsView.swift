@@ -2,7 +2,7 @@
 //  SettingsViewNew.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 5/18/26.
+//  Created by Enzo on 5/18/26.
 //
 import SwiftUI
 import SwiftData

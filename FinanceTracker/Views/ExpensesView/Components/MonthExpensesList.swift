@@ -2,7 +2,7 @@
 //  MonthExpensesList.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 3/13/26.
+//  Created by Enzo on 3/13/26.
 //
 import SwiftUI
 import SwiftData

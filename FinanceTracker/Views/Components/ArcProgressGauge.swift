@@ -2,7 +2,7 @@
 //  ArcProgressGauge.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 7/14/26.
+//  Created by Enzo on 7/14/26.
 //
 
 import SwiftUI

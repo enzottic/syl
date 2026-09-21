@@ -2,7 +2,7 @@
 //  ExpenseDetailView.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 10/11/25.
+//  Created by Enzo on 10/11/25.
 //
 import SwiftUI
 import SwiftData

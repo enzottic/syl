@@ -2,7 +2,7 @@
 //  WidgetTimelineEntry.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 10/7/25.
+//  Created by Enzo on 10/7/25.
 //
 
 import Foundation

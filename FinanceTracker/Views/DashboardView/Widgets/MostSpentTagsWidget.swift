@@ -2,7 +2,7 @@
 //  MostSpentTagsWidget.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 8/17/26.
+//  Created by Enzo on 8/17/26.
 //
 import SwiftUI
 import SwiftData

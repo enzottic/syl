@@ -2,7 +2,7 @@
 //  AddExpenseTagSheet.swift
 //  FinanceTracker
 //
-//  Created by Tyler McCormick on 10/19/25.
+//  Created by Enzo on 10/19/25.
 //
 
 import SwiftUI
