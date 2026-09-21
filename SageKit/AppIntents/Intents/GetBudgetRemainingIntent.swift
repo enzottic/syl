@@ -9,6 +9,7 @@ import SwiftData
 
 public struct GetBudgetRemainingIntent: AppIntent {
     public static var title: LocalizedStringResource = "Check Budget Remaining"
+    public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
     @Parameter(title: "Category") public var category: ExpenseCategory?
 

@@ -3,6 +3,7 @@ import AppIntents
 public struct GetMonthlySpendingTotalIntent: AppIntent {
     public static var title: LocalizedStringResource = "Monthly Spending Total"
     public static var openAppWhenRun: Bool = false
+    public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
     @Parameter(title: "Category") public var category: ExpenseCategory?
     @Parameter(title: "Tag") public var tag: ExpenseTagEntity?

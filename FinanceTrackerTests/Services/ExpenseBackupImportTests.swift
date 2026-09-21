@@ -503,7 +503,7 @@ struct ExpenseBackupImportTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appendingPathComponent("Sage.sqlite")
-        let schema = Schema(versionedSchema: SageSchemaV8.self)
+        let schema = Schema(versionedSchema: SageSchemaV9.self)
         func open() throws -> ModelContainer {
             try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)])
         }

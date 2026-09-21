@@ -68,6 +68,7 @@ public enum ExpenseTimePeriod: String, AppEnum {
 public struct FindExpensesIntent: AppIntent {
     public static var title: LocalizedStringResource = "Find Expenses"
     public static var openAppWhenRun: Bool = false
+    public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     
 
     @Parameter(title: "Time Period", default: .thisMonth) public var timePeriod: ExpenseTimePeriod

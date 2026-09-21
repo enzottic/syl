@@ -11,6 +11,7 @@ import SwiftData
 
 public struct AddExpenseAppIntent: AppIntent {
     public static var title: LocalizedStringResource = "Add New Expense"
+    public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
     
     @Parameter(title: "Name") var name: String
     @Parameter(title: "Amount", requestValueDialog: "What is the amount?") var amount: IntentCurrencyAmount

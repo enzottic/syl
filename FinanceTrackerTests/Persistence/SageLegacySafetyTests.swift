@@ -125,7 +125,7 @@ struct SageLegacySafetyTests {
     }
 
     private func currentContainer(at url: URL) throws -> ModelContainer {
-        let schema = Schema(versionedSchema: SageSchemaV8.self)
+        let schema = Schema(versionedSchema: SageSchemaV9.self)
         return try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)])
     }
 

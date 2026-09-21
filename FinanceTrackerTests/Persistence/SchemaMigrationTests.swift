@@ -13,7 +13,7 @@ struct SchemaMigrationTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appending(path: "Indexes.sqlite")
-        let schema = Schema(versionedSchema: SageSchemaV8.self)
+        let schema = Schema(versionedSchema: SageSchemaV9.self)
         let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
             ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         ])
@@ -33,7 +33,7 @@ struct SchemaMigrationTests {
 
         try createV1Store(at: storeURL)
 
-        let schema = Schema(versionedSchema: SageSchemaV8.self)
+        let schema = Schema(versionedSchema: SageSchemaV9.self)
         let configuration = ModelConfiguration(
             "Migration",
             schema: schema,
@@ -79,7 +79,7 @@ struct SchemaMigrationTests {
 
         // Reopen both the migrated legacy rule and its explicitly converted schedule.
         for opening in 0..<3 {
-            let schema = Schema(versionedSchema: SageSchemaV8.self)
+            let schema = Schema(versionedSchema: SageSchemaV9.self)
             let configuration = ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
             let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [configuration])
             let rule = try #require(container.mainContext.fetch(FetchDescriptor<RecurringExpenseRule>()).first)
@@ -136,7 +136,7 @@ struct SchemaMigrationTests {
             try container.mainContext.save()
         }
         for opening in 0..<2 {
-            let schema = Schema(versionedSchema: SageSchemaV8.self)
+            let schema = Schema(versionedSchema: SageSchemaV9.self)
             let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
                 ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
             ])
@@ -195,7 +195,7 @@ struct SchemaMigrationTests {
             try expectExpenseDateIndexes(at: url, hasDateIndex: false)
         }
         for _ in 0..<2 {
-            let schema = Schema(versionedSchema: SageSchemaV8.self)
+            let schema = Schema(versionedSchema: SageSchemaV9.self)
             let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
                 ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
             ])
@@ -216,6 +216,85 @@ struct SchemaMigrationTests {
             #expect(expense.account?.name == "Bank")
             #expect(expense.account?.id == rule.account?.id)
             try expectExpenseDateIndexes(at: url)
+        }
+    }
+
+    @Test @MainActor
+    func v8MigrationDefaultsTagVisibilityAndPreservesRecordsOnReopen() throws {
+        UIColorValueTransformer.register()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "SageV8Migration-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appending(path: "Migration.sqlite")
+        let tagID = UUID()
+        let accountID = UUID()
+        let ruleID = UUID()
+        let expenseID = UUID()
+        let scheduled = Date(timeIntervalSince1970: 1_786_368_000.125)
+        let edited = scheduled.addingTimeInterval(40 * 86_400)
+        let key = RecurringExpenseOccurrence.key(ruleID: ruleID, scheduledDate: scheduled)
+
+        try autoreleasepool {
+            let schema = Schema(versionedSchema: SageSchemaV8.self)
+            let container = try ModelContainer(for: schema, configurations: [
+                ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
+            ])
+            let tag = SageSchemaV8.ExpenseTag(id: tagID, name: "Bills", uiColor: .blue, emoji: "B",
+                                             symbolName: "house.fill", budget: 1_200)
+            let account = SageSchemaV8.ExpenseAccount(id: accountID, name: "Bank", type: .bankAccount)
+            let rule = SageSchemaV8.RecurringExpenseRule(name: "Rent", amount: 900, note: "Rule", category: .needs,
+                tags: [tag], frequency: .monthly, startDate: scheduled, lastGeneratedDate: scheduled,
+                recurrenceTimeZoneIdentifier: "GMT")
+            rule.id = ruleID
+            rule.account = account
+            rule.recurrenceEffectiveDate = scheduled
+            let expense = SageSchemaV8.Expense(name: "Moved rent", amount: 901.25, category: .needs, date: edited,
+                tags: [tag], note: "Edited", recurringExpenseId: ruleID, recurringOccurrenceKey: key, account: account)
+            expense.id = expenseID
+            container.mainContext.insert(rule)
+            container.mainContext.insert(expense)
+            try container.mainContext.save()
+        }
+
+        for opening in 0..<2 {
+            try autoreleasepool {
+                let schema = Schema(versionedSchema: SageSchemaV9.self)
+                let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
+                    ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
+                ])
+                let context = container.mainContext
+                let tags = try context.fetch(FetchDescriptor<ExpenseTag>())
+                let expenses = try context.fetch(FetchDescriptor<Expense>())
+                let rules = try context.fetch(FetchDescriptor<RecurringExpenseRule>())
+                let accounts = try context.fetch(FetchDescriptor<ExpenseAccount>())
+                #expect(tags.count == 1 && expenses.count == 1 && rules.count == 1 && accounts.count == 1)
+                let tag = try #require(tags.first)
+                let expense = try #require(expenses.first)
+                let rule = try #require(rules.first)
+                let account = try #require(accounts.first)
+                #expect(tag.id == tagID && tag.name == "Bills" && tag.emoji == "B")
+                #expect(tag.symbolName == "house.fill" && tag.budget == 1_200 && tag.uiColor == UIColor.blue)
+                #expect(tag.isHiddenFromExpenseEntry == (opening == 1))
+                #expect(expense.id == expenseID && expense.name == "Moved rent" && expense.amount == 901.25)
+                #expect(expense.category == .needs && expense.note == "Edited" && expense.date == edited)
+                #expect(expense.recurringExpenseId == ruleID && expense.recurringOccurrenceKey == key)
+                #expect(expense.recurringScheduledDate == scheduled)
+                #expect(rule.id == ruleID && rule.name == "Rent" && rule.amount == 900 && rule.note == "Rule")
+                #expect(rule.category == .needs && rule.frequency == .monthly && rule.startDate == scheduled)
+                #expect(rule.lastGeneratedDate == scheduled && rule.recurrenceEffectiveDate == scheduled)
+                #expect(rule.recurrenceTimeZoneIdentifier == "GMT")
+                #expect(account.id == accountID && account.name == "Bank" && account.type == .bankAccount)
+                #expect(expense.tags?.map(\.id) == [tagID] && rule.tags?.map(\.id) == [tagID])
+                #expect(expense.account?.id == accountID && rule.account?.id == accountID)
+                #expect(tag.taggedExpenses?.map(\.id) == [expenseID])
+                #expect(tag.taggedRecurringRules?.map(\.id) == [ruleID])
+                try expectExpenseDateIndexes(at: url)
+
+                if opening == 0 {
+                    tag.isHiddenFromExpenseEntry = true
+                    try context.save()
+                }
+            }
         }
     }
 
