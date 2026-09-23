@@ -7,6 +7,7 @@ struct CentsFirstCurrencyField<Field: Hashable>: View {
     var focus: FocusState<Field?>.Binding
     var focusValue: Field
     var accessibilityIdentifier: String = "expense-amount-field"
+    var usesInlineKeypad = false
 
     @ScaledMetric(relativeTo: .largeTitle) private var amountFontSize = 48
     @State private var digits = ""
@@ -19,7 +20,13 @@ struct CentsFirstCurrencyField<Field: Hashable>: View {
     private var isFocused: Bool { focus.wrappedValue == focusValue }
     private var hasInvalidAmount: Bool {
         if let amount { return !MonetaryAmount.isValid(amount, currencyCode: currencyCode) }
-        return !digits.isEmpty
+        // Local digits can update before the parent amount binding catches up.
+        // Only show an error when the register itself cannot form a valid amount.
+        return !digits.isEmpty && CentsFirstAmountInput.amount(
+            for: digits,
+            currencyCode: currencyCode,
+            isRefund: isRefund
+        ) == nil
     }
 
     private var displayValue: String {
@@ -47,75 +54,93 @@ struct CentsFirstCurrencyField<Field: Hashable>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Amount")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                Spacer()
-                Menu {
-                    Picker("Transaction type", selection: $isRefund) {
-                        Text("Expense").tag(false)
-                        Text("Refund").tag(true)
-                    }
-                    if amount != nil || !digits.isEmpty {
-                        Button("Clear Amount", systemImage: "delete.left") {
-                            digits = ""
-                            amount = nil
-                            rejectedNonDigitInput = false
+            if !usesInlineKeypad {
+                HStack {
+                    Text("Amount")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Spacer()
+                    Menu {
+                        Picker("Transaction type", selection: $isRefund) {
+                            Text("Expense").tag(false)
+                            Text("Refund").tag(true)
                         }
+                        if amount != nil || !digits.isEmpty {
+                            Button("Clear Amount", systemImage: "delete.left") {
+                                digits = ""
+                                amount = nil
+                                rejectedNonDigitInput = false
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(isRefund ? "Refund" : "Expense")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                            Image(systemName: "chevron.down")
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(isRefund ? .primary : .secondary)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(isRefund ? "Refund" : "Expense")
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2.weight(.semibold))
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(isRefund ? .primary : .secondary)
-                    .frame(minHeight: 44)
-                    .contentShape(Rectangle())
+                    .accessibilityIdentifier("expense-amount-type")
+                    .accessibilityLabel("Transaction type")
+                    .accessibilityValue(isRefund ? "Refund" : "Expense")
                 }
-                .accessibilityIdentifier("expense-amount-type")
-                .accessibilityLabel("Transaction type")
-                .accessibilityValue(isRefund ? "Refund" : "Expense")
             }
 
-            // Keep the real input visible to accessibility and hit testing. Only its
-            // raw digits are transparent; the localized amount supplies the display.
-            TextField("", text: input, selection: $selection)
-                .font(.system(size: amountFontSize, weight: .semibold, design: .rounded))
-                .foregroundStyle(.clear)
-                .tint(.clear)
-                .keyboardType(.numberPad)
-                .autocorrectionDisabled()
-                .focused(focus, equals: focusValue)
-                .frame(minHeight: 60)
-                .overlay(alignment: .leading) {
-                    HStack(spacing: 8) {
-                        Text(displayValue)
-                            .font(.system(size: amountFontSize, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundStyle(amount == nil && digits.isEmpty ? .secondary : .primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.3)
-                        if isFocused {
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(.sageAccent)
-                                .frame(width: 2, height: 32)
+            if usesInlineKeypad {
+                Text(displayValue)
+                    .font(.system(size: amountFontSize, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(amount == nil && digits.isEmpty ? .secondary : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.3)
+                    .frame(maxWidth: .infinity, minHeight: 60)
+                    .padding(.vertical, 12)
+                    .accessibilityIdentifier(accessibilityIdentifier)
+                    .accessibilityLabel("Amount")
+                    .accessibilityValue(displayValue)
+
+                ExpenseAmountKeypad(digits: input)
+            } else {
+                // Keep the real input visible to accessibility and hit testing. Only its
+                // raw digits are transparent; the localized amount supplies the display.
+                TextField("", text: input, selection: $selection)
+                    .font(.system(size: amountFontSize, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.clear)
+                    .tint(.clear)
+                    .keyboardType(.numberPad)
+                    .autocorrectionDisabled()
+                    .focused(focus, equals: focusValue)
+                    .frame(minHeight: 60)
+                    .overlay(alignment: .leading) {
+                        HStack(spacing: 8) {
+                            Text(displayValue)
+                                .font(.system(size: amountFontSize, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundStyle(amount == nil && digits.isEmpty ? .secondary : .primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.3)
+                            if isFocused {
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(.sageAccent)
+                                    .frame(width: 2, height: 32)
+                            }
+                            Spacer(minLength: 0)
                         }
-                        Spacer(minLength: 0)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
                     }
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-                }
-                .accessibilityIdentifier(accessibilityIdentifier)
-                .accessibilityLabel("Amount")
-                .accessibilityValue(displayValue)
-                .accessibilityHint(fractionDigits == 0 ? "Enter the amount using number keys" : "Enter digits; the decimal separator is added automatically")
+                    .accessibilityIdentifier(accessibilityIdentifier)
+                    .accessibilityLabel("Amount")
+                    .accessibilityValue(displayValue)
+                    .accessibilityHint(fractionDigits == 0 ? "Enter the amount using number keys" : "Enter digits; the decimal separator is added automatically")
+            }
 
             if rejectedNonDigitInput || hasInvalidAmount {
                 Text(rejectedNonDigitInput
