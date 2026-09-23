@@ -50,9 +50,6 @@ struct ExpenseNamePage<HeaderAction: View>: View {
                 }
                 .padding(.vertical, 12)
         }
-        .task {
-            nameFocus.wrappedValue = true
-        }
         .task(id: name.isEmpty) {
             guard name.isEmpty else { return }
             while !Task.isCancelled {

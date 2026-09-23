@@ -50,8 +50,7 @@ struct NewAddExpenseSheet: View {
         DynamicSheet(
             animation: pageAnimation,
             isExpanded: sheetMode != .form,
-            maxHeight: maxSheetHeight,
-            anchorsContentToBottom: sheetMode == .form && currentStep == .details
+            maxHeight: maxSheetHeight
         ) {
             if sheetMode == .form {
                 VStack(spacing: 24) {
@@ -237,7 +236,6 @@ struct DynamicSheet<Content: View>: View {
     var animation: Animation?
     var isExpanded = false
     var maxHeight: CGFloat
-    var anchorsContentToBottom = false
     @ViewBuilder var content: Content
     @State private var contentHeight: CGFloat = 0
 
@@ -265,22 +263,20 @@ struct DynamicSheet<Content: View>: View {
                         }
                     }
                 }
-                .frame(minHeight: anchorsContentToBottom ? maxHeight : nil, alignment: .bottom)
+                .frame(minHeight: maxHeight, alignment: .bottom)
         }
-        .defaultScrollAnchor(anchorsContentToBottom ? .bottom : .top, for: .sizeChanges)
-        .defaultScrollAnchor(anchorsContentToBottom ? .bottom : .top, for: .alignment)
+        .defaultScrollAnchor(.bottom, for: .sizeChanges)
+        .defaultScrollAnchor(.bottom, for: .alignment)
         .scrollBounceBehavior(.basedOnSize)
-        // Give the details content a stable bottom-aligned viewport. Changing
-        // both the scroll viewport and its content size during the same animation
-        // causes scroll-offset corrections that briefly push the footer offscreen.
-        .frame(height: anchorsContentToBottom ? maxHeight : nil)
-        .frame(
-            height: sheetHeight == .zero ? nil : sheetHeight,
-            alignment: anchorsContentToBottom ? .bottom : .top
-        )
-        // Anchor the details footer to the presented sheet, including while its
-        // detent catches up with the calendar's changing content height.
-        .frame(maxHeight: .infinity, alignment: anchorsContentToBottom ? .bottom : .top)
+        // Every page shares one stable, bottom-aligned viewport. Changing both the
+        // scroll viewport and its content size during the same animation causes
+        // scroll-offset corrections that briefly push the footer offscreen, and
+        // switching anchoring per page made those page changes animate differently.
+        .frame(height: maxHeight)
+        .frame(height: sheetHeight == .zero ? nil : sheetHeight, alignment: .bottom)
+        // Anchor the footer to the presented sheet, including while its detent
+        // catches up with a new page or the calendar's changing content height.
+        .frame(maxHeight: .infinity, alignment: .bottom)
         .clipped()
         .modifier(SheetHeightModifier(height: sheetHeight))
     }
