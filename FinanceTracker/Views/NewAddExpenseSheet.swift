@@ -17,7 +17,8 @@ struct NewAddExpenseSheet: View {
         case name
         case amount
         case category
-        case details
+        case tags
+        case date
     }
 
     private enum SheetMode {
@@ -54,9 +55,15 @@ struct NewAddExpenseSheet: View {
         ) {
             if sheetMode == .form {
                 VStack(spacing: 24) {
-                    pageContent
-                        .id(currentStep)
-                        .transition(.blurReplace)
+                    if currentStep == .date {
+                        pageContent
+                            .id(currentStep)
+                            .transition(.opacity)
+                    } else {
+                        pageContent
+                            .id(currentStep)
+                            .transition(.blurReplace)
+                    }
 
                     HStack(spacing: 12) {
                         if currentStep != .name {
@@ -70,7 +77,7 @@ struct NewAddExpenseSheet: View {
                         }
 
                         Button(action: advanceStep) {
-                            Text(currentStep == .details ? "Done" : "Next")
+                            Text(currentStep == .date ? "Done" : "Next")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity, minHeight: 44)
                                 .foregroundStyle(Color(red: 0.10, green: 0.17, blue: 0.07))
@@ -170,14 +177,14 @@ struct NewAddExpenseSheet: View {
     }
 
     private func validateCurrentStep() -> Bool {
-        if currentStep == .name || currentStep == .details {
+        if currentStep == .name || currentStep == .date {
             guard !expenseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 errorMessage = "Please enter an expense name"
                 showError = true
                 return false
             }
         }
-        if currentStep == .amount || currentStep == .details {
+        if currentStep == .amount || currentStep == .date {
             guard let amount = expenseAmount,
                   MonetaryAmount.isValid(amount, currencyCode: config.ledgerCurrencyCode) else {
                 errorMessage = MonetaryAmount.validationMessage(currencyCode: config.ledgerCurrencyCode)
@@ -227,7 +234,8 @@ struct NewAddExpenseSheet: View {
             }
         case .amount: ExpenseAmountPage(amount: $expenseAmount)
         case .category: ExpenseCategoryPage(category: $expenseCategory)
-        case .details: ExpenseDetailsPage(date: $expenseDate, tags: $expenseTags)
+        case .tags: ExpenseTagsPage(tags: $expenseTags)
+        case .date: ExpenseDatePage(date: $expenseDate)
         }
     }
 }
@@ -275,7 +283,7 @@ struct DynamicSheet<Content: View>: View {
         .frame(height: maxHeight)
         .frame(height: sheetHeight == .zero ? nil : sheetHeight, alignment: .bottom)
         // Anchor the footer to the presented sheet, including while its detent
-        // catches up with a new page or the calendar's changing content height.
+        // catches up with a new page's content height.
         .frame(maxHeight: .infinity, alignment: .bottom)
         .clipped()
         .modifier(SheetHeightModifier(height: sheetHeight))
