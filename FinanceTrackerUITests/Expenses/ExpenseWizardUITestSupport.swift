@@ -21,7 +21,7 @@ struct ExpenseWizardUITestSupport {
         XCTAssertTrue(next.waitForExistence(timeout: timeout))
         XCTAssertFalse(app.keyboards.firstMatch.exists, "New expense entry must not autofocus the name.")
         XCTAssertFalse(back.exists, "The first page must not expose Back.")
-        XCTAssertFalse(save.exists, "Saving belongs only on the final date page.")
+        XCTAssertFalse(save.exists, "Saving belongs only on the final details page.")
     }
 
     func enterName(_ text: String) {
@@ -50,20 +50,29 @@ struct ExpenseWizardUITestSupport {
         }
     }
 
-    func advanceFromAmountToDate() {
+    func advanceFromAmountToDetails() {
         advance(to: app.buttons["expense-category-needs"])
-        advance(to: note)
         advance(to: datePicker)
+        advance(to: note)
         XCTAssertTrue(save.waitForExistence(timeout: timeout))
         XCTAssertFalse(next.exists)
     }
 
     func saveAndWaitForDismissal() {
-        XCTAssertTrue(datePicker.waitForExistence(timeout: timeout))
+        XCTAssertTrue(note.waitForExistence(timeout: timeout))
         tap(save)
-        // The name field is already absent on the date page; it cannot prove dismissal.
         XCTAssertTrue(save.waitForNonExistence(timeout: timeout))
-        XCTAssertTrue(datePicker.waitForNonExistence(timeout: timeout))
+        XCTAssertTrue(note.waitForNonExistence(timeout: timeout))
+        XCTAssertTrue(app.tabBars.buttons["Expenses"].wait(for: \.isHittable, toEqual: true, timeout: timeout))
+    }
+
+    func dismissBySwipe() {
+        let title = app.staticTexts["What did you buy?"]
+        XCTAssertTrue(title.waitForExistence(timeout: timeout))
+        let destination = app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+        title.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.05, thenDragTo: destination)
+        XCTAssertTrue(name.waitForNonExistence(timeout: timeout))
         XCTAssertTrue(app.tabBars.buttons["Expenses"].wait(for: \.isHittable, toEqual: true, timeout: timeout))
     }
 

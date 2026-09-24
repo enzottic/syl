@@ -470,7 +470,7 @@ final class FinanceTrackerUITests: XCTestCase {
         tap("Clear amount", in: app)
         wizard.assertAmount(0)
         wizard.enterAmountDigits("123")
-        wizard.advanceFromAmountToDate()
+        wizard.advanceFromAmountToDetails()
         wizard.saveAndWaitForDismissal()
 
         tap(expenseRow(named: "Minor Unit Expense", in: app), named: "Saved minor unit expense")
@@ -534,7 +534,7 @@ final class FinanceTrackerUITests: XCTestCase {
         wizard.advance(to: wizard.amount)
         XCTAssertTrue(suggestions.waitForNonExistence(timeout: timeout))
         wizard.assertAmount(42.55)
-        wizard.advanceFromAmountToDate()
+        wizard.advanceFromAmountToDetails()
         wizard.saveAndWaitForDismissal()
         tap(expenseRow(named: "Coffee Shop Visit", in: app), named: "Saved suggested expense")
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
@@ -561,13 +561,15 @@ final class FinanceTrackerUITests: XCTestCase {
         wizard.goBack(to: wizard.amount)
         wizard.assertAmount(-12.34)
         XCTAssertEqual(app.buttons["expense-amount-type"].value as? String, "Refund")
-        wizard.advanceFromAmountToDate()
+        wizard.advance(to: app.buttons["expense-category-needs"])
+        wizard.advance(to: wizard.datePicker)
         let recurring = app.switches["expense-recurring-toggle"]
         wizard.reveal(recurring)
         recurring.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         XCTAssertEqual(recurring.value as? String, "0", "Refunds must not enable recurrence.")
         XCTAssertFalse(app.buttons["expense-frequency-picker"].exists)
         XCTAssertEqual(recurring.value as? String, "0")
+        wizard.advance(to: wizard.note)
         wizard.saveAndWaitForDismissal()
 
         tap(expenseRow(named: "Returned Purchase", in: app), named: "Saved refund")
@@ -603,19 +605,21 @@ final class FinanceTrackerUITests: XCTestCase {
         XCTAssertTrue(app.windows.firstMatch.frame.contains(amountField.frame))
         captureScreenshot("New expense largest text - amount entry", in: app)
         XCTAssertTrue(keyboard.waitForNonExistence(timeout: timeout))
-        for identifier in ["expense-category-wants", "expense-note-field", "expense-date-picker"] {
+        for identifier in ["expense-category-wants", "expense-date-picker", "expense-note-field"] {
             let control = app.descendants(matching: .any)[identifier].firstMatch
             wizard.advance(to: control)
             XCTAssertTrue(scrollToVisibility(of: control, in: app), "Every wizard page must remain reachable at largest text size.")
-            let footer = identifier == "expense-date-picker" ? wizard.save : wizard.next
+            let footer = identifier == "expense-note-field" ? wizard.save : wizard.next
             XCTAssertTrue(scrollToVisibility(of: footer, in: app))
-            wizard.assertFooter(keyboardVisible: false, final: identifier == "expense-date-picker")
+            wizard.assertFooter(keyboardVisible: false, final: identifier == "expense-note-field")
             captureScreenshot("New expense largest text - \(identifier)", in: app)
+            if identifier == "expense-date-picker" {
+                let recurring = app.switches["expense-recurring-toggle"]
+                XCTAssertTrue(scrollToVisibility(of: recurring, in: app))
+                XCTAssertEqual(recurring.value as? String, "0")
+                captureScreenshot("New expense largest text - recurrence", in: app)
+            }
         }
-        let recurring = app.switches["expense-recurring-toggle"]
-        XCTAssertTrue(scrollToVisibility(of: recurring, in: app))
-        XCTAssertEqual(recurring.value as? String, "0")
-        captureScreenshot("New expense largest text - recurrence", in: app)
         wizard.saveAndWaitForDismissal()
         tap(expenseRow(named: longName, in: app), named: "Saved long-name expense")
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
@@ -886,8 +890,8 @@ final class FinanceTrackerUITests: XCTestCase {
         wizard.assertAmount(42.50)
         wizard.advance(to: app.buttons["expense-category-wants"])
         XCTAssertEqual(app.buttons["expense-category-wants"].value as? String, "Selected")
-        wizard.advance(to: wizard.note)
         wizard.advance(to: wizard.datePicker)
+        wizard.advance(to: wizard.note)
         wizard.saveAndWaitForDismissal()
 
         let duplicate = app.descendants(matching: .any)
@@ -1059,7 +1063,7 @@ final class FinanceTrackerUITests: XCTestCase {
         }
         wizard.enterAmountDigits(NSDecimalNumber(decimal: value * 100).stringValue)
         wizard.assertAmount(NSDecimalNumber(decimal: value).doubleValue)
-        wizard.advanceFromAmountToDate()
+        wizard.advanceFromAmountToDetails()
         wizard.saveAndWaitForDismissal()
     }
 

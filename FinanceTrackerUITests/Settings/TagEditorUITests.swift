@@ -128,6 +128,7 @@ final class TagEditorUITests: XCTestCase {
         wizard.advance(to: wizard.amount)
         wizard.enterAmountDigits("100")
         wizard.advance(to: app.buttons["expense-category-needs"])
+        wizard.advance(to: wizard.datePicker)
         wizard.advance(to: wizard.note)
 
         let chip = app.buttons["Tag: \(name)"]
@@ -146,10 +147,12 @@ final class TagEditorUITests: XCTestCase {
         XCTAssertEqual(chip.value as? String, "Selected")
         tap(chip)
         XCTAssertEqual(chip.value as? String, "Not selected")
-        tap(app.buttons["cancel-expense-button"])
-        tap(app.buttons["discard-expense-button"])
+        wizard.goBack(to: wizard.datePicker)
+        wizard.goBack(to: app.buttons["expense-category-needs"])
+        wizard.goBack(to: wizard.amount)
+        wizard.goBack(to: wizard.name)
+        wizard.dismissBySwipe()
         XCTAssertTrue(wizard.note.waitForNonExistence(timeout: timeout))
-        XCTAssertTrue(app.buttons["cancel-expense-button"].waitForNonExistence(timeout: timeout))
         XCTAssertTrue(app.tabBars.buttons["Expenses"].isHittable)
     }
 

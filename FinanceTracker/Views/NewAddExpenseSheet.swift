@@ -5,8 +5,8 @@ import WidgetKit
 import PhotosUI
 
 struct NewAddExpenseSheet: View {
-    enum AddExpenseStep: Int, CaseIterable {
-        case name, amount, category, details, date
+    enum AddExpenseStep: Int {
+        case name, amount, category, date, details
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -22,7 +22,6 @@ struct NewAddExpenseSheet: View {
     @State private var currentStep: AddExpenseStep = .name
     @State private var errorMessage: String?
     @State private var showError = false
-    @State private var showDiscardConfirmation = false
     @State private var isSaving = false
     @State private var importer = ExpenseReceiptImporter()
     @State private var showCamera = false
@@ -44,18 +43,7 @@ struct NewAddExpenseSheet: View {
 
     var body: some View {
         ExpenseEntrySheetLayout(animation: pageAnimation, step: currentStep.rawValue) {
-            HStack {
-                Button(action: requestDismissal) {
-                    Text("Cancel").frame(minHeight: 48)
-                }
-                    .accessibilityIdentifier("cancel-expense-button")
-                    .frame(minHeight: 44)
-                Spacer()
-                Text("\(currentStep.rawValue + 1) of \(AddExpenseStep.allCases.count)")
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("Step \(currentStep.rawValue + 1) of \(AddExpenseStep.allCases.count)")
-            }
+            EmptyView()
         } content: {
             VStack(spacing: 20) {
                 pageContent
@@ -75,7 +63,7 @@ struct NewAddExpenseSheet: View {
                         .accessibilityIdentifier("expense-back-button")
                 }
                 Button(action: advanceStep) {
-                    Text(isSaving ? "Saving…" : currentStep == .date ? "Save Expense" : "Next")
+                    Text(isSaving ? "Saving…" : currentStep == .details ? "Save Expense" : "Next")
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 48)
                         .foregroundStyle(Color(red: 0.10, green: 0.17, blue: 0.07))
@@ -83,7 +71,7 @@ struct NewAddExpenseSheet: View {
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.roundedRectangle(radius: 22))
                 .tint(.sage)
-                .accessibilityIdentifier(currentStep == .date ? "save-expense-button" : "expense-next-button")
+                .accessibilityIdentifier(currentStep == .details ? "save-expense-button" : "expense-next-button")
             }
             .disabled(isSaving || importer.isImporting)
         }
@@ -92,18 +80,6 @@ struct NewAddExpenseSheet: View {
         } message: {
             Text(errorMessage ?? "Please try again.")
         }
-        .alert("Discard this expense?", isPresented: $showDiscardConfirmation) {
-            Button("Discard Changes", role: .destructive) {
-                importTask?.cancel()
-                dismiss()
-            }
-            .accessibilityIdentifier("discard-expense-button")
-            Button("Keep Editing", role: .cancel) { }
-                .accessibilityIdentifier("keep-editing-expense-button")
-        } message: {
-            Text("Your unsaved expense details will be lost.")
-        }
-        .interactiveDismissDisabled(draft.hasChanges || importer.isImporting || isSaving)
         .photosPicker(isPresented: $showPhotoLibrary, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
@@ -156,12 +132,12 @@ struct NewAddExpenseSheet: View {
             ExpenseAmountPage(amount: $draft.amount)
         case .category:
             ExpenseCategoryPage(category: $draft.category)
-        case .details:
-            ExpenseTagsPage(tags: $draft.tags, note: $draft.note, isNoteFocused: $isNoteFocused,
-                            aiSuggestedTagIDs: aiSuggestedTagIDs)
         case .date:
             ExpenseDatePage(date: $draft.date, isRecurring: $draft.isRecurring,
                             frequency: $draft.recurrenceFrequency, allowsRecurrence: (draft.amount ?? 0) > 0)
+        case .details:
+            ExpenseTagsPage(tags: $draft.tags, note: $draft.note, isNoteFocused: $isNoteFocused,
+                            aiSuggestedTagIDs: aiSuggestedTagIDs)
         }
     }
 
@@ -288,12 +264,6 @@ struct NewAddExpenseSheet: View {
            let tag = allTags.first(where: { $0.name == tagName && !$0.isHiddenFromExpenseEntry }) {
             draft.tags = [tag]
         }
-    }
-
-    private func requestDismissal() {
-        guard !isSaving else { return }
-        clearFocus()
-        if draft.hasChanges || importer.isImporting { showDiscardConfirmation = true } else { dismiss() }
     }
 
     private func presentError(_ message: String) {
