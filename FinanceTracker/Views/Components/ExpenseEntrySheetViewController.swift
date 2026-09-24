@@ -27,6 +27,14 @@ final class ExpenseEntrySheetViewController: UIViewController {
     private let contentState = ExpenseEntryContentState()
     private lazy var contentHost = UIHostingController(rootView: AnyView(ExpenseEntryHostedContent(state: contentState)))
     private let footerHost = UIHostingController(rootView: AnyView(EmptyView()))
+    /// Spans the whole sheet above the other hosts (receipt attachment panel).
+    private let overlayHost = UIHostingController(rootView: AnyView(EmptyView()))
+    private var pendingOverlay: AnyView?
+    private var overlayUpdateScheduled = false
+    private var overlayActive = false
+    private var expandsForOverlay = false
+    /// Share of the window height used while the overlay expands the sheet.
+    private let overlaySheetHeightFraction: CGFloat = 0.46
     private let scrollView = UIScrollView()
     private var headerHeight: NSLayoutConstraint!
     private var contentHeight: NSLayoutConstraint!
@@ -67,6 +75,8 @@ final class ExpenseEntrySheetViewController: UIViewController {
         install(headerHost, in: view)
         install(contentHost, in: scrollView)
         install(footerHost, in: view)
+        install(overlayHost, in: view)
+        overlayHost.view.isUserInteractionEnabled = false
 
         headerHeight = headerHost.view.heightAnchor.constraint(equalToConstant: 0)
         contentHeight = contentHost.view.heightAnchor.constraint(equalToConstant: 0)
@@ -90,6 +100,12 @@ final class ExpenseEntrySheetViewController: UIViewController {
         footerContentLimit = footerHost.view.topAnchor.constraint(
             lessThanOrEqualTo: scrollView.topAnchor, constant: 0)
         NSLayoutConstraint.activate([
+            // The overlay covers the full sheet, including the bottom edge, so
+            // an expanded panel can follow the sheet's shape.
+            overlayHost.view.topAnchor.constraint(equalTo: view.topAnchor),
+            overlayHost.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            overlayHost.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            overlayHost.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             headerHost.view.topAnchor.constraint(equalTo: safeArea.topAnchor),
             headerHost.view.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
             headerHost.view.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
@@ -166,12 +182,42 @@ final class ExpenseEntrySheetViewController: UIViewController {
         }
     }
 
+    func updateOverlay(_ root: AnyView, isActive: Bool, expandsSheet: Bool) {
+        // Interaction and accessibility flip synchronously so the page below
+        // can't be reached once the overlay has taken over.
+        if overlayActive != isActive {
+            overlayActive = isActive
+            overlayHost.view.isUserInteractionEnabled = isActive
+            headerHost.view.accessibilityElementsHidden = isActive
+            scrollView.accessibilityElementsHidden = isActive
+            updateFooterInteraction()
+            if isActive {
+                UIAccessibility.post(notification: .screenChanged, argument: overlayHost.view)
+            }
+        }
+        if expandsForOverlay != expandsSheet {
+            expandsForOverlay = expandsSheet
+            requestMeasurement()
+        }
+        // Like the other hosts, never assign a root inside the representable update.
+        pendingOverlay = root
+        guard !overlayUpdateScheduled else { return }
+        overlayUpdateScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.overlayUpdateScheduled = false
+            guard let root = self.pendingOverlay else { return }
+            self.pendingOverlay = nil
+            self.overlayHost.rootView = root
+        }
+    }
+
     func cancelPendingUpdate() {
         pendingUpdate = nil
     }
 
     private func updateFooterInteraction() {
-        let enabled = stagedPage == nil && revealingPage == nil
+        let enabled = stagedPage == nil && revealingPage == nil && !overlayActive
             && (pendingUpdate == nil || pendingUpdate?.step == step)
         footerHost.view.isUserInteractionEnabled = enabled
         footerHost.view.accessibilityElementsHidden = !enabled
@@ -310,13 +356,22 @@ final class ExpenseEntrySheetViewController: UIViewController {
 
         // Custom detents exclude the bottom safe area; UIKit adds it. Never add
         // keyboard height here: the sheet and keyboard guide handle it natively.
-        let height = rounded.reduce(0, +) + measuredTopInset
+        let height = expandsForOverlay
+            ? overlaySheetHeight ?? rounded.reduce(0, +) + measuredTopInset
+            : rounded.reduce(0, +) + measuredTopInset
         applyDetent(height: height)
         // UIKit lays out the new constraints in its normal animation pass; do
         // not synchronously flush the hosted SwiftUI transition here.
         view.setNeedsLayout()
         keepFocusedControlVisible()
         scheduleStagedReveal()
+    }
+
+    /// Fixed, screen-relative height while the attachment panel is expanded.
+    private var overlaySheetHeight: CGFloat? {
+        guard let window = view.window else { return nil }
+        let scale = max(traitCollection.displayScale, 1)
+        return ceil(window.bounds.height * overlaySheetHeightFraction * scale) / scale
     }
 
     private var ownsInstalledDetent: Bool {

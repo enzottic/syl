@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// Bridges the caller's environment and live controls into three persistent hosts.
-struct ExpenseEntrySheetContainer<Header: View, Content: View, Footer: View>: UIViewControllerRepresentable {
+/// Bridges the caller's environment and live controls into four persistent hosts.
+struct ExpenseEntrySheetContainer<Header: View, Content: View, Footer: View, Overlay: View>: UIViewControllerRepresentable {
     var animation: Animation?
     var step: Int
+    var overlayActive: Bool
+    var expandsForOverlay: Bool
     var header: Header
     var content: Content
     var footer: Footer
+    var overlay: Overlay
 
     func makeUIViewController(context: Context) -> ExpenseEntrySheetViewController {
         let controller = ExpenseEntrySheetViewController()
@@ -16,6 +19,12 @@ struct ExpenseEntrySheetContainer<Header: View, Content: View, Footer: View>: UI
     }
 
     func updateUIViewController(_ controller: ExpenseEntrySheetViewController, context: Context) {
+        // Sheet-spanning layer: no padding, measurement, or page transitions.
+        controller.updateOverlay(
+            AnyView(overlay.environment(\.self, context.environment)),
+            isActive: overlayActive,
+            expandsSheet: expandsForOverlay
+        )
         controller.update(
             header: hosted(header.padding(.horizontal, 24).padding(.top, 8),
                            context: context, controller: controller, section: .header),

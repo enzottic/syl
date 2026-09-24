@@ -3,6 +3,7 @@ import SwiftData
 import SageKit
 import WidgetKit
 import PhotosUI
+import Photos
 
 struct NewAddExpenseSheet: View {
     enum AddExpenseStep: Int {
@@ -24,8 +25,9 @@ struct NewAddExpenseSheet: View {
     @State private var showError = false
     @State private var isSaving = false
     @State private var importer = ExpenseReceiptImporter()
-    @State private var showCamera = false
+    @State private var attachment = ReceiptAttachmentState()
     @State private var showPhotoLibrary = false
+    @State private var isLoadingPhoto = false
     @State private var photoItem: PhotosPickerItem?
     @State private var importTask: Task<Void, Never>?
     @State private var suggestionTask: Task<Void, Never>?
@@ -42,12 +44,13 @@ struct NewAddExpenseSheet: View {
     }
 
     var body: some View {
-        ExpenseEntrySheetLayout(animation: pageAnimation, step: currentStep.rawValue) {
+        ExpenseEntrySheetLayout(animation: pageAnimation, step: currentStep.rawValue,
+                                overlayActive: attachment.isPresented,
+                                expandsForOverlay: attachment.mode.isExpanded) {
             EmptyView()
         } content: {
             VStack(spacing: 20) {
                 pageContent
-                if importer.isImporting { ProgressView("Reading receipt…") }
             }
             .disabled(importer.isImporting || isSaving)
         } footer: {
@@ -74,7 +77,16 @@ struct NewAddExpenseSheet: View {
                 .accessibilityIdentifier(currentStep == .details ? "save-expense-button" : "expense-next-button")
             }
             .disabled(isSaving || importer.isImporting)
+        } overlay: {
+            ReceiptAttachmentOverlay(
+                state: attachment,
+                unavailableMessage: importer.unavailableMessage,
+                onSelectAsset: importAsset,
+                onCapture: importCapturedImage,
+                onAllPhotos: { showPhotoLibrary = true }
+            )
         }
+        .interactiveDismissDisabled(attachment.isPresented)
         .alert("Expense", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -83,18 +95,15 @@ struct NewAddExpenseSheet: View {
         .photosPicker(isPresented: $showPhotoLibrary, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
+            attachment.close()
             importTask = Task {
                 if let parsed = await importer.importPhoto(item, tags: allTags) { applyReceipt(parsed) }
                 photoItem = nil
             }
         }
-        .fullScreenCover(isPresented: $showCamera) {
-            CameraPickerView(onImagePicked: { image in
-                importTask = Task {
-                    if let parsed = await importer.importImage(image, tags: allTags) { applyReceipt(parsed) }
-                }
-            }, onFailure: presentError)
-            .ignoresSafeArea()
+        .onChange(of: importer.isImporting || isLoadingPhoto, initial: true) { _, busy in
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.2)) { attachment.isBusy = busy }
+            if busy { AccessibilityNotification.Announcement("Reading receipt").post() }
         }
         .onChange(of: importer.errorMessage) { _, message in
             if let message { presentError(message) }
@@ -113,6 +122,7 @@ struct NewAddExpenseSheet: View {
             if let amount = draft.amount, amount < 0 { draft.isRecurring = false }
         }
         .onDisappear {
+            attachment.tearDown()
             importTask?.cancel()
             suggestionTask?.cancel()
         }
@@ -142,25 +152,32 @@ struct NewAddExpenseSheet: View {
     }
 
     private var receiptMenu: some View {
-        Menu("Import receipt", systemImage: "receipt") {
-            if let message = importer.unavailableMessage {
-                Text(message)
-            } else {
-                Button("Take Receipt Photo", systemImage: "camera") {
-                    clearFocus()
-                    showCamera = true
-                }
-                .disabled(!importer.canUseCamera)
-                Button("Choose Photo", systemImage: "photo") {
-                    clearFocus()
-                    showPhotoLibrary = true
-                }
+        ReceiptAttachmentButton(state: attachment, onOpen: clearFocus)
+    }
+
+    private func importAsset(_ asset: PHAsset) {
+        guard !importer.isImporting else { return }
+        attachment.close()
+        importTask?.cancel()
+        importTask = Task {
+            isLoadingPhoto = true
+            let image = await ReceiptPhotoLoader.image(for: asset)
+            isLoadingPhoto = false
+            guard let image else {
+                if !Task.isCancelled { presentError("Syl couldn't open that photo. Choose another photo and try again.") }
+                return
             }
+            if let parsed = await importer.importImage(image, tags: allTags) { applyReceipt(parsed) }
         }
-        .labelStyle(.iconOnly)
-        .frame(minWidth: 44, minHeight: 44)
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
+    }
+
+    private func importCapturedImage(_ image: UIImage) {
+        guard !importer.isImporting else { return }
+        attachment.close()
+        importTask?.cancel()
+        importTask = Task {
+            if let parsed = await importer.importImage(image, tags: allTags) { applyReceipt(parsed) }
+        }
     }
 
     private var suggestions: [Expense] {
