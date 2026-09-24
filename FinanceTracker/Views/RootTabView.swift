@@ -16,7 +16,6 @@ struct RootTabView: View {
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var query: String? = nil
     @State private var isShowingSettings = false
-    @State private var availableSheetHeight: CGFloat = 600
     @State private var reminderNavigation = ReminderNavigation.shared
 
     private var isPad: Bool {
@@ -71,11 +70,6 @@ struct RootTabView: View {
         }
         .tabViewSearchActivation(.searchTabSelection)
         .accessibilityIdentifier("main-tab-view")
-        .onGeometryChange(for: CGFloat.self) { geometry in
-            geometry.size.height
-        } action: { height in
-            availableSheetHeight = height
-        }
         .sheet(isPresented: $isShowingSettings) {
             SettingsView(showsDismissButton: true, showsGradientBackground: false)
                 .presentationSizing(.form)
@@ -83,13 +77,7 @@ struct RootTabView: View {
         .sheet(item: $appRouter.presentedSheet) { sheet in
             switch sheet {
             case .addExpense(let expense, let receiptData, _):
-                if expense == nil && receiptData == nil {
-                    NewAddExpenseSheet(maxSheetHeight: max(1, availableSheetHeight - 24))
-                } else {
-                    NavigationStack {
-                        AddExpenseView(expense: expense, receiptData: receiptData)
-                    }
-                }
+                NewAddExpenseSheet(expense: expense, receiptData: receiptData)
             }
         }
         .overlay(alignment: .top) {

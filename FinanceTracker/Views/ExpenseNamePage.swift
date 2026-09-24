@@ -35,6 +35,7 @@ struct ExpenseNamePage<HeaderAction: View>: View {
                 .submitLabel(.next)
                 .onSubmit(onSubmit)
                 .accessibilityLabel("Expense name")
+                .accessibilityIdentifier("expense-name-field")
                 .overlay {
                     if name.isEmpty {
                         Text(placeholders[placeholderIndex])

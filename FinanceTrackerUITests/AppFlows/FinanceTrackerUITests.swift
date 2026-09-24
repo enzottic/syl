@@ -440,49 +440,38 @@ final class FinanceTrackerUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["Expenses"].waitForExistence(timeout: timeout))
     }
 
-    func testNewExpenseAutofocusesNameAndRetainsMinorUnitAmount() {
+    func testNewExpenseTapToFocusAndRetainsMinorUnitAmount() {
         let app = launchApp()
         openExpenses(in: app)
         openNewExpense(in: app)
-
-        let nameField = app.textFields["expense-name-field"]
-        let amountField = app.textFields["expense-amount-field"]
+        let wizard = ExpenseWizardUITestSupport(app: app)
+        let nameField = wizard.name
         let keyboard = app.keyboards.firstMatch
-        let keyboardContinue = app.buttons["expense-keyboard-continue-button"]
-        XCTAssertTrue(keyboard.waitForExistence(timeout: timeout))
+        XCTAssertFalse(keyboard.exists)
         XCTAssertEqual(nameField.value as? String, nameField.placeholderValue)
-        assertExpenseAmount(0, in: app)
-        XCTAssertEqual(keyboardContinue.label, "Next")
-        captureScreenshot("New expense - blank name focused", in: app)
-
-        // App-level typing must not restore focus if the form loses it.
-        app.typeText("Minor Unit Expense")
-        XCTAssertEqual(nameField.value as? String, "Minor Unit Expense")
-        tap("expense-keyboard-continue-button", in: app)
-        XCTAssertEqual(keyboardContinue.label, "Done")
-        XCTAssertTrue(keyboard.keys["1"].waitForExistence(timeout: timeout))
-        XCTAssertFalse(keyboard.keys["."].exists, "Amount entry must use a number pad, not a decimal pad.")
-        app.typeText("123")
-        assertExpenseAmount(1.23, in: app)
-        XCTAssertEqual(nameField.value as? String, "Minor Unit Expense")
-        XCTAssertTrue(keyboard.exists)
-        XCTAssertTrue(keyboardContinue.isHittable)
-        captureScreenshot("New expense - amount entry", in: app)
-        app.typeText(XCUIKeyboardKey.delete.rawValue)
-        assertExpenseAmount(0.12, in: app)
-
-        tap("expense-keyboard-continue-button", in: app)
+        captureScreenshot("New expense - blank name without keyboard", in: app)
+        wizard.enterName("Minor Unit Expense")
+        wizard.advance(to: wizard.amount)
         XCTAssertTrue(keyboard.waitForNonExistence(timeout: timeout))
-        assertExpenseAmount(0.12, in: app)
-        captureScreenshot("New expense - keyboard dismissed full form", in: app)
-        tap(amountField, named: "expense-amount-field")
-        XCTAssertTrue(keyboard.waitForExistence(timeout: timeout))
-        assertExpenseAmount(0.12, in: app)
-        app.typeText("3")
-        assertExpenseAmount(1.23, in: app)
-        tap("expense-keyboard-continue-button", in: app)
-        tap("save-expense-button", in: app)
-        XCTAssertTrue(nameField.waitForNonExistence(timeout: timeout))
+        wizard.assertAmount(0)
+        XCTAssertFalse(app.buttons["."].exists, "The inline keypad must accept minor-unit digits only.")
+        wizard.enterAmountDigits("123")
+        wizard.assertAmount(1.23)
+        captureScreenshot("New expense - inline amount entry", in: app)
+        tap("Delete last digit", in: app)
+        wizard.assertAmount(0.12)
+        wizard.goBack(to: nameField)
+        XCTAssertEqual(nameField.value as? String, "Minor Unit Expense")
+        XCTAssertFalse(keyboard.exists)
+        wizard.advance(to: wizard.amount)
+        wizard.assertAmount(0.12)
+        wizard.enterAmountDigits("3")
+        wizard.assertAmount(1.23)
+        tap("Clear amount", in: app)
+        wizard.assertAmount(0)
+        wizard.enterAmountDigits("123")
+        wizard.advanceFromAmountToDate()
+        wizard.saveAndWaitForDismissal()
 
         tap(expenseRow(named: "Minor Unit Expense", in: app), named: "Saved minor unit expense")
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
@@ -490,32 +479,32 @@ final class FinanceTrackerUITests: XCTestCase {
         assertExpenseAmount(1.23, in: app)
     }
 
-    func testNewExpenseReturnNextFocusesAmount() {
+    func testNewExpenseReturnNextOpensInlineAmountKeypad() {
         let app = launchApp()
         openExpenses(in: app)
         openNewExpense(in: app)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
-        app.typeText("Return Next Expense")
+        let wizard = ExpenseWizardUITestSupport(app: app)
+        wizard.enterName("Return Next Expense")
         tap(app.keyboards.buttons["next"], named: "Keyboard return Next")
-        XCTAssertEqual(app.buttons["expense-keyboard-continue-button"].label, "Done")
-        XCTAssertTrue(app.keyboards.keys["1"].waitForExistence(timeout: timeout))
-        XCTAssertFalse(app.keyboards.keys["."].exists)
-        app.typeText("1234")
-        assertExpenseAmount(12.34, in: app)
+        XCTAssertTrue(wizard.amount.waitForExistence(timeout: timeout))
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: timeout))
+        XCTAssertFalse(app.buttons["."].exists)
+        wizard.enterAmountDigits("1234")
+        wizard.assertAmount(12.34)
+        wizard.goBack(to: wizard.name)
         XCTAssertEqual(app.textFields["expense-name-field"].value as? String, "Return Next Expense")
-        XCTAssertTrue(app.keyboards.firstMatch.exists)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
     }
 
     func testExpenseNameSuggestionPrefillsAndAllowsAmountEditing() {
         let app = launchApp(seedExpense: "Coffee Shop")
         openExpenses(in: app)
         openNewExpense(in: app)
+        let wizard = ExpenseWizardUITestSupport(app: app)
         let nameField = app.textFields["expense-name-field"]
-        let amountField = app.textFields["expense-amount-field"]
         let keyboard = app.keyboards.firstMatch
-        let suggestions = app.descendants(matching: .any)["past-expense-suggestions"].firstMatch
-        XCTAssertTrue(keyboard.waitForExistence(timeout: timeout))
-        app.typeText("Coff")
+        let suggestions = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "past-expense-suggestion-")).firstMatch
+        wizard.enterName("Coff")
         XCTAssertTrue(suggestions.waitForExistence(timeout: timeout))
         let coffeeSuggestion = app.buttons["past-expense-suggestion-Coffee Shop"]
         captureScreenshot("New expense - name suggestions", in: app)
@@ -523,32 +512,30 @@ final class FinanceTrackerUITests: XCTestCase {
         tap(coffeeSuggestion, named: "Coffee Shop suggestion")
 
         XCTAssertEqual(nameField.value as? String, "Coffee Shop")
-        assertExpenseAmount(42.50, in: app)
-        XCTAssertEqual(app.buttons["expense-category-wants"].value as? String, "Selected")
         XCTAssertTrue(suggestions.waitForNonExistence(timeout: timeout), "Selecting a suggestion must hide the popup.")
         XCTAssertTrue(keyboard.waitForNonExistence(timeout: timeout))
-        captureScreenshot("New expense - suggestion prefill full form", in: app)
-
-        tap(amountField, named: "expense-amount-field")
-        XCTAssertTrue(keyboard.waitForExistence(timeout: timeout))
-        assertExpenseAmount(42.50, in: app)
+        XCTAssertTrue(nameField.isHittable, "Selecting history must stay on the name page.")
+        XCTAssertFalse(wizard.amount.exists)
+        captureScreenshot("New expense - suggestion stays on name", in: app)
+        wizard.advance(to: wizard.amount)
+        wizard.assertAmount(42.50)
         XCTAssertFalse(suggestions.exists)
-        app.typeText(XCUIKeyboardKey.delete.rawValue)
-        assertExpenseAmount(4.25, in: app)
-        app.typeText("5")
-        assertExpenseAmount(42.55, in: app)
-        tap("expense-keyboard-continue-button", in: app)
-        XCTAssertTrue(keyboard.waitForNonExistence(timeout: timeout))
-        assertExpenseAmount(42.55, in: app)
+        tap("Delete last digit", in: app)
+        wizard.assertAmount(4.25)
+        wizard.enterAmountDigits("5")
+        wizard.assertAmount(42.55)
+        wizard.advance(to: app.buttons["expense-category-wants"])
+        XCTAssertEqual(app.buttons["expense-category-wants"].value as? String, "Selected")
 
         // Give the new expense a unique name so reopening cannot select the seed.
+        wizard.goBack(to: wizard.amount)
+        wizard.goBack(to: nameField)
         nameField.clearAndTypeText("Coffee Shop Visit")
-        tap("expense-keyboard-continue-button", in: app)
+        wizard.advance(to: wizard.amount)
         XCTAssertTrue(suggestions.waitForNonExistence(timeout: timeout))
-        assertExpenseAmount(42.55, in: app)
-        tap("expense-keyboard-continue-button", in: app)
-        tap("save-expense-button", in: app)
-        XCTAssertTrue(nameField.waitForNonExistence(timeout: timeout))
+        wizard.assertAmount(42.55)
+        wizard.advanceFromAmountToDate()
+        wizard.saveAndWaitForDismissal()
         tap(expenseRow(named: "Coffee Shop Visit", in: app), named: "Saved suggested expense")
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
         XCTAssertEqual(nameField.value as? String, "Coffee Shop Visit")
@@ -560,20 +547,28 @@ final class FinanceTrackerUITests: XCTestCase {
         let app = launchApp()
         openExpenses(in: app)
         openNewExpense(in: app)
+        let wizard = ExpenseWizardUITestSupport(app: app)
         let nameField = app.textFields["expense-name-field"]
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
-        app.typeText("Returned Purchase")
-        tap(app.keyboards.buttons["next"], named: "Keyboard return Next")
-        app.typeText("1234")
-        assertExpenseAmount(12.34, in: app)
-        tap("expense-keyboard-continue-button", in: app)
-        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: timeout))
+        wizard.enterName("Returned Purchase")
+        wizard.advance(to: wizard.amount)
+        wizard.enterAmountDigits("1234")
+        wizard.assertAmount(12.34)
         tap("expense-amount-type", in: app)
         tap("Refund", in: app)
         XCTAssertEqual(app.buttons["expense-amount-type"].value as? String, "Refund")
-        assertExpenseAmount(-12.34, in: app)
-        tap("save-expense-button", in: app)
-        XCTAssertTrue(nameField.waitForNonExistence(timeout: timeout))
+        wizard.assertAmount(-12.34)
+        wizard.advance(to: app.buttons["expense-category-needs"])
+        wizard.goBack(to: wizard.amount)
+        wizard.assertAmount(-12.34)
+        XCTAssertEqual(app.buttons["expense-amount-type"].value as? String, "Refund")
+        wizard.advanceFromAmountToDate()
+        let recurring = app.switches["expense-recurring-toggle"]
+        wizard.reveal(recurring)
+        recurring.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(recurring.value as? String, "0", "Refunds must not enable recurrence.")
+        XCTAssertFalse(app.buttons["expense-frequency-picker"].exists)
+        XCTAssertEqual(recurring.value as? String, "0")
+        wizard.saveAndWaitForDismissal()
 
         tap(expenseRow(named: "Returned Purchase", in: app), named: "Saved refund")
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
@@ -585,36 +580,43 @@ final class FinanceTrackerUITests: XCTestCase {
     func testNewExpenseSupportsLongNameAtLargestAccessibilityTextSize() {
         let app = launchApp(launchArguments: [
             "-UIPreferredContentSizeCategoryName",
-            "UICTContentSizeCategoryAccessibilityXXXL"
+            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge"
         ])
         openExpenses(in: app)
         openNewExpense(in: app)
+        let wizard = ExpenseWizardUITestSupport(app: app)
         let nameField = app.textFields["expense-name-field"]
-        let amountField = app.textFields["expense-amount-field"]
+        let amountField = wizard.amount
         let keyboard = app.keyboards.firstMatch
         let longName = "Weekly groceries and household supplies for the entire family"
-        XCTAssertTrue(keyboard.waitForExistence(timeout: timeout))
-        captureScreenshot("New expense largest text - blank name focused", in: app)
-        app.typeText(longName)
+        XCTAssertFalse(keyboard.exists)
+        captureScreenshot("New expense largest text - blank name", in: app)
+        wizard.enterName(longName)
         XCTAssertEqual(nameField.value as? String, longName)
+        wizard.assertFooter(keyboardVisible: true, hasBack: false)
         captureScreenshot("New expense largest text - long name", in: app)
         tap(app.keyboards.buttons["next"], named: "Keyboard return Next")
-        app.typeText("123456")
-        assertExpenseAmount(1234.56, in: app)
+        wizard.enterAmountDigits("123456")
+        wizard.assertAmount(1234.56)
+        XCTAssertTrue(scrollToVisibility(of: amountField, in: app))
         XCTAssertTrue(amountField.isHittable)
         XCTAssertTrue(app.windows.firstMatch.frame.contains(amountField.frame))
         captureScreenshot("New expense largest text - amount entry", in: app)
-        tap("expense-keyboard-continue-button", in: app)
         XCTAssertTrue(keyboard.waitForNonExistence(timeout: timeout))
-        captureScreenshot("New expense largest text - keyboard dismissed", in: app)
-
-        for identifier in ["expense-category-wants", "expense-note-field", "Recurring"] {
+        for identifier in ["expense-category-wants", "expense-note-field", "expense-date-picker"] {
             let control = app.descendants(matching: .any)[identifier].firstMatch
-            XCTAssertTrue(scrollToVisibility(of: control, in: app), "The full form must remain reachable at largest text size.")
+            wizard.advance(to: control)
+            XCTAssertTrue(scrollToVisibility(of: control, in: app), "Every wizard page must remain reachable at largest text size.")
+            let footer = identifier == "expense-date-picker" ? wizard.save : wizard.next
+            XCTAssertTrue(scrollToVisibility(of: footer, in: app))
+            wizard.assertFooter(keyboardVisible: false, final: identifier == "expense-date-picker")
             captureScreenshot("New expense largest text - \(identifier)", in: app)
         }
-        tap("save-expense-button", in: app)
-        XCTAssertTrue(nameField.waitForNonExistence(timeout: timeout))
+        let recurring = app.switches["expense-recurring-toggle"]
+        XCTAssertTrue(scrollToVisibility(of: recurring, in: app))
+        XCTAssertEqual(recurring.value as? String, "0")
+        captureScreenshot("New expense largest text - recurrence", in: app)
+        wizard.saveAndWaitForDismissal()
         tap(expenseRow(named: longName, in: app), named: "Saved long-name expense")
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
         XCTAssertEqual(nameField.value as? String, longName)
@@ -878,12 +880,25 @@ final class FinanceTrackerUITests: XCTestCase {
         let nameField = app.textFields["expense-name-field"]
         XCTAssertTrue(nameField.waitForExistence(timeout: timeout), "The duplicate form did not appear.")
         XCTAssertEqual(nameField.value as? String, "Expense to Duplicate")
-        tap("save-expense-button", in: app)
+        let wizard = ExpenseWizardUITestSupport(app: app)
+        XCTAssertFalse(app.keyboards.firstMatch.exists)
+        wizard.advance(to: wizard.amount)
+        wizard.assertAmount(42.50)
+        wizard.advance(to: app.buttons["expense-category-wants"])
+        XCTAssertEqual(app.buttons["expense-category-wants"].value as? String, "Selected")
+        wizard.advance(to: wizard.note)
+        wizard.advance(to: wizard.datePicker)
+        wizard.saveAndWaitForDismissal()
 
         let duplicate = app.descendants(matching: .any)
             .matching(identifier: "expense-row-Expense to Duplicate")
             .element(boundBy: 1)
         XCTAssertTrue(duplicate.waitForExistence(timeout: timeout), "The duplicate expense did not appear.")
+        tap(duplicate, named: "Saved duplicate")
+        XCTAssertTrue(nameField.waitForExistence(timeout: timeout))
+        XCTAssertEqual(nameField.value as? String, "Expense to Duplicate")
+        assertExpenseAmount(42.50, in: app)
+        XCTAssertEqual(app.buttons["expense-category-wants"].value as? String, "Selected")
     }
 
     func testSearchesExpenses() {
@@ -1029,57 +1044,27 @@ final class FinanceTrackerUITests: XCTestCase {
     }
 
     private func openNewExpense(in app: XCUIApplication) {
-        let addButton = app.descendants(matching: .any)
-            .matching(identifier: "add-expense-button")
-            .firstMatch
-        let nameField = app.textFields["expense-name-field"]
-
-        tap(addButton, named: "add-expense-button")
-        if !nameField.waitForExistence(timeout: timeout) {
-            tap(addButton, named: "add-expense-button")
-        }
-
-        XCTAssertTrue(nameField.waitForExistence(timeout: timeout), "The add expense form did not appear.")
+        ExpenseWizardUITestSupport(app: app).open()
     }
 
     private func addExpense(named name: String, amount: String, in app: XCUIApplication) {
         openNewExpense(in: app)
-        let nameField = app.textFields["expense-name-field"]
-        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: timeout))
-        // A fresh simulator can cover the keyboard with Apple's typing tutorial.
-        let typingTutorial = app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."]
-        if typingTutorial.exists {
-            tap("Continue", in: app)
-            XCTAssertTrue(typingTutorial.waitForNonExistence(timeout: timeout))
-        }
-        app.typeText(name)
-        tap(app.keyboards.buttons["next"], named: "Keyboard return Next")
-
-        let amountField = app.textFields["expense-amount-field"]
-        XCTAssertTrue(amountField.waitForExistence(timeout: timeout), "The amount field did not appear.")
+        let wizard = ExpenseWizardUITestSupport(app: app)
+        wizard.enterName(name)
+        wizard.advance(to: wizard.amount)
         // Callers supply whole currency values; the new field accepts minor-unit digits.
         guard let value = Decimal(string: amount, locale: Locale(identifier: "en_US_POSIX")) else {
             XCTFail("Invalid expense amount: \(amount)")
             return
         }
-        app.typeText(NSDecimalNumber(decimal: value * 100).stringValue)
-        assertExpenseAmount(NSDecimalNumber(decimal: value).doubleValue, in: app)
-        tap(app.buttons["expense-keyboard-continue-button"], named: "expense-keyboard-continue-button")
-
-        tap("save-expense-button", in: app)
-        XCTAssertTrue(
-            nameField.waitForNonExistence(timeout: timeout),
-            "The add expense form did not close after saving."
-        )
+        wizard.enterAmountDigits(NSDecimalNumber(decimal: value * 100).stringValue)
+        wizard.assertAmount(NSDecimalNumber(decimal: value).doubleValue)
+        wizard.advanceFromAmountToDate()
+        wizard.saveAndWaitForDismissal()
     }
 
     private func assertExpenseAmount(_ amount: Double, in app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
-        let field = app.textFields["expense-amount-field"]
-        XCTAssertTrue(field.waitForExistence(timeout: timeout), file: file, line: line)
-        let expected = amount.formatted(.currency(code: "USD"))
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected), object: field)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed,
-                       "Expected localized amount \(expected), got \(String(describing: field.value)).", file: file, line: line)
+        ExpenseWizardUITestSupport(app: app).assertAmount(amount, editing: true, file: file, line: line)
     }
 
     private func captureScreenshot(_ name: String, in app: XCUIApplication) {

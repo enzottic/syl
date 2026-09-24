@@ -11,6 +11,7 @@
   "defaultOptions" : {
     "codeCoverage" : false,
     "performanceAntipatternCheckerEnabled" : true,
+    "systemAttachmentLifetime" : "keepAlways",
     "targetForVariableExpansion" : {
       "containerPath" : "container:FinanceTracker.xcodeproj",
       "identifier" : "C66031C52E8073C60078DD15",

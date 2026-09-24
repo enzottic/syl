@@ -122,11 +122,13 @@ final class TagEditorUITests: XCTestCase {
         XCTAssertTrue(nameField.waitForNonExistence(timeout: timeout))
         tap(app.navigationBars.buttons.firstMatch)
         tap(app.tabBars.buttons["Expenses"])
-        tap(app.descendants(matching: .any)["add-expense-button"].firstMatch)
-        XCTAssertTrue(app.textFields["expense-name-field"].waitForExistence(timeout: timeout))
-        // Tag layout does not depend on the custom name-field keyboard toolbar.
-        tap(app.keyboards.buttons["next"])
-        tap(app.buttons["expense-keyboard-continue-button"])
+        let wizard = ExpenseWizardUITestSupport(app: app)
+        wizard.open()
+        wizard.enterName("Long tag layout")
+        wizard.advance(to: wizard.amount)
+        wizard.enterAmountDigits("100")
+        wizard.advance(to: app.buttons["expense-category-needs"])
+        wizard.advance(to: wizard.note)
 
         let chip = app.buttons["Tag: \(name)"]
         reveal(chip, in: app)
@@ -145,7 +147,10 @@ final class TagEditorUITests: XCTestCase {
         tap(chip)
         XCTAssertEqual(chip.value as? String, "Not selected")
         tap(app.buttons["cancel-expense-button"])
-        XCTAssertTrue(app.textFields["expense-name-field"].waitForNonExistence(timeout: timeout))
+        tap(app.buttons["discard-expense-button"])
+        XCTAssertTrue(wizard.note.waitForNonExistence(timeout: timeout))
+        XCTAssertTrue(app.buttons["cancel-expense-button"].waitForNonExistence(timeout: timeout))
+        XCTAssertTrue(app.tabBars.buttons["Expenses"].isHittable)
     }
 
     private func openTagEditor(dark: Bool) -> XCUIApplication {

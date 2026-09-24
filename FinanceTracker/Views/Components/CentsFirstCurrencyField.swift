@@ -15,6 +15,23 @@ struct CentsFirstCurrencyField<Field: Hashable>: View {
     @State private var selection: TextSelection?
     @State private var rejectedNonDigitInput = false
 
+    init(
+        amount: Binding<Double?>,
+        focus: FocusState<Field?>.Binding,
+        focusValue: Field,
+        accessibilityIdentifier: String = "expense-amount-field",
+        usesInlineKeypad: Bool = false
+    ) {
+        self._amount = amount
+        self.focus = focus
+        self.focusValue = focusValue
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.usesInlineKeypad = usesInlineKeypad
+        // Page identity changes recreate local state. Restore the transaction type
+        // immediately from the signed amount, before the next keypad interaction.
+        self._isRefund = State(initialValue: (amount.wrappedValue ?? 0) < 0)
+    }
+
     private var currencyCode: String { config.ledgerCurrencyCode }
     private var fractionDigits: Int { LedgerCurrency.fractionDigits(for: currencyCode) }
     private var isFocused: Bool { focus.wrappedValue == focusValue }
@@ -54,43 +71,44 @@ struct CentsFirstCurrencyField<Field: Hashable>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if !usesInlineKeypad {
-                HStack {
-                    Text("Amount")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Spacer()
-                    Menu {
-                        Picker("Transaction type", selection: $isRefund) {
-                            Text("Expense").tag(false)
-                            Text("Refund").tag(true)
-                        }
-                        if amount != nil || !digits.isEmpty {
-                            Button("Clear Amount", systemImage: "delete.left") {
-                                digits = ""
-                                amount = nil
-                                rejectedNonDigitInput = false
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text(isRefund ? "Refund" : "Expense")
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                            Image(systemName: "chevron.down")
-                                .font(.caption2.weight(.semibold))
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(isRefund ? .primary : .secondary)
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
+            HStack {
+                Text(usesInlineKeypad ? "Transaction type" : "Amount")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                Menu {
+                    Picker("Transaction type", selection: $isRefund) {
+                        Text("Expense")
+                            .tag(false)
+                            .accessibilityIdentifier("expense-amount-type-expense")
+                        Text("Refund")
+                            .tag(true)
+                            .accessibilityIdentifier("expense-amount-type-refund")
                     }
-                    .accessibilityIdentifier("expense-amount-type")
-                    .accessibilityLabel("Transaction type")
-                    .accessibilityValue(isRefund ? "Refund" : "Expense")
+                    if amount != nil || !digits.isEmpty {
+                        Button("Clear Amount", systemImage: "delete.left") {
+                            digits = ""
+                            amount = nil
+                            rejectedNonDigitInput = false
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(isRefund ? "Refund" : "Expense")
+                            .fixedSize(horizontal: false, vertical: true)
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(isRefund ? .primary : .secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                 }
+                .accessibilityIdentifier("expense-amount-type")
+                .accessibilityLabel("Transaction type")
+                .accessibilityValue(isRefund ? "Refund" : "Expense")
+                .accessibilityInputLabels(["Transaction type", "Expense", "Refund"])
             }
 
             if usesInlineKeypad {

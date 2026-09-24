@@ -73,6 +73,7 @@ struct TagPicker: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("expense-tag-\(option.id)")
                 .accessibilityAddTraits(selected ? .isSelected : [])
                 .accessibilityValue(selected ? "Selected" : "Not selected")
             }
@@ -93,6 +94,7 @@ struct TagPicker: View {
                 .accessibilityLabel(Text("Add new tag"))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("add-expense-tag-button")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)

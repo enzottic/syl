@@ -6,8 +6,9 @@ struct ExpenseAmountPage: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("How much did you spend?")
+            Text("Amount")
                 .font(.headline)
+                .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
             CentsFirstCurrencyField(

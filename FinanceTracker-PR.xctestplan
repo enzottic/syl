@@ -29,21 +29,28 @@
     {
       "selectedTests" : [
         "ExpenseBackupUITests\/testBackupExportAndFilesCancellation()",
+        "ExpenseDetailsSheetUITests\/testFinalCalendarKeepsFooterVisibleAndPreservesSelectedDate()",
         "ExpensesMonthPickerUITests\/testTitlePickerFiltersExpensesAndSupportsFutureYears()",
         "FinanceTrackerUITests\/testCompletesOnboarding()",
         "FinanceTrackerUITests\/testDeletesExpense()",
         "FinanceTrackerUITests\/testDuplicatesExpense()",
         "FinanceTrackerUITests\/testEditsExpense()",
-        "FinanceTrackerUITests\/testNewExpenseAutofocusesNameAndRetainsMinorUnitAmount()",
-        "FinanceTrackerUITests\/testNewExpenseReturnNextFocusesAmount()",
+        "FinanceTrackerUITests\/testExpenseNameSuggestionPrefillsAndAllowsAmountEditing()",
+        "FinanceTrackerUITests\/testNewExpenseTapToFocusAndRetainsMinorUnitAmount()",
+        "FinanceTrackerUITests\/testNewExpenseReturnNextOpensInlineAmountKeypad()",
+        "FinanceTrackerUITests\/testNewExpenseSupportsLongNameAtLargestAccessibilityTextSize()",
         "FinanceTrackerUITests\/testRecurringScheduleEditRequiresConfirmationAndPersists()",
         "FinanceTrackerUITests\/testRefundAmountPersistsAfterSavingAndReopening()",
         "FinanceTrackerUITests\/testSearchesExpenses()",
         "FinanceTrackerUITests\/testShowAllRestoresMonthAndClearsDetail()",
         "LedgerCurrencyUITests\/testChangingAndCancellingCurrencyPreservesExpenseAmount()",
+        "NewAddExpenseFlowUITests\/testCancelBlankAndKeepEditingThenDiscardPopulatedDraft()",
+        "NewAddExpenseFlowUITests\/testKeyboardFooterFramesAndDateRoundTripWithAnimations()",
+        "NewAddExpenseFlowUITests\/testNotesTagsAndRecurrenceSurviveEveryBackStepAndPersist()",
         "StatsViewUITests\/testCategoryFilterExcludesExpenseAndAllCategoriesRestoresTotal()",
         "StatsViewUITests\/testTappingMonthlyHistorySelectsTheMonthEvenWithNoSpending()",
-        "TagEditorUITests\/testTagControlsAndSavedSelection()"
+        "TagEditorUITests\/testTagControlsAndSavedSelection()",
+        "TagEditorUITests\/testLongTagFitsPickerWithAccessibilityText()"
       ],
       "target" : {
         "containerPath" : "container:FinanceTracker.xcodeproj",

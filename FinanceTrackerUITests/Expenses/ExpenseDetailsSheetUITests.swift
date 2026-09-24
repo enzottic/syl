@@ -2,72 +2,66 @@ import XCTest
 
 @MainActor
 final class ExpenseDetailsSheetUITests: XCTestCase {
-    func testCalendarExpandsUpwardAndKeepsFooterVisible() {
+    func testFinalCalendarKeepsFooterVisibleAndPreservesSelectedDate() {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchEnvironment["SAGE_UI_TESTING"] = "1"
         app.launchEnvironment["SAGE_UI_TEST_ONBOARDING"] = "0"
+        app.launchArguments += ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
+        let wizard = ExpenseWizardUITestSupport(app: app)
+        wizard.tap(app.tabBars.buttons["Expenses"])
+        wizard.open()
+        wizard.enterName("Calendar layout")
+        wizard.advance(to: wizard.amount)
+        wizard.enterAmountDigits("500")
+        wizard.advance(to: app.buttons["expense-category-needs"])
+        wizard.advance(to: wizard.note)
+        let detailsFooter = wizard.assertFooter(keyboardVisible: false)
+        wizard.advance(to: wizard.datePicker)
+        let footer = wizard.assertFooter(keyboardVisible: false, final: true)
+        XCTAssertEqual(footer.maxY, detailsFooter.maxY, accuracy: 3)
+        XCTAssertTrue(app.windows.firstMatch.frame.contains(wizard.datePicker.frame))
+        XCTAssertLessThanOrEqual(wizard.datePicker.frame.maxY, wizard.save.frame.minY)
 
-        let add = app.buttons["add-expense-button"].firstMatch
-        XCTAssertTrue(add.waitForExistence(timeout: 20))
-        add.tap()
-        let name = app.textFields["Expense name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 10))
-        name.tap()
-        name.typeText("Calendar layout")
-        app.buttons["Next"].tap()
-        XCTAssertTrue(app.buttons["5"].waitForExistence(timeout: 10))
-        app.buttons["5"].tap()
-        app.buttons["Next"].tap()
-        app.buttons["Next"].tap()
-
-        let date = app.buttons["Date"]
-        let done = app.buttons["Done"]
-        let back = app.buttons["Back"]
-        let tags = app.staticTexts["Tags"]
-        XCTAssertTrue(date.waitForExistence(timeout: 10))
-        let collapsedDateY = date.frame.minY
-        let footerY = done.frame.maxY
-        let tagsY = tags.frame.minY
-
-        let originalDateValue = date.value as? String
-        for _ in 0..<2 {
-            date.tap()
-            XCTAssertTrue(app.buttons["expense-date-calendar-next-month"].waitForExistence(timeout: 5))
-            XCTAssertLessThan(date.frame.minY, collapsedDateY - 100)
-            XCTAssertEqual(done.frame.maxY, footerY, accuracy: 2)
-            XCTAssertEqual(tags.frame.minY, tagsY, accuracy: 2)
-            XCTAssertTrue(app.windows.firstMatch.frame.contains(done.frame))
-            XCTAssertTrue(done.isHittable)
-            XCTAssertTrue(back.isHittable)
-            let month = app.descendants(matching: .any).matching(identifier: "expense-date-calendar-month").firstMatch
-            let originalMonth = month.value as? String
-            let expandedDateY = date.frame.minY
-            app.buttons["expense-date-calendar-next-month"].tap()
-            XCTAssertNotEqual(month.value as? String, originalMonth)
-            XCTAssertEqual(done.frame.maxY, footerY, accuracy: 2)
-            XCTAssertEqual(date.frame.minY, expandedDateY, accuracy: 2)
-            app.buttons["expense-date-calendar-previous-month"].tap()
-            XCTAssertEqual(month.value as? String, originalMonth)
-            date.tap()
-            XCTAssertTrue(app.buttons["expense-date-calendar-next-month"].waitForNonExistence(timeout: 5))
-            XCTAssertEqual(date.frame.minY, collapsedDateY, accuracy: 2)
-            XCTAssertEqual(done.frame.maxY, footerY, accuracy: 2)
+        let originalDate = wizard.selectedDate.value as? String
+        XCTAssertNotNil(originalDate)
+        let calendarFrame = wizard.datePicker.frame
+        wizard.browseCalendarMonth(forward: true)
+        XCTAssertEqual(wizard.selectedDate.value as? String, originalDate,
+                       "Browsing months must not change the expense date.")
+        XCTAssertEqual(wizard.assertFooter(keyboardVisible: false, final: true).maxY, footer.maxY, accuracy: 3)
+        XCTAssertEqual(wizard.datePicker.frame.minY, calendarFrame.minY, accuracy: 3)
+        wizard.selectDayInDisplayedMonth(15, monthOffset: 1)
+        XCTAssertNotEqual(wizard.selectedDate.value as? String, originalDate)
+        XCTAssertEqual(wizard.assertFooter(keyboardVisible: false, final: true).maxY, footer.maxY, accuracy: 3)
+        wizard.browseCalendarMonth(forward: false)
+        let today = Calendar.current.component(.day, from: .now)
+        wizard.selectDayInDisplayedMonth(today == 15 ? 14 : 15)
+        let changedDate = wizard.selectedDate.value as? String
+        XCTAssertNotNil(changedDate)
+        XCTAssertNotEqual(changedDate, originalDate)
+        for pass in 1...2 {
+            let attachment = XCTAttachment(screenshot: app.screenshot())
+            attachment.name = "Final calendar - roundtrip \(pass)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            wizard.goBack(to: wizard.note)
+            XCTAssertEqual(wizard.assertFooter(keyboardVisible: false).maxY, footer.maxY, accuracy: 3)
+            wizard.advance(to: wizard.datePicker)
+            XCTAssertEqual(wizard.selectedDate.value as? String, changedDate)
+            XCTAssertEqual(wizard.assertFooter(keyboardVisible: false, final: true).maxY, footer.maxY, accuracy: 3)
         }
-        date.tap()
-        app.buttons["expense-date-calendar-next-month"].tap()
-        app.buttons["expense-date-calendar-day-15"].tap()
-        XCTAssertTrue(app.buttons["expense-date-calendar-next-month"].waitForNonExistence(timeout: 5))
-        XCTAssertNotEqual(date.value as? String, originalDateValue)
-        XCTAssertEqual(done.frame.maxY, footerY, accuracy: 2)
-        date.tap()
-        app.buttons["expense-date-calendar-today"].tap()
-        XCTAssertTrue(app.buttons["expense-date-calendar-next-month"].waitForNonExistence(timeout: 5))
-        XCTAssertEqual(date.value as? String, originalDateValue)
-        // Selecting the already-selected day must close the calendar too.
-        date.tap()
-        app.buttons["expense-date-calendar-today"].tap()
-        XCTAssertTrue(app.buttons["expense-date-calendar-next-month"].waitForNonExistence(timeout: 5))
+        wizard.selectDayInDisplayedMonth(today)
+        XCTAssertEqual(wizard.selectedDate.value as? String, originalDate)
+        // Selecting the same native calendar day leaves the final action usable.
+        wizard.selectDayInDisplayedMonth(today)
+        XCTAssertEqual(wizard.selectedDate.value as? String, originalDate)
+        wizard.assertFooter(keyboardVisible: false, final: true)
+        wizard.saveAndWaitForDismissal()
+        wizard.tap(app.descendants(matching: .any)["expense-row-Calendar layout"].firstMatch)
+        XCTAssertTrue(wizard.name.waitForExistence(timeout: 20))
+        XCTAssertEqual(app.buttons["Date"].value as? String, originalDate)
+        wizard.assertAmount(5, editing: true)
     }
 }
