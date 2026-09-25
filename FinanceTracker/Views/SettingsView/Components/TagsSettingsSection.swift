@@ -14,11 +14,14 @@ struct TagsSettingsSection: View {
     @Query private var allExpenses: [Expense]
     @Environment(\.modelContext) private var modelContext
     @Environment(AppConfiguration.self) private var config
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var showAddTagSheet = false
     @State private var tagToEdit: ExpenseTag? = nil
     @State private var tagPendingDelete: ExpenseTag? = nil
     @State private var deleteErrorMessage: String?
+    /// Animate removal independently of SwiftData's query refresh.
+    @State private var deletingTagIDs: Set<PersistentIdentifier> = []
     @State private var tagPendingHide: ExpenseTag?
     @State private var showHideConfirmation = false
     @State private var visibilityErrorMessage: String?
@@ -105,6 +108,12 @@ struct TagsSettingsSection: View {
                 }
             }
         }
+        .transaction(value: deletingTagIDs) { transaction in
+            // Alert dismissal can replace the button action's transaction.
+            // Set the animation where the List consumes the changed rows.
+            transaction.disablesAnimations = reduceMotion
+            transaction.animation = reduceMotion ? nil : .default
+        }
         .settingsBackground()
         .navigationTitle("Tags")
         .navigationBarTitleDisplayMode(.inline)
@@ -174,11 +183,15 @@ struct TagsSettingsSection: View {
     }
 
     private var visibleTags: [ExpenseTag] {
-        expenseTags.filter { !$0.isDeleted && !$0.isHiddenFromExpenseEntry }
+        remainingTags.filter { !$0.isHiddenFromExpenseEntry }
     }
 
     private var hiddenTags: [ExpenseTag] {
-        expenseTags.filter { !$0.isDeleted && $0.isHiddenFromExpenseEntry }
+        remainingTags.filter { $0.isHiddenFromExpenseEntry }
+    }
+
+    private var remainingTags: [ExpenseTag] {
+        expenseTags.filter { !deletingTagIDs.contains($0.persistentModelID) && !$0.isDeleted }
     }
 
     private func tagRow(for tag: ExpenseTag) -> some View {
@@ -232,11 +245,16 @@ struct TagsSettingsSection: View {
     }
 
     private func deleteTag(_ tag: ExpenseTag) {
+        let tagID = tag.persistentModelID
+        // Keep the swipe action non-destructive so tags awaiting confirmation
+        // stay visible. Animate the actual removal only after deletion is chosen.
+        _ = deletingTagIDs.insert(tagID)
         modelContext.delete(tag)
         do {
             try modelContext.save()
         } catch {
             modelContext.rollback()
+            _ = deletingTagIDs.remove(tagID)
             deleteErrorMessage = "Syl could not delete this tag. Please try again."
         }
     }
