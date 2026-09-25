@@ -34,18 +34,12 @@ extension View {
         modifier(GradientBackgroundModifier(color))
     }
 
-    /// Applies the Sage background treatment used by Settings lists.
-    @ViewBuilder
+    /// Applies the Sage background treatment used by Settings tab lists.
+    /// Sheets presented from Settings set their own `presentationBackground` instead.
     func settingsBackground() -> some View {
-        if UIDevice.current.userInterfaceIdiom != .pad {
-            scrollContentBackground(.hidden)
-                .textCase(nil)
-                .background(.sageBackground)
-                .gradientBackground()
-        } else {
-            scrollContentBackground(.hidden)
-                .textCase(nil)
-                .background(.sageBackground)
-        }
+        scrollContentBackground(.hidden)
+            .textCase(nil)
+            .background(.sageBackground)
+            .gradientBackground()
     }
 }
