@@ -8,6 +8,8 @@ struct ReceiptCameraView: View {
     let onBack: () -> Void
     let onCapture: (UIImage) -> Void
 
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @State private var status: Status
     @State private var isCapturing = false
     @State private var rotation = ReceiptCameraRotation()
@@ -38,7 +40,14 @@ struct ReceiptCameraView: View {
                 case .loading:
                     EmptyView()
                 case .denied:
-                    message("Camera access is off. Allow access for Syl in Settings.")
+                    VStack {
+                        message("Camera access is off. Allow access for Syl in Settings.")
+                        Button("Open Settings") {
+                            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                            openURL(url)
+                        }
+                        .accessibilityIdentifier("receipt-camera-open-settings")
+                    }
                 case .unavailable:
                     message("This device doesn't have a camera.")
                 }
@@ -76,6 +85,11 @@ struct ReceiptCameraView: View {
             .padding(20)
         }
         .task { await start() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, status == .denied {
+                Task { await start() }
+            }
+        }
         // Volume buttons, Camera Control and AirPods stem clicks act as the
         // shutter. Enabled only while a photo can be taken: while enabled the
         // system hands the buttons over entirely (volume stops changing).
