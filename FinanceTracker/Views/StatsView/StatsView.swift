@@ -14,8 +14,6 @@ struct StatsView: View {
     @AppStorage("statsShowsWantsLine") private var showsWantsLine = true
     @AppStorage("statsShowsSavingsLine") private var showsSavingsLine = true
     
-    @Query(sort: [SortDescriptor(\Expense.date, order: .reverse)]) private var allExpenses: [Expense]
-    
     @State private var selectedMonth = Calendar.current.dateInterval(of: .month, for: Date())!.start
     @State private var timeframe: StatsTimeframe = .monthly
     @State private var selectedCategory: ExpenseCategory?
@@ -69,23 +67,20 @@ struct StatsView: View {
         }
     }
 
-    private var tagFilteredExpenses: [Expense] {
-        guard let selectedTag, !selectedTag.isDeleted else { return allExpenses }
-        return allExpenses.filter { ($0.tags ?? []).contains { $0.id == selectedTag.id } }
+    private func tagFilteredExpenses(from expenses: [Expense]) -> [Expense] {
+        guard let selectedTag, !selectedTag.isDeleted else { return expenses }
+        return expenses.filter { ($0.tags ?? []).contains { $0.id == selectedTag.id } }
     }
 
-    private var filteredExpenses: [Expense] {
-        guard let selectedCategory else { return tagFilteredExpenses }
-        return tagFilteredExpenses.filter { $0.category == selectedCategory }
-    }
-    
-    private var summary: SpendingMonthSummary {
-        SpendingMonthSummary(month: selectedMonth, expenses: filteredExpenses)
+    private func filteredExpenses(from expenses: [Expense]) -> [Expense] {
+        let tagged = tagFilteredExpenses(from: expenses)
+        guard let selectedCategory else { return tagged }
+        return tagged.filter { $0.category == selectedCategory }
     }
     
     private var daysInMonth: Int { calendar.range(of: .day, in: .month, for: selectedMonth)!.count }
 
-    private var chartData: [SpendingPeriodData] {
+    private func chartData(for expenses: [Expense]) -> [SpendingPeriodData] {
         let now = Date()
         
         if timeframe == .monthly {
@@ -95,7 +90,7 @@ struct StatsView: View {
             return (0..<6).reversed().map { offset in
                 let start = calendar.date(byAdding: .month, value: -offset, to: end)!
                 let interval = calendar.dateInterval(of: .month, for: start)!
-                let total = filteredExpenses.filter { $0.date >= start && $0.date < interval.end && $0.date <= now }.total
+                let total = expenses.filter { $0.date >= start && $0.date < interval.end && $0.date <= now }.total
                 return SpendingPeriodData(periodStart: start, label: start.formatted(.dateTime.month(.abbreviated)), total: total)
             }
         }
@@ -108,7 +103,7 @@ struct StatsView: View {
             let end = min(week.end, month.end)
             let lastDay = calendar.component(.day, from: calendar.date(byAdding: .day, value: -1, to: end)!)
             let label = "\(calendar.component(.day, from: start))–\(lastDay)"
-            let total = filteredExpenses.filter { $0.date >= start && $0.date < end && $0.date <= now }.total
+            let total = expenses.filter { $0.date >= start && $0.date < end && $0.date <= now }.total
             result.append(SpendingPeriodData(periodStart: start, label: label, total: total))
             start = end
         }
@@ -116,48 +111,55 @@ struct StatsView: View {
     }
 
     var body: some View {
-        let monthSummary = summary
-        
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    
-                    // The chip row's 44pt tap target already pads the capsule, so keep the gap tight.
-                    VStack(alignment: .leading, spacing: 4) {
-                        StatsActiveFilters(selectedCategory: $selectedCategory, selectedTag: $selectedTag)
-                        monthlyChart(monthSummary)
+        StatsExpenseHistory(selectedMonth: selectedMonth, currentMonth: currentMonth,
+                            category: selectedCategory,
+                            tagID: selectedTag?.isDeleted == true ? nil : selectedTag?.id) { expenses, firstRecordedDate in
+            let tagged = tagFilteredExpenses(from: expenses)
+            let filtered = filteredExpenses(from: expenses)
+            let monthSummary = SpendingMonthSummary(month: selectedMonth, expenses: filtered,
+                                                    firstRecordedDate: firstRecordedDate)
+            let periods = chartData(for: filtered)
+
+            NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        // The chip row's 44pt tap target already pads the capsule, so keep the gap tight.
+                        VStack(alignment: .leading, spacing: 4) {
+                            StatsActiveFilters(selectedCategory: $selectedCategory, selectedTag: $selectedTag)
+                            monthlyChart(monthSummary, tagFiltered: tagged)
+                        }
+                        // Lift the group too, so the chart's day overview draws above the cards below.
+                        .zIndex(chartSelection == nil ? 0 : 1)
+
+                        InsightsCard(summary: monthSummary, isCurrentMonth: isCurrentMonth)
+
+                        if selectedTag == nil || selectedTag?.isDeleted == true {
+                            topTags(monthSummary)
+                        }
+
+                        historyChart(periods: periods)
                     }
-                    // Lift the group too, so the chart's day overview draws above the cards below.
-                    .zIndex(chartSelection == nil ? 0 : 1)
-                    
-                    InsightsCard(summary: monthSummary, isCurrentMonth: isCurrentMonth)
-                    
-                    if selectedTag == nil || selectedTag?.isDeleted == true {
-                        topTags(monthSummary)
+                    .padding()
+                }
+                .accessibilityIdentifier("stats-scroll-view")
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { statsViewport = $0 }
+                .background(.sageBackground)
+                .navigationTitle("Stats")
+                .navigationSubtitle(selectedMonth.formatted(.dateTime.month(.wide).year()))
+                .gradientBackground(color: accentColor)
+                .toolbar { statsToolbar }
+                .onChange(of: selectedBar) { _, label in
+                    if timeframe == .monthly, let item = periods.first(where: { $0.label == label }) {
+                        selectedMonth = item.periodStart
+                        selectedBar = nil
                     }
-                    
-                    historyChart
                 }
-                .padding()
-            }
-            .accessibilityIdentifier("stats-scroll-view")
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { statsViewport = $0 }
-            .background(.sageBackground)
-            .navigationTitle("Stats")
-            .navigationSubtitle(selectedMonth.formatted(.dateTime.month(.wide).year()))
-            .gradientBackground(color: accentColor)
-            .toolbar { statsToolbar }
-            .onChange(of: selectedBar) { _, label in
-                if timeframe == .monthly, let item = chartData.first(where: { $0.label == label }) {
-                    selectedMonth = item.periodStart
-                    selectedBar = nil
+                .onChange(of: selectedMonth) { chartHover = nil }
+                .sheet(isPresented: $showsMonthPicker) {
+                    MonthPicker(month: selectedMonth) { selectedMonth = $0 }
                 }
+                .onDisappear { chartHover = nil }
             }
-            .onChange(of: selectedMonth) { chartHover = nil }
-            .sheet(isPresented: $showsMonthPicker) {
-                MonthPicker(month: selectedMonth) { selectedMonth = $0 }
-            }
-            .onDisappear { chartHover = nil }
         }
     }
 
@@ -200,12 +202,12 @@ struct StatsView: View {
         }
     }
 
-    private func monthlyChart(_ summary: SpendingMonthSummary) -> some View {
+    private func monthlyChart(_ summary: SpendingMonthSummary, tagFiltered: [Expense]) -> some View {
         // Every line is always drawn, from data that ignores the category filter, so lines that
         // a filter hides keep their shape and fade out in place. The filtered category's own line
         // matches the filtered summary exactly.
         let lineSummary = selectedCategory == nil ? summary
-            : SpendingMonthSummary(month: selectedMonth, expenses: tagFilteredExpenses)
+            : SpendingMonthSummary(month: selectedMonth, expenses: tagFiltered)
         let chartSeries = [SpendingChartSeries(category: nil, points: lineSummary.days, color: .primary,
                                                isVisible: selectedCategory == nil)] +
             ExpenseCategory.allCases.map { category in
@@ -434,10 +436,8 @@ struct StatsView: View {
         .background(.cardBackground, in: .rect(cornerRadius: 15))
     }
 
-    private var historyChart: some View {
-        let periods = chartData
-        
-        return VStack(alignment: .leading, spacing: 16) {
+    private func historyChart(periods: [SpendingPeriodData]) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
             
             Text("Spending History").font(.headline)
             

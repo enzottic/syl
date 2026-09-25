@@ -17,7 +17,6 @@ struct NewAddExpenseSheet: View {
     @Environment(AppConfiguration.self) private var config
     @Environment(AppRouter.self) private var appRouter
     @Query private var allTags: [ExpenseTag]
-    @Query(sort: \Expense.date, order: .reverse) private var pastExpenses: [Expense]
 
     @State private var draft: ExpenseEntryDraft
     @State private var currentStep: AddExpenseStep = .name
@@ -32,6 +31,7 @@ struct NewAddExpenseSheet: View {
     @State private var importTask: Task<Void, Never>?
     @State private var suggestionTask: Task<Void, Never>?
     @State private var debouncedName = ""
+    @State private var recentSuggestions: [Expense] = []
     @State private var aiSuggestedTagIDs: Set<UUID> = []
     @State private var hasStartedInitialImport = false
     @FocusState private var isNameFocused: Bool
@@ -118,6 +118,13 @@ struct NewAddExpenseSheet: View {
             do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
             withAnimation(pageAnimation) { debouncedName = draft.name }
         }
+        .task(id: debouncedName) {
+            let name = debouncedName
+            let limit = dynamicTypeSize.isAccessibilitySize ? 1 : 3
+            recentSuggestions = (try? ExpenseSuggestionHistory.recentDistinctMatches(
+                for: name, limit: limit, in: modelContext
+            )) ?? []
+        }
         .onChange(of: draft.amount) {
             if let amount = draft.amount, amount < 0 { draft.isRecurring = false }
         }
@@ -133,8 +140,8 @@ struct NewAddExpenseSheet: View {
     @ViewBuilder private var pageContent: some View {
         switch currentStep {
         case .name:
-            if isNameFocused && !suggestions.isEmpty {
-                ExpenseEntrySuggestions(expenses: suggestions, currencyCode: config.ledgerCurrencyCode, onSelect: applySuggestion)
+            if isNameFocused && !recentSuggestions.isEmpty {
+                ExpenseEntrySuggestions(expenses: recentSuggestions, currencyCode: config.ledgerCurrencyCode, onSelect: applySuggestion)
                     .transition(.opacity)
             }
             ExpenseNamePage(name: $draft.name, nameFocus: $isNameFocused, onSubmit: advanceStep) { receiptMenu }
@@ -180,15 +187,6 @@ struct NewAddExpenseSheet: View {
         }
     }
 
-    private var suggestions: [Expense] {
-        let name = debouncedName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !name.isEmpty else { return [] }
-        var seen = Set<String>()
-        return Array(pastExpenses.filter {
-            $0.name.localizedCaseInsensitiveContains(name) && seen.insert($0.name.lowercased()).inserted
-        }.prefix(dynamicTypeSize.isAccessibilitySize ? 1 : 3))
-    }
-
     private func applySuggestion(_ expense: Expense) {
         draft.name = expense.name
         draft.amount = expense.amount
@@ -201,7 +199,7 @@ struct NewAddExpenseSheet: View {
         guard draft.tags.isEmpty else { return }
         let name = draft.name
         let tags = allTags.filter { !$0.isHiddenFromExpenseEntry }
-        let history = pastExpenses.map { (name: $0.name, tagName: $0.tags?.first?.name) }
+        let history = (try? ExpenseSuggestionHistory.newestTaggedMatch(for: name, in: modelContext)).map { [$0] } ?? []
         suggestionTask?.cancel()
         suggestionTask = Task {
             let suggestion = await TagSuggestionService().suggestTag(

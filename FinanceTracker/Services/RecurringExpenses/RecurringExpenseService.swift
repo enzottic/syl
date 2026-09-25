@@ -36,9 +36,9 @@ public final class RecurringExpenseService {
     @discardableResult
     public func generateAllExpenses(through date: Date, calendar: Calendar = .current) throws -> RecurringExpenseMaintenanceResult {
         do {
-            let repair = try RecurringExpenseRepairService(modelContext: modelContext).repair()
+            let expenses = try modelContext.fetch(RecurringExpenseRepairService.recurringIdentityExpensesDescriptor())
+            let repair = RecurringExpenseRepairService(modelContext: modelContext).repair(expenses: expenses)
             let rules = try modelContext.fetch(FetchDescriptor<RecurringExpenseRule>())
-            let expenses = try modelContext.fetch(FetchDescriptor<Expense>())
             var existingKeys = Set(expenses.compactMap(\.recurringOccurrenceKey))
             var generatedCount = 0
             var skippedCount = 0

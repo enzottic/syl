@@ -22,7 +22,8 @@ public struct SpendingMonthSummary {
     public let averageDays: [Point]
     public let historicalMonthCount: Int
 
-    public init(month: Date, expenses: [Expense], now: Date = Date(), calendar: Calendar = .current) {
+    public init(month: Date, expenses: [Expense], firstRecordedDate: Date? = nil,
+                now: Date = Date(), calendar: Calendar = .current) {
         guard let interval = calendar.dateInterval(of: .month, for: month),
               let dayRange = calendar.range(of: .day, in: .month, for: month),
               interval.start <= now else {
@@ -70,7 +71,7 @@ public struct SpendingMonthSummary {
         }
 
         // Months before the first record are unknown, not zero-spend months.
-        let firstMonth = recorded.map(\.date).min().flatMap {
+        let firstMonth = (firstRecordedDate ?? recorded.map(\.date).min()).flatMap {
             calendar.dateInterval(of: .month, for: $0)?.start
         }
         var history: [[Point]] = []
