@@ -281,6 +281,24 @@ private struct ReceiptCameraPreview: UIViewRepresentable {
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
         var rotation: ReceiptCameraRotation?
 
+        override var frame: CGRect {
+            get { super.frame }
+            set { withoutImplicitAnimations { super.frame = newValue } }
+        }
+
+        override var bounds: CGRect {
+            get { super.bounds }
+            set { withoutImplicitAnimations { super.bounds = newValue } }
+        }
+
+        private func withoutImplicitAnimations(_ change: () -> Void) {
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            change()
+            layer.layoutIfNeeded()
+            CATransaction.commit()
+        }
+
         override func didMoveToWindow() {
             super.didMoveToWindow()
             // The coordinator reads the interface orientation from the layer's window.
