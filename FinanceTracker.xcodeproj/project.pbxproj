@@ -854,7 +854,7 @@
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
 				WATCH_APP_GROUP = group.me.enzottic.SageAppGroup.dev;
 			};
 			name = Debug;
@@ -883,7 +883,7 @@
 				SUPPORTED_PLATFORMS = "watchos watchsimulator";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
 				WATCH_APP_GROUP = group.me.enzottic.SageAppGroup;
 			};
 			name = Release;
@@ -1428,7 +1428,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
 				WATCH_APP_GROUP = group.me.enzottic.SageAppGroup.dev;
 			};
 			name = Debug;
@@ -1464,7 +1464,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.6;
+				WATCHOS_DEPLOYMENT_TARGET = 26.5;
 				WATCH_APP_GROUP = group.me.enzottic.SageAppGroup;
 			};
 			name = Release;

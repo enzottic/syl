@@ -25,17 +25,8 @@ struct SageToolbar: ToolbarContent {
             .disabled(isNextDisabled)
         }
 
-        ToolbarItem(placement: addButtonPlacement) {
+        ToolbarItem(placement: .topBarTrailing) {
             addButton
-        }
-    }
-
-    private var addButtonPlacement: ToolbarItemPlacement {
-        if #available(iOS 27.0, *) {
-            // Keep expense creation visible when the toolbar runs out of space.
-            .topBarPinnedTrailing
-        } else {
-            .topBarTrailing
         }
     }
 
