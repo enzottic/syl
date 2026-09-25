@@ -5,8 +5,8 @@ import SwiftUI
 ///
 /// `overlay` is hosted above the header, content and footer, spanning the whole
 /// sheet. While `overlayActive`, it receives all touches and accessibility; with
-/// `expandsForOverlay` the sheet uses a fixed, screen-relative height instead of
-/// the measured page height.
+/// `expandsForOverlay` the sheet grows to most of its maximum height (never
+/// below the measured page height).
 struct ExpenseEntrySheetLayout<Header: View, Content: View, Footer: View, Overlay: View>: View {
     var animation: Animation?
     var step: Int
@@ -24,7 +24,7 @@ struct ExpenseEntrySheetLayout<Header: View, Content: View, Footer: View, Overla
         // UIKit receives the whole sheet and applies the container safe areas
         // itself. SwiftUI must not shorten it again when the keyboard arrives.
         .ignoresSafeArea()
-        .presentationSizing(.form)
+        .presentationSizing(ExpenseEntryPresentationSizing())
     }
 }
 

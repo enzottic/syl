@@ -31,9 +31,9 @@ struct ReceiptPhotoGrid: View {
                     Text("All Photos")
                         .font(.headline)
                         .padding(.horizontal, 12)
-                        .frame(height: 40)
+                        .frame(height: ReceiptPanelBackButton.labelHeight)
                 }
-                .buttonStyle(.glass)
+                .receiptPanelGlassButtonStyle()
                 .accessibilityIdentifier("receipt-panel-all-photos")
             }
             .padding(20)

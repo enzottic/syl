@@ -209,17 +209,40 @@ private struct ReceiptAttachmentMenuRowLabel: View {
 
 /// Glass circle back button shared by both panels.
 struct ReceiptPanelBackButton: View {
+    /// Label height shared by every glass button along the panel's bottom edge,
+    /// so they render at the same size.
+    static let labelHeight: CGFloat = 40
+
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
                 .font(.system(size: 20, weight: .semibold))
-                .frame(width: 52, height: 52)
+                .frame(width: Self.labelHeight, height: Self.labelHeight)
         }
-        .buttonStyle(.glass)
         .buttonBorderShape(.circle)
+        .receiptPanelGlassButtonStyle()
         .accessibilityLabel("Back")
         .accessibilityIdentifier("receipt-panel-back")
+    }
+}
+
+extension View {
+    /// Smoked glass with a light monochrome label, for buttons floating over
+    /// photos or the camera. Plain glass keeps its label color over bright
+    /// images (white receipts, light photos), so an accent or white label washes
+    /// out; darkening the glass keeps it legible there and over the black panel.
+    @ViewBuilder
+    func receiptPanelGlassButtonStyle() -> some View {
+        if #available(iOS 26.1, *) {
+            buttonStyle(.glass(.regular.tint(.black.opacity(0.4))))
+                .foregroundStyle(.primary)
+                .environment(\.colorScheme, .dark)
+        } else {
+            buttonStyle(.glass)
+                .foregroundStyle(.primary)
+                .environment(\.colorScheme, .dark)
+        }
     }
 }

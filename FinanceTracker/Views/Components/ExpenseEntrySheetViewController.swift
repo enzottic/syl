@@ -33,8 +33,12 @@ final class ExpenseEntrySheetViewController: UIViewController {
     private var overlayUpdateScheduled = false
     private var overlayActive = false
     private var expandsForOverlay = false
-    /// Share of the window height used while the overlay expands the sheet.
-    private let overlaySheetHeightFraction: CGFloat = 0.46
+    /// `expandsForOverlay` as last committed to the installed detent.
+    private var detentExpandsForOverlay = false
+    /// Share of the sheet's maximum height used while the overlay expands it.
+    /// Resolved against the live detent context, so it follows iPhone vs iPad
+    /// form sheets, rotation and multitasking window sizes.
+    private let overlayDetentFraction: CGFloat = 0.9
     private let scrollView = UIScrollView()
     private var headerHeight: NSLayoutConstraint!
     private var contentHeight: NSLayoutConstraint!
@@ -356,10 +360,8 @@ final class ExpenseEntrySheetViewController: UIViewController {
 
         // Custom detents exclude the bottom safe area; UIKit adds it. Never add
         // keyboard height here: the sheet and keyboard guide handle it natively.
-        let height = expandsForOverlay
-            ? overlaySheetHeight ?? rounded.reduce(0, +) + measuredTopInset
-            : rounded.reduce(0, +) + measuredTopInset
-        applyDetent(height: height)
+        // While the overlay is expanded the resolver grows this to its own height.
+        applyDetent(height: rounded.reduce(0, +) + measuredTopInset)
         // UIKit lays out the new constraints in its normal animation pass; do
         // not synchronously flush the hosted SwiftUI transition here.
         view.setNeedsLayout()
@@ -367,11 +369,13 @@ final class ExpenseEntrySheetViewController: UIViewController {
         scheduleStagedReveal()
     }
 
-    /// Fixed, screen-relative height while the attachment panel is expanded.
-    private var overlaySheetHeight: CGFloat? {
-        guard let window = view.window else { return nil }
+    /// The installed detent's height for the sheet's current maximum.
+    private func resolvedDetentHeight(maximum: CGFloat) -> CGFloat {
+        guard detentExpandsForOverlay else { return min(targetHeight, maximum) }
         let scale = max(traitCollection.displayScale, 1)
-        return ceil(window.bounds.height * overlaySheetHeightFraction * scale) / scale
+        let overlay = ceil(maximum * overlayDetentFraction * scale) / scale
+        // Never shrink below the page underneath (large Dynamic Type).
+        return min(max(targetHeight, overlay), maximum)
     }
 
     private var ownsInstalledDetent: Bool {
@@ -439,12 +443,14 @@ final class ExpenseEntrySheetViewController: UIViewController {
 
         if requiresInstallation {
             managedSheet = sheet
+            let expands = expandsForOverlay
             let install = { [self] in
                 self.targetHeight = height
+                self.detentExpandsForOverlay = expands
                 sheet.prefersGrabberVisible = false
                 sheet.prefersScrollingExpandsWhenScrolledToEdge = false
                 sheet.detents = [.custom(identifier: self.detentIdentifier) { [weak self] context in
-                    min(self?.targetHeight ?? context.maximumDetentValue, context.maximumDetentValue)
+                    self?.resolvedDetentHeight(maximum: context.maximumDetentValue) ?? context.maximumDetentValue
                 }]
                 sheet.selectedDetentIdentifier = self.detentIdentifier
             }
@@ -454,9 +460,11 @@ final class ExpenseEntrySheetViewController: UIViewController {
             return
         }
 
-        guard abs(height - targetHeight) > pixelTolerance else { return }
+        let expands = expandsForOverlay
+        guard abs(height - targetHeight) > pixelTolerance || expands != detentExpandsForOverlay else { return }
         let changes = {
             self.targetHeight = height
+            self.detentExpandsForOverlay = expands
             sheet.invalidateDetents()
         }
         performSheetChanges(on: sheet, changes: changes)
