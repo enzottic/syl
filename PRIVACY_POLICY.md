@@ -1,6 +1,6 @@
 # Syl Privacy Policy
 
-Last updated: September 14, 2026
+Last updated: September 25, 2026
 
 Syl keeps your financial data on your devices and, if you choose, in your private
 iCloud storage. Your expenses are never sent to the developer. Syl does not
@@ -52,9 +52,17 @@ files, must be deleted separately. Deleting data in Syl cannot recall those copi
 
 ## Permissions
 
-Syl requests camera access for receipt scanning and notification permission for
-optional reminders. You can change these permissions in iOS Settings and turn
-reminders off in Syl's notification settings.
+Syl requests camera access for receipt scanning, Photos access so you can pick a
+receipt photo, and notification permission for optional reminders. You can
+change these permissions in iOS Settings and turn reminders off in Syl's
+notification settings.
+
+Photos access is optional. If you allow it, Syl shows your photos in a grid so
+you can choose a receipt. You can share your whole library or only the photos you
+select, and change that selection from the grid's *Manage* menu. The photo you
+choose is read on your device to fill in the expense. Syl doesn't keep a copy of
+it and doesn't upload your photos. If you don't allow Photos access, *All Photos*
+opens the system photo picker, which shares only the photo you pick.
 
 ## Feedback and support
 
@@ -63,7 +71,7 @@ used to respond and help resolve your request. Syl's feedback email includes
 your app version, iOS version, and device model. You can edit or cancel the
 message before sending it; your expense database is not automatically attached.
 
-You can request deletion of support correspondence by emailing hi@enzottic.me.
+You can request deletion of support correspondence by emailing [contact@getsyl.app](mailto:contact@getsyl.app).
 
 ## This website
 
@@ -81,4 +89,4 @@ data-handling practices.
 
 ## Contact
 
-For privacy questions or requests, send an email to [hi@enzottic.me](mailto:hi@enzottic.me)
+For privacy questions or requests, send an email to [contact@getsyl.app](mailto:contact@getsyl.app)
