@@ -13,8 +13,6 @@ struct StatsView: View {
     @AppStorage("statsShowsNeedsLine") private var showsNeedsLine = true
     @AppStorage("statsShowsWantsLine") private var showsWantsLine = true
     @AppStorage("statsShowsSavingsLine") private var showsSavingsLine = true
-
-    @ScaledMetric(relativeTo: .caption) private var tagFilterHeight = 15
     
     @Query(sort: [SortDescriptor(\Expense.date, order: .reverse)]) private var allExpenses: [Expense]
     
@@ -27,7 +25,6 @@ struct StatsView: View {
     @State private var chartHover: ChartSelection?
     @State private var dailyOverviewHeight: CGFloat = 220
     @State private var statsViewport: CGRect = .zero
-    @State private var isolatedLine: String?
     @GestureState private var chartTouch: ChartSelection?
     
     private var chartSelection: ChartSelection? { chartTouch ?? chartHover }
@@ -51,12 +48,35 @@ struct StatsView: View {
         if let tag = selectedTag, !tag.isDeleted { return tag.color }
         return .sage
     }
-    
-    private var filteredExpenses: [Expense] {
-        allExpenses.filter { expense in
-            (selectedCategory == nil || expense.category == selectedCategory) &&
-            (selectedTag == nil || selectedTag?.isDeleted == true || (expense.tags ?? []).contains { $0.id == selectedTag?.id })
+
+    /// Fades for filter changes. Month changes keep their own, longer morph on the chart.
+    /// A bounce-free spring: starts promptly and settles with a long, soft deceleration.
+    private var filterAnimation: Animation? { reduceMotion ? nil : .smooth(duration: 0.45) }
+
+    /// Every category budget, visible only for the filtered category. They are always passed
+    /// so switching categories cross-fades between budget lines. Skipped when no income is set.
+    private var chartBudgets: [DailySpendingChart.Budget] {
+        ExpenseCategory.allCases.compactMap { category in
+            let amount: Double = switch category {
+            case .needs: config.needsBudget
+            case .wants: config.wantsBudget
+            case .savings: config.savingsBudget
+            @unknown default: 0
+            }
+            guard amount > 0 else { return nil }
+            return .init(id: category.rawValue, amount: amount, color: category.color(in: categoryColors),
+                         isVisible: category == selectedCategory)
         }
+    }
+
+    private var tagFilteredExpenses: [Expense] {
+        guard let selectedTag, !selectedTag.isDeleted else { return allExpenses }
+        return allExpenses.filter { ($0.tags ?? []).contains { $0.id == selectedTag.id } }
+    }
+
+    private var filteredExpenses: [Expense] {
+        guard let selectedCategory else { return tagFilteredExpenses }
+        return tagFilteredExpenses.filter { $0.category == selectedCategory }
     }
     
     private var summary: SpendingMonthSummary {
@@ -102,7 +122,13 @@ struct StatsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     
-                    monthlyChart(monthSummary)
+                    // The chip row's 44pt tap target already pads the capsule, so keep the gap tight.
+                    VStack(alignment: .leading, spacing: 4) {
+                        StatsActiveFilters(selectedCategory: $selectedCategory, selectedTag: $selectedTag)
+                        monthlyChart(monthSummary)
+                    }
+                    // Lift the group too, so the chart's day overview draws above the cards below.
+                    .zIndex(chartSelection == nil ? 0 : 1)
                     
                     InsightsCard(summary: monthSummary, isCurrentMonth: isCurrentMonth)
                     
@@ -128,14 +154,6 @@ struct StatsView: View {
                 }
             }
             .onChange(of: selectedMonth) { chartHover = nil }
-            .onChange(of: selectedCategory) { isolatedLine = nil }
-            .onChange(of: selectedTag?.id) { isolatedLine = nil }
-            .onChange(of: visibleCategories) { _, categories in
-                if let isolatedLine, isolatedLine != "Total",
-                   !categories.contains(where: { $0.rawValue == isolatedLine }) {
-                    self.isolatedLine = nil
-                }
-            }
             .sheet(isPresented: $showsMonthPicker) {
                 MonthPicker(month: selectedMonth) { selectedMonth = $0 }
             }
@@ -147,27 +165,12 @@ struct StatsView: View {
         selectedMonth = min(calendar.date(byAdding: .month, value: offset, to: selectedMonth)!, currentMonth)
     }
 
-    private func tagFilterButton(_ tag: ExpenseTag) -> some View {
-        Button { selectedTag = nil } label: {
-            HStack(spacing: 4) {
-                Text(glyph: tag.glyph, name: tag.name)
-                    .lineLimit(1)
-                Image(systemName: "xmark")
-                    .font(.caption2.weight(.semibold))
-            }
-            .font(.caption.weight(.medium))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(tag.color.quaternary, in: Capsule())
-            .overlay { Capsule().strokeBorder(tag.color, lineWidth: 1) }
-            .frame(minWidth: 44, minHeight: 44, alignment: .bottomLeading)
-            .contentShape(Rectangle())
+    /// The legend and chart lines share the toolbar's category filter. Selecting the active
+    /// category, or Total, clears it.
+    private func selectCategory(_ category: ExpenseCategory?) {
+        withAnimation(filterAnimation) {
+            selectedCategory = selectedCategory == category ? nil : category
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Filtered by tag: \(tag.name)")
-        .accessibilityHint("Remove tag filter")
-        .accessibilityIdentifier("stats-tag-filter-pill")
     }
 
     @ToolbarContentBuilder
@@ -198,39 +201,44 @@ struct StatsView: View {
     }
 
     private func monthlyChart(_ summary: SpendingMonthSummary) -> some View {
-        let series = [SpendingChartSeries(category: nil, points: summary.days, color: .primary)] +
-            visibleCategories.filter { selectedCategory == nil || $0 == selectedCategory }.map {
-                SpendingChartSeries(category: $0, points: summary.categoryDays[$0] ?? [], color: $0.color(in: categoryColors))
+        // Every line is always drawn, from data that ignores the category filter, so lines that
+        // a filter hides keep their shape and fade out in place. The filtered category's own line
+        // matches the filtered summary exactly.
+        let lineSummary = selectedCategory == nil ? summary
+            : SpendingMonthSummary(month: selectedMonth, expenses: tagFilteredExpenses)
+        let chartSeries = [SpendingChartSeries(category: nil, points: lineSummary.days, color: .primary,
+                                               isVisible: selectedCategory == nil)] +
+            ExpenseCategory.allCases.map { category in
+                SpendingChartSeries(category: category, points: lineSummary.categoryDays[category] ?? [],
+                                    color: category.color(in: categoryColors),
+                                    isVisible: selectedCategory.map { $0 == category } ?? visibleCategories.contains(category))
             }
-        let visibleSeries = series.filter { isolatedLine == nil || $0.id == isolatedLine }
-        let averageDays = isolatedLine == nil ? summary.averageDays : []
-        let showsUnfilteredTotal = selectedCategory == nil &&
-            (selectedTag == nil || selectedTag?.isDeleted == true) &&
-            (isolatedLine == nil || isolatedLine == "Total")
-        let chartDomain = SpendingChartScale.domain(
-            points: visibleSeries.flatMap(\.points) + averageDays,
-            monthlyIncome: Double(config.totalMonthlyIncome),
-            showsUnfilteredTotal: showsUnfilteredTotal
-        )
-        let isolatedCategory = series.first(where: { $0.id == isolatedLine })?.category
-        let displayedTotal = isolatedCategory.map { summary.categoryDays[$0]?.last?.total ?? 0 } ?? summary.total
+        let visibleSeries = chartSeries.filter(\.isVisible)
+        // Keep the filtered category in the legend even if its line is hidden in Chart Options.
+        let legendCategories = ExpenseCategory.allCases.filter { visibleCategories.contains($0) || $0 == selectedCategory }
 
         return VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(displayedTotal.currencyString(code: config.ledgerCurrencyCode))
+                Text(summary.total.currencyString(code: config.ledgerCurrencyCode))
                     .font(.largeTitle.bold()).monospacedDigit().textSelection(.enabled)
                     .accessibilityIdentifier("stats-month-total")
                 Text(isCurrentMonth ? "Spent so far" : "Total spent")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             
-            DailySpendingChart(series: visibleSeries,
-                               averageDays: averageDays,
+            DailySpendingChart(series: chartSeries,
+                               averageDays: summary.averageDays,
                                daysInMonth: daysInMonth, currencyCode: config.ledgerCurrencyCode,
-                               selectedDay: selectedDay)
-                .chartYScale(domain: chartDomain)
+                               selectedDay: selectedDay,
+                               budgets: chartBudgets)
+                .chartYScale(domain: 0...Double(max(config.totalMonthlyIncome, 1)))
                 .chartPlotStyle { plot in plot.clipped() }
+                // Month changes morph every line to new data; filter changes mostly fade lines
+                // in and out, and get a slightly longer settle so the fade eases to rest.
                 .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: selectedMonth)
+                .animation(filterAnimation, value: selectedCategory)
+                .animation(filterAnimation, value: selectedTag?.id)
+                .animation(filterAnimation, value: visibleCategories)
                 .chartOverlay { proxy in
                     chartInteractionOverlay(summary, proxy: proxy, series: visibleSeries)
                 }
@@ -238,28 +246,12 @@ struct StatsView: View {
                 .accessibilityIdentifier("stats-daily-chart")
             
             HStack(spacing: 8) {
-                ForEach(series) { line in
-                    Button {
-                        isolatedLine = isolatedLine == line.id ? nil : line.id
-                    } label: {
-                        HStack(spacing: 4) {
-                            Capsule().fill(line.color).frame(width: 10, height: 3)
-                            Text(line.id)
-                                .fontWeight(isolatedLine == line.id ? .semibold : .regular)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.75)
-                        }
-                        .font(.caption)
-                        .foregroundStyle(isolatedLine == nil || isolatedLine == line.id ? Color.primary : .secondary)
-                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(isolatedLine == line.id ? .isSelected : [])
-                    .accessibilityHint(isolatedLine == line.id ? "Show all lines" : "Isolate this line")
+                legendButton(category: nil, color: .primary)
+                ForEach(legendCategories, id: \.self) { category in
+                    legendButton(category: category, color: category.color(in: categoryColors))
                 }
                 
-                if isolatedLine == nil, summary.historicalMonthCount > 0 {
+                if summary.historicalMonthCount > 0 {
                     HStack(spacing: 4) {
                         HStack(spacing: 2) {
                             Capsule().frame(width: 4, height: 2)
@@ -287,13 +279,33 @@ struct StatsView: View {
                     let visibleFrame = statsViewport.isEmpty ? cardFrame : statsViewport
                     let bounds = CGRect(x: 0, y: visibleFrame.minY - cardFrame.minY,
                                         width: geometry.size.width, height: visibleFrame.height)
-                    dailyOverview(summary, day: chartSelection.day, category: isolatedCategory,
+                    dailyOverview(summary, day: chartSelection.day, category: selectedCategory,
                                   finger: chartSelection.location, highestLineY: chartSelection.highestLineY, bounds: bounds)
                 }
             }
             .allowsHitTesting(false)
         }
         .zIndex(chartSelection == nil ? 0 : 1)
+    }
+
+    private func legendButton(category: ExpenseCategory?, color: Color) -> some View {
+        let isSelected = selectedCategory == category && category != nil
+        return Button { selectCategory(category) } label: {
+            HStack(spacing: 4) {
+                Capsule().fill(color).frame(width: 10, height: 3)
+                Text(category?.rawValue ?? "Total")
+                    .fontWeight(isSelected ? .semibold : .regular)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .font(.caption)
+            .foregroundStyle(selectedCategory == nil || isSelected ? Color.primary : .secondary)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint(isSelected || category == nil ? "Show all categories" : "Filter by this category")
     }
 
     private func chartInteractionOverlay(_ summary: SpendingMonthSummary, proxy: ChartProxy,
@@ -307,7 +319,7 @@ struct StatsView: View {
                     else { return nil }
                     // Touch and hover coordinates are local to the plot, not the chart axes.
                     let chartOrigin = geometry.frame(in: .named("stats-chart-card")).origin
-                    let points = series.flatMap(\.points) + (isolatedLine == nil ? summary.averageDays : [])
+                    let points = series.flatMap(\.points) + summary.averageDays
                     let highestLineY = points.compactMap { proxy.position(forY: $0.total) }.min() ?? 0
                     return ChartSelection(
                         day: min(max(Int(chartDay.rounded()), 1), lastDay),
@@ -330,7 +342,7 @@ struct StatsView: View {
                     )
                     .simultaneousGesture(
                         SpatialTapGesture().onEnded { value in
-                            isolateLine(at: value.location, proxy: proxy, series: series)
+                            selectLine(at: value.location, proxy: proxy, series: series)
                         }
                     )
                     .onContinuousHover { phase in
@@ -370,9 +382,9 @@ struct StatsView: View {
             .position(x: x, y: y)
     }
 
-    private func isolateLine(at location: CGPoint, proxy: ChartProxy, series: [SpendingChartSeries]) {
+    private func selectLine(at location: CGPoint, proxy: ChartProxy, series: [SpendingChartSeries]) {
         // Hit-test the rendered segments, so taps between calendar days still select the line.
-        var closest: (id: String, distance: CGFloat)?
+        var closest: (category: ExpenseCategory?, distance: CGFloat)?
         for line in series {
             let positions = line.points.compactMap { point -> CGPoint? in
                 guard let x = proxy.position(forX: point.day), let y = proxy.position(forY: point.total) else { return nil }
@@ -386,12 +398,12 @@ struct StatsView: View {
                 let fraction = lengthSquared == 0 ? 0 : min(max(((location.x - start.x) * dx + (location.y - start.y) * dy) / lengthSquared, 0), 1)
                 let distance = hypot(location.x - start.x - fraction * dx, location.y - start.y - fraction * dy)
                 if distance <= 22, closest == nil || distance <= closest!.distance {
-                    closest = (line.id, distance)
+                    closest = (line.category, distance)
                 }
             }
         }
         if let closest {
-            isolatedLine = isolatedLine == closest.id ? nil : closest.id
+            selectCategory(closest.category)
         }
     }
 

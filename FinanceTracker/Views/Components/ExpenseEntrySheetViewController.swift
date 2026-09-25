@@ -468,19 +468,25 @@ final class ExpenseEntrySheetViewController: UIViewController {
             // animated SwiftUI number, detent replacement, or display-link loop.
             resizeGeneration += 1
             let generation = resizeGeneration
-            activeResizes.insert(generation)
+            // A new resize supersedes any in flight. UIKit does not reliably call
+            // the completion of an interrupted detent animation, so only the
+            // latest generation may block the staged reveal.
+            activeResizes = [generation]
+            let finish = { [weak self] in
+                guard let self, self.activeResizes.remove(generation) != nil else { return }
+                self.scheduleStagedReveal()
+            }
             CATransaction.begin()
-            CATransaction.setCompletionBlock { [weak self] in
+            CATransaction.setCompletionBlock {
                 // CA completion has no actor contract. Hop to main and allow
                 // pending SwiftUI geometry callbacks to settle before revealing.
-                DispatchQueue.main.async { [weak self] in
-                    guard let self else { return }
-                    self.activeResizes.remove(generation)
-                    self.scheduleStagedReveal()
-                }
+                DispatchQueue.main.async(execute: finish)
             }
             sheet.animateChanges(changes)
             CATransaction.commit()
+            // Fallback: never leave the page hidden from touches and VoiceOver
+            // if the completion is dropped.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: finish)
         } else {
             UIView.performWithoutAnimation(changes)
         }
