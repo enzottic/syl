@@ -17,7 +17,8 @@ final class ReceiptAttachmentState {
     private(set) var mode: Mode = .closed
     /// The overlay stays mounted until the shape has collapsed back into the button.
     private(set) var isPresented = false
-    /// The page button's frame in global coordinates; the overlay morphs from it.
+    /// The page button's frame in global (window) coordinates; the overlay maps
+    /// it into its own local points before morphing from it.
     var buttonFrame: CGRect = .zero
     private(set) var cameraAvailability: CameraAvailability = .available
     /// Owned here (not by the camera panel) so it can warm up while the menu is
@@ -30,7 +31,7 @@ final class ReceiptAttachmentState {
     private var generation = 0
 
     var menuAnimation: Animation {
-        reduceMotion ? .easeInOut(duration: 0.15) : .bouncy(duration: 0.28, extraBounce: 0.1)
+        reduceMotion ? .easeInOut(duration: 0.15) : .spring(duration: 0.3, bounce: 0.15)
     }
 
     var expandAnimation: Animation {

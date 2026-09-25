@@ -19,10 +19,9 @@ struct ReceiptAttachmentOverlay: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let origin = proxy.frame(in: .global).origin
-            let button = state.buttonFrame.offsetBy(dx: -origin.x, dy: -origin.y)
             let size = proxy.size
-            let expanded = expandedFrame(button: button, in: size)
+            let button = localFrame(of: state.buttonFrame, in: proxy.frame(in: .global), size: size)
+            let expanded = expandedFrame(in: size)
             let rect = frame(for: state.mode, button: button, expanded: expanded)
 
             if state.isPresented {
@@ -37,8 +36,8 @@ struct ReceiptAttachmentOverlay: View {
 
                     panel(rect: rect, expanded: expanded)
                         .frame(width: rect.width, height: rect.height, alignment: .topTrailing)
-                        .clipShape(shape(for: state.mode))
-                        .glassEffect(.regular, in: shape(for: state.mode))
+                        .clipShape(shape(for: state.mode, button: button))
+                        .glassEffect(.regular, in: shape(for: state.mode, button: button))
                         .offset(x: rect.minX, y: rect.minY)
                         .accessibilityElement(children: .contain)
                         .accessibilityAddTraits(.isModal)
@@ -128,6 +127,25 @@ struct ReceiptAttachmentOverlay: View {
 
     // MARK: - Geometry
 
+    /// Maps a window-space (`.global`) rect into the overlay's local points.
+    ///
+    /// The button lives in a different hosting controller, so `.global` is the
+    /// only space the two layers share. It is not the same unit as local points:
+    /// an inset (floating) sheet lays out at the full window width and is then
+    /// drawn scaled down, so `.global` frames come back scaled. Subtracting the
+    /// origin alone leaves the menu and collapsed circle shifted and undersized.
+    private func localFrame(of rect: CGRect, in overlay: CGRect, size: CGSize) -> CGRect {
+        guard size.width > 0, size.height > 0, overlay.width > 0, overlay.height > 0 else {
+            return rect.offsetBy(dx: -overlay.minX, dy: -overlay.minY)
+        }
+        let scaleX = size.width / overlay.width
+        let scaleY = size.height / overlay.height
+        return CGRect(x: (rect.minX - overlay.minX) * scaleX,
+                      y: (rect.minY - overlay.minY) * scaleY,
+                      width: rect.width * scaleX,
+                      height: rect.height * scaleY)
+    }
+
     private func frame(for mode: ReceiptAttachmentState.Mode, button: CGRect, expanded: CGRect) -> CGRect {
         switch mode {
         case .closed:
@@ -140,16 +158,16 @@ struct ReceiptAttachmentOverlay: View {
         }
     }
 
-    private func expandedFrame(button: CGRect, in size: CGSize) -> CGRect {
-        let top = max(Self.expandedInset, button.minY)
-        return CGRect(x: Self.expandedInset, y: top,
-                      width: max(0, size.width - Self.expandedInset * 2),
-                      height: max(0, size.height - top - Self.expandedInset))
+    /// Fills the sheet with an even inset on every edge
+    private func expandedFrame(in size: CGSize) -> CGRect {
+        CGRect(x: Self.expandedInset, y: Self.expandedInset,
+               width: max(0, size.width - Self.expandedInset * 2),
+               height: max(0, size.height - Self.expandedInset * 2))
     }
 
-    private func shape(for mode: ReceiptAttachmentState.Mode) -> RoundedRectangle {
+    private func shape(for mode: ReceiptAttachmentState.Mode, button: CGRect) -> RoundedRectangle {
         switch mode {
-        case .closed: RoundedRectangle(cornerRadius: max(state.buttonFrame.height / 2, 1), style: .continuous)
+        case .closed: RoundedRectangle(cornerRadius: max(button.height / 2, 1), style: .continuous)
         case .menu: RoundedRectangle(cornerRadius: 30, style: .continuous)
         case .photos, .camera: RoundedRectangle(cornerRadius: 40, style: .continuous)
         }

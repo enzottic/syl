@@ -378,7 +378,7 @@ final class ExpenseEntrySheetViewController: UIViewController {
         guard let sheet = managedSheet else { return false }
         return sheet.detents.count == 1
             && sheet.detents.first?.identifier == detentIdentifier
-            && sheet.prefersGrabberVisible
+            && !sheet.prefersGrabberVisible
     }
 
     private func enclosingSheet() -> UISheetPresentationController? {
@@ -441,7 +441,7 @@ final class ExpenseEntrySheetViewController: UIViewController {
             managedSheet = sheet
             let install = { [self] in
                 self.targetHeight = height
-                sheet.prefersGrabberVisible = true
+                sheet.prefersGrabberVisible = false
                 sheet.prefersScrollingExpandsWhenScrolledToEdge = false
                 sheet.detents = [.custom(identifier: self.detentIdentifier) { [weak self] context in
                     min(self?.targetHeight ?? context.maximumDetentValue, context.maximumDetentValue)
