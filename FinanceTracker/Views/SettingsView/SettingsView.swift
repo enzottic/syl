@@ -367,7 +367,11 @@ private struct WebView: UIViewRepresentable {
     @Binding var loadError: String?
 
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        let configuration = WKWebViewConfiguration()
+        configuration.userContentController.addUserScript(
+            WKUserScript(source: Self.plainLinkTapsJS, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        )
+        let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         context.coordinator.reloadID = reloadID
         webView.load(URLRequest(url: url))
@@ -388,20 +392,51 @@ private struct WebView: UIViewRepresentable {
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(isLoading: $isLoading, loadError: $loadError, isReaderMode: isReaderMode)
+        Coordinator(policyURL: url, isLoading: $isLoading, loadError: $loadError, isReaderMode: isReaderMode)
     }
 
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate {
+        let policyURL: URL
         var isLoading: Binding<Bool>
         var loadError: Binding<String?>
         var isReaderMode: Bool
         var reloadID: UUID?
 
-        init(isLoading: Binding<Bool>, loadError: Binding<String?>, isReaderMode: Bool) {
+        init(policyURL: URL, isLoading: Binding<Bool>, loadError: Binding<String?>, isReaderMode: Bool) {
+            self.policyURL = policyURL
             self.isLoading = isLoading
             self.loadError = loadError
             self.isReaderMode = isReaderMode
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
+        ) {
+            guard let url = navigationAction.request.url else {
+                decisionHandler(.cancel)
+                return
+            }
+            let frame: PrivacyPolicyNavigation.Frame = switch navigationAction.targetFrame?.isMainFrame {
+            case nil: .newWindow
+            case true?: .main
+            case false?: .subframe
+            }
+            let decision = PrivacyPolicyNavigation.decision(
+                for: url,
+                in: frame,
+                isLinkTap: navigationAction.navigationType == .linkActivated,
+                policyURL: policyURL
+            )
+            switch decision {
+            case .load:
+                decisionHandler(.allow)
+            case .openExternally:
+                decisionHandler(.cancel)
+                UIApplication.shared.open(url)
+            }
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation?) {
@@ -458,6 +493,17 @@ private struct WebView: UIViewRepresentable {
 
     private static let disableReaderModeJS = """
     (function() { var s = document.getElementById('sage-reader'); if (s) s.remove(); })();
+    """
+
+    /// getsyl.app's client-side router swaps in its own pages (Contact, home)
+    /// without a real navigation, so the navigation delegate never sees them.
+    /// Hiding link taps from the router makes every link a normal navigation.
+    private static let plainLinkTapsJS = """
+    window.addEventListener('click', function (event) {
+        if (event.target instanceof Element && event.target.closest('a[href]')) {
+            event.stopImmediatePropagation();
+        }
+    }, true);
     """
 }
 
