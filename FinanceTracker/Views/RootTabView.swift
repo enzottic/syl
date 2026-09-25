@@ -15,7 +15,6 @@ struct RootTabView: View {
     @State private var appRouter = AppRouter()
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var query: String? = nil
-    @State private var isShowingSettings = false
     @State private var reminderNavigation = ReminderNavigation.shared
 
     private var isPad: Bool {
@@ -39,41 +38,20 @@ struct RootTabView: View {
                 StatsView()
             }
 
-            if !isPad {
-                Tab("Settings", systemImage: "gear", value: SageTab.settings) {
-                    SettingsView()
-                }
+            // Keep Settings as a real tab on every idiom: a sidebar-only entry point
+            // disappears in compact iPad widths (Slide Over, narrow Split View).
+            Tab("Settings", systemImage: "gear", value: SageTab.settings) {
+                SettingsView()
             }
-            
+
             Tab("Search", systemImage: "magnifyingglass", value: SageTab.search, role: .search) {
                 SearchExpensesView()
             }
 
         }
         .modifier(PlatformTabViewStyle(isPad: isPad))
-        .tabViewSidebarHeader {
-            if isPad {
-                HStack {
-                    Button {
-                        isShowingSettings = true
-                    } label: {
-                        Image(systemName: "gear")
-                    }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
-                    .accessibilityLabel("Settings")
-                    .accessibilityIdentifier("settings-button")
-
-                    Spacer()
-                }
-            }
-        }
         .tabViewSearchActivation(.searchTabSelection)
         .accessibilityIdentifier("main-tab-view")
-        .sheet(isPresented: $isShowingSettings) {
-            SettingsView(showsDismissButton: true, showsGradientBackground: false)
-                .presentationSizing(.form)
-        }
         .sheet(item: $appRouter.presentedSheet) { sheet in
             switch sheet {
             case .addExpense(let expense, let receiptData, _):
@@ -122,7 +100,6 @@ struct RootTabView: View {
         }
         .onChange(of: reminderNavigation.isRequested, initial: true) { openReminderDashboardIfReady() }
         .onChange(of: reminderNavigation.isExpenseEntryRequested, initial: true) { openReminderDashboardIfReady() }
-        .onChange(of: isShowingSettings) { openReminderDashboardIfReady() }
         .onChange(of: appRouter.presentedSheet == nil) { openReminderDashboardIfReady() }
         .onChange(of: whatsNewRelease == nil) { openReminderDashboardIfReady() }
         .sheet(item: $whatsNewRelease) { release in
@@ -133,7 +110,7 @@ struct RootTabView: View {
     private func openReminderDashboardIfReady() {
         // Preserve an open expense draft; cold-launch requests wait for the normal app gates.
         guard reminderNavigation.isRequested || reminderNavigation.isExpenseEntryRequested,
-              appRouter.presentedSheet == nil, !isShowingSettings,
+              appRouter.presentedSheet == nil,
               whatsNewRelease == nil else { return }
         reminderNavigation.isExpenseEntryRequested = false
         reminderNavigation.isRequested = false
