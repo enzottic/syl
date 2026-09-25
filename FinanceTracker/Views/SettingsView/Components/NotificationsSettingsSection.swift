@@ -4,8 +4,15 @@ import SageKit
 import UserNotifications
 
 struct NotificationsSettingsSection: View {
+    @Environment(\.recurringReminders) private var reminders
+
     var body: some View {
         List {
+            if reminders?.scheduler.authorizationStatus == .denied || reminders?.dailyScheduler.authorizationStatus == .denied {
+                Section {
+                    NotificationPermissionNotice()
+                }
+            }
             RecurringNotificationsSettingsSection()
             DailyExpenseReminderSettingsSection()
         }
@@ -29,7 +36,7 @@ private struct RecurringNotificationsSettingsSection: View {
                 get: { config.billRemindersEnabled && !permissionDenied },
                 set: { setRemindersEnabled($0) }
             ))
-            .disabled(isRequestingPermission)
+            .disabled(isRequestingPermission || permissionDenied)
             .accessibilityIdentifier("bill-reminders-toggle")
 
             if config.billRemindersEnabled && !permissionDenied {
@@ -55,7 +62,9 @@ private struct RecurringNotificationsSettingsSection: View {
         } footer: {
             VStack(alignment: .leading, spacing: 8) {
                 Text("One summary at your chosen local time for all recurring expenses scheduled on the target day.")
-                NotificationPermissionFooter(isDenied: permissionDenied, error: permissionError)
+                if let permissionError {
+                    Text("Could not enable reminders: \(permissionError)")
+                }
             }
         }
         .onChange(of: config.billReminderDaysBefore) { reminders?.refresh() }

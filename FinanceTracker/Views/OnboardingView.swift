@@ -13,7 +13,7 @@ import UserNotifications
 
 struct OnboardingView: View {
     @Environment(AppConfiguration.self) var config
-    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     @Environment(\.categoryColors) private var categoryColors
     @Environment(\.recurringReminders) private var reminders
@@ -38,7 +38,8 @@ struct OnboardingView: View {
     @State private var recurringRemindersEnabled = false
     @State private var dailyReminderEnabled = false
     @State private var requestingNotificationPermission = false
-    @State private var notificationPermissionMessage: String?
+    @State private var notificationPermissionError: String?
+    @State private var notificationAuthorizationStatus: UNAuthorizationStatus = .notDetermined
     @State private var completionErrorMessage: String?
     @FocusState private var incomeFocused: Bool
     @AccessibilityFocusState private var headingFocused: Bool
@@ -137,21 +138,14 @@ struct OnboardingView: View {
             } message: {
                 Text(completionErrorMessage ?? "Check available storage and try again.")
             }
-            .alert("Notifications are off", isPresented: Binding(
-                get: { notificationPermissionMessage != nil },
-                set: { if !$0 { notificationPermissionMessage = nil } }
-            )) {
-                Button("Open Settings") {
-                    guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
-                    openURL(url)
-                }
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(notificationPermissionMessage ?? "")
-            }
+
         }
         .fontDesign(.rounded)
         .tint(.sage)
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            notificationAuthorizationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        }
         .onAppear {
             guard !didLoadCurrency else { return }
             didLoadCurrency = true
@@ -468,7 +462,7 @@ struct OnboardingView: View {
 
             VStack(alignment: .leading, spacing: 24) {
                 Toggle(isOn: Binding(
-                    get: { recurringRemindersEnabled },
+                    get: { recurringRemindersEnabled && notificationAuthorizationStatus != .denied },
                     set: {
                         recurringRemindersEnabled = $0
                         if $0 { requestNotificationPermission() }
@@ -488,7 +482,7 @@ struct OnboardingView: View {
                 Divider()
 
                 Toggle(isOn: Binding(
-                    get: { dailyReminderEnabled },
+                    get: { dailyReminderEnabled && notificationAuthorizationStatus != .denied },
                     set: {
                         dailyReminderEnabled = $0
                         if $0 { requestNotificationPermission() }
@@ -505,9 +499,18 @@ struct OnboardingView: View {
                 }
                 .accessibilityIdentifier("onboarding-daily-reminder-toggle")
             }
-            .disabled(requestingNotificationPermission)
+            .disabled(requestingNotificationPermission || notificationAuthorizationStatus == .denied)
             .padding(24)
             .background(Color.cardBackground, in: .rect(cornerRadius: 24))
+
+            if notificationAuthorizationStatus == .denied {
+                NotificationPermissionNotice()
+            }
+            if let notificationPermissionError {
+                Text(notificationPermissionError)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
         }
     }
@@ -557,6 +560,7 @@ struct OnboardingView: View {
 
     private func requestNotificationPermission() {
         guard !requestingNotificationPermission, reminders != nil else { return }
+        notificationPermissionError = nil
         requestingNotificationPermission = true
         Task { @MainActor in
             defer {
@@ -567,11 +571,9 @@ struct OnboardingView: View {
                 if await center.notificationSettings().authorizationStatus == .notDetermined {
                     _ = try await center.requestAuthorization(options: [.alert, .sound])
                 }
-                if await center.notificationSettings().authorizationStatus == .denied {
-                    notificationPermissionMessage = "You can finish setup without notifications. Your reminder choices will be saved, but delivery is blocked until you allow notifications in iOS Settings."
-                }
+                notificationAuthorizationStatus = await center.notificationSettings().authorizationStatus
             } catch {
-                notificationPermissionMessage = "Syl could not request notification permission. You can finish setup and try again from Settings. \(error.localizedDescription)"
+                notificationPermissionError = "Syl could not request notification permission. You can finish setup and try again from Settings. \(error.localizedDescription)"
             }
         }
     }

@@ -15,7 +15,7 @@ struct DailyExpenseReminderSettingsSection: View {
                 get: { config.dailyExpenseReminderEnabled && !permissionDenied },
                 set: { setEnabled($0) }
             ))
-            .disabled(requestingPermission)
+            .disabled(requestingPermission || permissionDenied)
             .accessibilityIdentifier("daily-expense-reminder-toggle")
 
             if config.dailyExpenseReminderEnabled && !permissionDenied {
@@ -25,7 +25,9 @@ struct DailyExpenseReminderSettingsSection: View {
         } header: {
             Text("Daily Reminder")
         } footer: {
-            NotificationPermissionFooter(isDenied: permissionDenied, error: permissionError)
+            if let permissionError {
+                Text("Could not enable reminders: \(permissionError)")
+            }
         }
         .onChange(of: config.dailyExpenseReminderTimeMinutes) { reminders?.refresh() }
     }
