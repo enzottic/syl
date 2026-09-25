@@ -13,6 +13,7 @@ import UserNotifications
 
 struct OnboardingView: View {
     @Environment(AppConfiguration.self) var config
+    @Environment(\.openURL) private var openURL
     @Environment(\.modelContext) private var modelContext
     @Environment(\.categoryColors) private var categoryColors
     @Environment(\.recurringReminders) private var reminders
@@ -140,6 +141,10 @@ struct OnboardingView: View {
                 get: { notificationPermissionMessage != nil },
                 set: { if !$0 { notificationPermissionMessage = nil } }
             )) {
+                Button("Open Settings") {
+                    guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
+                    openURL(url)
+                }
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(notificationPermissionMessage ?? "")
