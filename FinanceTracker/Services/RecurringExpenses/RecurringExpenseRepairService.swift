@@ -23,7 +23,19 @@ public final class RecurringExpenseRepairService {
     /// Backfills occurrence identities and keeps one generated expense per occurrence key.
     /// The caller owns the save so repair and generation can use one transaction.
     public func repair() throws -> RecurringExpenseRepairResult {
-        let expenses = try modelContext.fetch(FetchDescriptor<Expense>())
+        let expenses = try modelContext.fetch(Self.recurringIdentityExpensesDescriptor())
+        return repair(expenses: expenses)
+    }
+
+    static func recurringIdentityExpensesDescriptor() -> FetchDescriptor<Expense> {
+        // Retain key-only records for the generation check, even when their rule ID was lost.
+        FetchDescriptor<Expense>(predicate: #Predicate {
+            $0.recurringExpenseId != nil || $0.recurringOccurrenceKey != nil
+        })
+    }
+
+    /// Reuses the caller's recurring fetch when repair and generation run together.
+    func repair(expenses: [Expense]) -> RecurringExpenseRepairResult {
         var groups: [String: [Expense]] = [:]
         var backfilledCount = 0
 

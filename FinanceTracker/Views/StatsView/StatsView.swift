@@ -87,6 +87,7 @@ struct StatsView: View {
 
     private var chartData: [SpendingPeriodData] {
         let now = Date()
+        let expenses = filteredExpenses
         
         if timeframe == .monthly {
             // Keep the recent window stable when selecting its bars. Older months get their own window.
@@ -95,7 +96,7 @@ struct StatsView: View {
             return (0..<6).reversed().map { offset in
                 let start = calendar.date(byAdding: .month, value: -offset, to: end)!
                 let interval = calendar.dateInterval(of: .month, for: start)!
-                let total = filteredExpenses.filter { $0.date >= start && $0.date < interval.end && $0.date <= now }.total
+                let total = expenses.filter { $0.date >= start && $0.date < interval.end && $0.date <= now }.total
                 return SpendingPeriodData(periodStart: start, label: start.formatted(.dateTime.month(.abbreviated)), total: total)
             }
         }
@@ -108,7 +109,7 @@ struct StatsView: View {
             let end = min(week.end, month.end)
             let lastDay = calendar.component(.day, from: calendar.date(byAdding: .day, value: -1, to: end)!)
             let label = "\(calendar.component(.day, from: start))–\(lastDay)"
-            let total = filteredExpenses.filter { $0.date >= start && $0.date < end && $0.date <= now }.total
+            let total = expenses.filter { $0.date >= start && $0.date < end && $0.date <= now }.total
             result.append(SpendingPeriodData(periodStart: start, label: label, total: total))
             start = end
         }
