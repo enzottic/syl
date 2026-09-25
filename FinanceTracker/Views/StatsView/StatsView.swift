@@ -203,6 +203,15 @@ struct StatsView: View {
                 SpendingChartSeries(category: $0, points: summary.categoryDays[$0] ?? [], color: $0.color(in: categoryColors))
             }
         let visibleSeries = series.filter { isolatedLine == nil || $0.id == isolatedLine }
+        let averageDays = isolatedLine == nil ? summary.averageDays : []
+        let showsUnfilteredTotal = selectedCategory == nil &&
+            (selectedTag == nil || selectedTag?.isDeleted == true) &&
+            (isolatedLine == nil || isolatedLine == "Total")
+        let chartDomain = SpendingChartScale.domain(
+            points: visibleSeries.flatMap(\.points) + averageDays,
+            monthlyIncome: Double(config.totalMonthlyIncome),
+            showsUnfilteredTotal: showsUnfilteredTotal
+        )
         let isolatedCategory = series.first(where: { $0.id == isolatedLine })?.category
         let displayedTotal = isolatedCategory.map { summary.categoryDays[$0]?.last?.total ?? 0 } ?? summary.total
 
@@ -216,10 +225,10 @@ struct StatsView: View {
             }
             
             DailySpendingChart(series: visibleSeries,
-                               averageDays: isolatedLine == nil ? summary.averageDays : [],
+                               averageDays: averageDays,
                                daysInMonth: daysInMonth, currencyCode: config.ledgerCurrencyCode,
                                selectedDay: selectedDay)
-                .chartYScale(domain: 0...Double(max(config.totalMonthlyIncome, 1)))
+                .chartYScale(domain: chartDomain)
                 .chartPlotStyle { plot in plot.clipped() }
                 .animation(reduceMotion ? nil : .smooth(duration: 0.35), value: selectedMonth)
                 .chartOverlay { proxy in
