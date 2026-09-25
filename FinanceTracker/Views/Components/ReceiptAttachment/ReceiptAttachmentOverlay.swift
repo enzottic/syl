@@ -5,8 +5,6 @@ import Photos
 /// into the attachment menu, then into the full camera / photo panel.
 struct ReceiptAttachmentOverlay: View {
     let state: ReceiptAttachmentState
-    /// Replaces both options when receipt reading isn't available.
-    var unavailableMessage: String?
     var onSelectAsset: (PHAsset) -> Void
     var onCapture: (UIImage) -> Void
     var onAllPhotos: () -> Void
@@ -82,19 +80,11 @@ struct ReceiptAttachmentOverlay: View {
 
     private var menu: some View {
         VStack(spacing: 0) {
-            if let unavailableMessage {
-                Label(unavailableMessage, systemImage: "exclamationmark.triangle")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                cameraRow
-                ReceiptAttachmentMenuRow(title: "Photos", systemImage: "photo.on.rectangle") {
-                    state.show(.photos)
-                }
-                .accessibilityIdentifier("receipt-menu-photos")
+            cameraRow
+            ReceiptAttachmentMenuRow(title: "Photos", systemImage: "photo.on.rectangle") {
+                state.show(.photos)
             }
+            .accessibilityIdentifier("receipt-menu-photos")
         }
         .padding(8)
         .frame(width: Self.menuWidth)

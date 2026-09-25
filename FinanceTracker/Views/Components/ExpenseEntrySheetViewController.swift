@@ -37,8 +37,11 @@ final class ExpenseEntrySheetViewController: UIViewController {
     private var detentExpandsForOverlay = false
     /// Share of the sheet's maximum height used while the overlay expands it.
     /// Resolved against the live detent context, so it follows iPhone vs iPad
-    /// form sheets, rotation and multitasking window sizes.
-    private let overlayDetentFraction: CGFloat = 0.9
+    /// form sheets, rotation and multitasking window sizes. An edge-attached
+    /// compact-width sheet (iPhone, narrow iPad windows) is already nearly
+    /// screen-tall, so it takes a smaller share than a floating form sheet.
+    private let regularOverlayDetentFraction: CGFloat = 0.8
+    private let compactOverlayDetentFraction: CGFloat = 0.6
     private let scrollView = UIScrollView()
     private var headerHeight: NSLayoutConstraint!
     private var contentHeight: NSLayoutConstraint!
@@ -370,10 +373,14 @@ final class ExpenseEntrySheetViewController: UIViewController {
     }
 
     /// The installed detent's height for the sheet's current maximum.
-    private func resolvedDetentHeight(maximum: CGFloat) -> CGFloat {
+    private func resolvedDetentHeight(in context: UISheetPresentationControllerDetentResolutionContext) -> CGFloat {
+        let maximum = context.maximumDetentValue
         guard detentExpandsForOverlay else { return min(targetHeight, maximum) }
+        let fraction = context.containerTraitCollection.horizontalSizeClass == .regular
+            ? regularOverlayDetentFraction
+            : compactOverlayDetentFraction
         let scale = max(traitCollection.displayScale, 1)
-        let overlay = ceil(maximum * overlayDetentFraction * scale) / scale
+        let overlay = ceil(maximum * fraction * scale) / scale
         // Never shrink below the page underneath (large Dynamic Type).
         return min(max(targetHeight, overlay), maximum)
     }
@@ -450,7 +457,7 @@ final class ExpenseEntrySheetViewController: UIViewController {
                 sheet.prefersGrabberVisible = false
                 sheet.prefersScrollingExpandsWhenScrolledToEdge = false
                 sheet.detents = [.custom(identifier: self.detentIdentifier) { [weak self] context in
-                    self?.resolvedDetentHeight(maximum: context.maximumDetentValue) ?? context.maximumDetentValue
+                    self?.resolvedDetentHeight(in: context) ?? context.maximumDetentValue
                 }]
                 sheet.selectedDetentIdentifier = self.detentIdentifier
             }

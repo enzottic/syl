@@ -80,7 +80,6 @@ struct NewAddExpenseSheet: View {
         } overlay: {
             ReceiptAttachmentOverlay(
                 state: attachment,
-                unavailableMessage: importer.unavailableMessage,
                 onSelectAsset: importAsset,
                 onCapture: importCapturedImage,
                 onAllPhotos: { showPhotoLibrary = true }
@@ -158,8 +157,11 @@ struct NewAddExpenseSheet: View {
         }
     }
 
-    private var receiptMenu: some View {
-        ReceiptAttachmentButton(state: attachment, onOpen: clearFocus)
+    /// Hidden entirely without Apple Intelligence: there's no receipt reading to offer.
+    @ViewBuilder private var receiptMenu: some View {
+        if importer.isAvailable {
+            ReceiptAttachmentButton(state: attachment, onOpen: clearFocus)
+        }
     }
 
     private func importAsset(_ asset: PHAsset) {

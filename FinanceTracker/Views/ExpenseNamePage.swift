@@ -22,8 +22,10 @@ struct ExpenseNamePage<HeaderAction: View>: View {
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
 
-                headerAction
+                // Reserve the slot even when there's no action, so the title stays centered.
+                Color.clear
                     .frame(width: 44, height: 44)
+                    .overlay { headerAction }
             }
 
             TextField("Expense name", text: $name, prompt: Text(""))

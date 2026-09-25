@@ -13,10 +13,15 @@ final class ExpenseReceiptImporter {
     private(set) var isImporting = false
     var errorMessage: String?
 
-    var unavailableMessage: String? {
+    /// Whether receipts can be read on this device. `SystemLanguageModel` is
+    /// observable, so views reading this update if the model finishes downloading
+    /// or Apple Intelligence is turned on while they're on screen.
+    var isAvailable: Bool {
         SystemLanguageModel.default.isAvailable
-            ? nil
-            : "Receipt reading requires Apple Intelligence on this device."
+    }
+
+    var unavailableMessage: String? {
+        isAvailable ? nil : "Receipt reading requires Apple Intelligence on this device."
     }
 
     var canUseCamera: Bool {
