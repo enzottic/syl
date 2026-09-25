@@ -167,6 +167,24 @@ struct SpendingMonthSummaryTests {
         #expect(result.averageDays.map(\.total) == Array(repeating: 12.0, count: 31))
     }
 
+    @Test
+    func boundedHistoryWithFirstRecordedDateMatchesFullLedgerAverage() throws {
+        let now = try date(2026, 9, 10, hour: 12)
+        let first = Expense(name: "First record", amount: 25, date: try date(2020, 1, 1))
+        let recent = Expense(name: "Recent", amount: 30, date: try date(2026, 7, 5))
+        let selected = Expense(name: "Selected", amount: 40, date: try date(2026, 9, 2))
+        let full = SpendingMonthSummary(month: now, expenses: [first, recent, selected],
+                                        now: now, calendar: calendar)
+        let bounded = SpendingMonthSummary(month: now, expenses: [recent, selected],
+                                           firstRecordedDate: first.date, now: now, calendar: calendar)
+
+        #expect(bounded.total == full.total)
+        #expect(bounded.previousTotal == full.previousTotal)
+        #expect(bounded.days.map(\.total) == full.days.map(\.total))
+        #expect(bounded.historicalMonthCount == full.historicalMonthCount)
+        #expect(bounded.averageDays.map(\.total) == full.averageDays.map(\.total))
+    }
+
     @Test(arguments: [(2026, 28), (2024, 29)])
     func shorterHistoricalMonthCarriesFinalTotalForward(year: Int, lastDay: Int) throws {
         let now = try date(year, 3, 2, hour: 12)
