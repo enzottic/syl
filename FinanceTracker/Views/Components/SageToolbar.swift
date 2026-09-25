@@ -36,6 +36,7 @@ struct SageToolbar: ToolbarContent {
             onAdd()
         } label: {
             Image(systemName: "plus")
+                .foregroundStyle(.onSage)
         }
         .accessibilityLabel("Add Expense")
         .accessibilityIdentifier("add-expense-button")

@@ -452,7 +452,7 @@ struct UnknownTagsSheet: View {
                         Spacer()
                         if selectedNames.contains(name) {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.sage)
+                                .foregroundStyle(.sageTint)
                         } else {
                             Image(systemName: "circle")
                                 .foregroundStyle(.secondary)

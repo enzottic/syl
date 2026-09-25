@@ -16,7 +16,7 @@ struct DashboardWidgetOrderSheet: View {
                             Text(widget.title)
                         } icon: {
                             Image(systemName: widget.symbol)
-                                .foregroundStyle(Color.sage)
+                                .foregroundStyle(.sageTint)
                         }
                         .frame(minHeight: 28)
                         .accessibilityIdentifier("widget-order-\(widget.rawValue)")
@@ -66,7 +66,7 @@ struct DashboardWidgetOrderSheet: View {
                 }
             }
         }
-        .tint(.sage)
+        .tint(.sageTint)
         .presentationSizing(.form)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)

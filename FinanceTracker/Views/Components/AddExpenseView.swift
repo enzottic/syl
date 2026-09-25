@@ -143,7 +143,7 @@ struct AddExpenseView: View {
                     Button("Save") { Task { await saveItem() } }
                         .accessibilityIdentifier("save-expense-button")
                         .fontWeight(.semibold)
-                        .tint(.sageAccent)
+                        .tint(.sageTint)
                         .disabled(isParsingReceipt || isSaving)
                 }
             }

@@ -34,7 +34,7 @@ struct ExpenseDatePage: View {
                     .datePickerStyle(.graphical)
                     .labelsHidden()
                     .accessibilityIdentifier("expense-date-picker")
-                    .tint(.sageAccent)
+                    .tint(.sageTint)
                     .fixedSize(horizontal: false, vertical: true)
                     // Animate the surrounding page and sheet, not the native calendar's layout.
                     .transaction { transaction in
@@ -50,7 +50,7 @@ struct ExpenseDatePage: View {
                     Label("Recurring", systemImage: "arrow.triangle.2.circlepath")
                 }
                 .font(.subheadline)
-                .tint(.sageAccent)
+                .tint(.sageTint)
                 .frame(minHeight: 44)
                 .disabled(!allowsRecurrence)
                 .accessibilityIdentifier("expense-recurring-toggle")

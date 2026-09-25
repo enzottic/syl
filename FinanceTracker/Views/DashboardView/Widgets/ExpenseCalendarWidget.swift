@@ -107,7 +107,7 @@ struct ExpenseCalendarWidget: View {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isToday ? Color.sage : Color(.separator),
+                    .strokeBorder(isToday ? Color.sageTint : Color(.separator),
                                   style: StrokeStyle(lineWidth: isToday ? 1.5 : 1,
                                                      dash: day.upcomingExpenses.isEmpty ? [] : [3, 2]))
             }

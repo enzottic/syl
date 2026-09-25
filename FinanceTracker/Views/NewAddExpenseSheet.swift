@@ -69,7 +69,7 @@ struct NewAddExpenseSheet: View {
                     Text(isSaving ? "Saving…" : currentStep == .details ? "Save Expense" : "Next")
                         .font(.headline)
                         .frame(maxWidth: .infinity, minHeight: 48)
-                        .foregroundStyle(Color(red: 0.10, green: 0.17, blue: 0.07))
+                        .foregroundStyle(.onSage)
                 }
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.roundedRectangle(radius: 22))

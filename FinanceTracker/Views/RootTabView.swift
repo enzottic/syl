@@ -84,7 +84,7 @@ struct RootTabView: View {
         .sensoryFeedback(.success, trigger: appRouter.toast?.kind == .success) { _, isSuccess in isSuccess }
         .environment(appRouter)
         .background(.background)
-        .tint(.sage)
+        .tint(.sageTint)
         .onOpenURL { url in
             if url.isFileURL {
                 appRouter.importReceipt(from: url)

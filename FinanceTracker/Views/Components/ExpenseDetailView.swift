@@ -79,7 +79,7 @@ struct ExpenseDetailView: View {
                         Task { await saveItem() }
                     }
                     .accessibilityIdentifier("save-expense-changes-button")
-                    .tint(Color.sageAccent)
+                    .tint(.sageTint)
                     .disabled(isSaving)
                 }
             }

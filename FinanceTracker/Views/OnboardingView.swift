@@ -141,7 +141,7 @@ struct OnboardingView: View {
 
         }
         .fontDesign(.rounded)
-        .tint(.sage)
+        .tint(.sageTint)
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
             notificationAuthorizationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
@@ -181,7 +181,7 @@ struct OnboardingView: View {
                 Text(requestingNotificationPermission ? "Requesting permission..." : currentStep == .welcome ? "Get Started" : currentStep == .complete ? "Start Tracking" : "Continue")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 44)
-                    .foregroundStyle(Color(red: 0.10, green: 0.17, blue: 0.07))
+                    .foregroundStyle(.onSage)
             }
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.roundedRectangle(radius: 22))
@@ -305,7 +305,7 @@ struct OnboardingView: View {
                     .multilineTextAlignment(.center)
                     .keyboardType(.numberPad)
                     .focused($incomeFocused)
-                    .tint(.sage)
+                    .tint(.sageTint)
                     .accessibilityLabel("Take-home income")
                     .accessibilityHint("Enter your income in whole currency units, \(incomeFrequency.periodDescription)")
                     .accessibilityIdentifier("onboarding-income-field")
@@ -419,7 +419,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Toggle("Enable iCloud Sync", isOn: $cloudSyncEnabled)
                     .font(.headline)
-                    .tint(.sage)
+                    .tint(.sageTint)
                     .accessibilityIdentifier("onboarding-sync-toggle")
                     .disabled(!config.supportsCloudSync)
                 Text(!config.supportsCloudSync ? "iCloud sync is unavailable in this dev build." : cloudSyncEnabled ? "Preference sync starts when you finish setup. Fully close and reopen Syl to enable expense sync." : "Preferences stay on this device. If expense sync was previously enabled, fully close and reopen Syl to turn it off.")
