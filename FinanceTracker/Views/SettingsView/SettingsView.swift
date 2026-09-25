@@ -34,7 +34,7 @@ struct SettingsView: View {
         let body = "\n\n\n--- Please do not remove the info below ---\nSyl \(version) (\(build)) · iOS \(ios) · \(Self.deviceModel)"
         var components = URLComponents()
         components.scheme = "mailto"
-        components.path = "hi@enzottic.me"
+        components.path = "contact@getsyl.app"
         components.queryItems = [
             URLQueryItem(name: "subject", value: "Syl Feedback"),
             URLQueryItem(name: "body", value: body)
