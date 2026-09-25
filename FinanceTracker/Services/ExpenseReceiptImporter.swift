@@ -24,10 +24,6 @@ final class ExpenseReceiptImporter {
         isAvailable ? nil : "Receipt reading requires Apple Intelligence on this device."
     }
 
-    var canUseCamera: Bool {
-        UIImagePickerController.isSourceTypeAvailable(.camera)
-    }
-
     /// Returns receipt details for the caller to apply to its draft.
     /// Concurrent starts and cancelled imports return nil without reporting an error.
     func importPhoto(_ item: PhotosPickerItem, tags: [ExpenseTag]) async -> ParsedExpense? {

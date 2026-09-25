@@ -50,10 +50,6 @@ public struct WatchSnapshot: Codable, Identifiable {
         self.spendingPoints = spendingPoints
         self.recentDailySpending = recentDailySpending
     }
-    
-    var budgetRemaining: Double {
-        monthlyBudget - totalSpent
-    }
 }
 
 public struct WatchDailySpending: Codable, Identifiable {
@@ -120,14 +116,6 @@ public struct WatchCategorySnapshot: Codable, Identifiable {
         self.monthlyBudget = monthlyBudget
         self.color = color
         self.spendingPoints = spendingPoints
-    }
-    
-    public var budgetRemaining: Double? {
-        monthlyBudget - totalSpent
-    }
-    
-    public var budgetUsedFraction: Double {
-        totalSpent / monthlyBudget
     }
 }
 

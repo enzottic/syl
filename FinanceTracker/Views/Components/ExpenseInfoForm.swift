@@ -9,13 +9,6 @@ import SwiftUI
 import SwiftData
 import SageKit
 
-struct ReceiptImportConfiguration {
-    let isParsing: Bool
-    let canUseCamera: Bool
-    let onTakePhoto: () -> Void
-    let onChoosePhoto: () -> Void
-}
-
 struct ExpenseInfoForm: View {
     @Environment(AppConfiguration.self) private var config
     @Environment(\.categoryColors) private var categoryColors
@@ -30,12 +23,6 @@ struct ExpenseInfoForm: View {
     @Binding var category: ExpenseCategory
     @Binding var tags: [ExpenseTag]
     @Binding var note: String
-    @Binding var isNameFieldFocused: Bool
-    @Binding var keyboardDismissalRequest: Int
-    var isEditing: Bool
-    var focusesNameOnAppear: Bool
-    var receiptImport: ReceiptImportConfiguration?
-    var receiptImportUnavailableMessage: String?
 
     private let tagSuggestionService = TagSuggestionService()
     @FocusState private var focusedField: Field?
@@ -51,13 +38,7 @@ struct ExpenseInfoForm: View {
         date: Binding<Date>,
         category: Binding<ExpenseCategory>,
         tags: Binding<[ExpenseTag]>,
-        note: Binding<String>,
-        isNameFieldFocused: Binding<Bool> = .constant(false),
-        keyboardDismissalRequest: Binding<Int> = .constant(0),
-        isEditing: Bool = false,
-        focusesNameOnAppear: Bool = false,
-        receiptImport: ReceiptImportConfiguration? = nil,
-        receiptImportUnavailableMessage: String? = nil
+        note: Binding<String>
     ) {
         self._name = name
         self._amount = amount
@@ -65,12 +46,6 @@ struct ExpenseInfoForm: View {
         self._category = category
         self._tags = tags
         self._note = note
-        self._isNameFieldFocused = isNameFieldFocused
-        self._keyboardDismissalRequest = keyboardDismissalRequest
-        self.isEditing = isEditing
-        self.focusesNameOnAppear = focusesNameOnAppear
-        self.receiptImport = receiptImport
-        self.receiptImportUnavailableMessage = receiptImportUnavailableMessage
     }
 
     var body: some View {
@@ -96,20 +71,8 @@ struct ExpenseInfoForm: View {
         }
         .sensoryFeedback(.selection, trigger: category)
         .sensoryFeedback(.selection, trigger: tags.map(\.id))
-        .onChange(of: isNameFieldFocused) { _, isFocused in
-            if !isFocused, focusedField == .name {
-                focusedField = nil
-            }
-        }
-        .onChange(of: keyboardDismissalRequest) {
-            dismissKeyboard()
-        }
-        .onChange(of: focusedField) { old, new in
-            isNameFieldFocused = new == .name
+        .onChange(of: focusedField) { old, _ in
             if old == .name { suggestTagIfNeeded() }
-        }
-        .task {
-            if focusesNameOnAppear { focusedField = .name }
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -140,66 +103,19 @@ struct ExpenseInfoForm: View {
     }
 
     private var nameHeader: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Name")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                TextField("What was it for?", text: $name)
-                    .accessibilityIdentifier("expense-name-field")
-                    .accessibilityLabel("Expense name")
-                    .font(.title2.weight(.semibold))
-                    .submitLabel(.next)
-                    .focused($focusedField, equals: .name)
-                    .onSubmit { focusedField = .amount }
-                    .frame(minHeight: 44)
-            }
-
-            if !isEditing, let receiptImport {
-                receiptButton(receiptImport)
-            } else if !isEditing, let receiptImportUnavailableMessage {
-                Menu {
-                    Text(receiptImportUnavailableMessage)
-                } label: {
-                    Image(systemName: "receipt")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
-                        .background(.sageBackground, in: RoundedRectangle(cornerRadius: 12))
-                }
-                .accessibilityLabel("Receipt reading unavailable")
-                .accessibilityHint(receiptImportUnavailableMessage)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Name")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            TextField("What was it for?", text: $name)
+                .accessibilityIdentifier("expense-name-field")
+                .accessibilityLabel("Expense name")
+                .font(.title2.weight(.semibold))
+                .submitLabel(.next)
+                .focused($focusedField, equals: .name)
+                .onSubmit { focusedField = .amount }
+                .frame(minHeight: 44)
         }
-    }
-
-    private func receiptButton(_ configuration: ReceiptImportConfiguration) -> some View {
-        Menu {
-            if configuration.canUseCamera {
-                Button("Take Photo", systemImage: "camera") {
-                    configuration.onTakePhoto()
-                }
-            }
-            Button("Choose from Photos", systemImage: "photo.on.rectangle") {
-                configuration.onChoosePhoto()
-            }
-        } label: {
-            Group {
-                if configuration.isParsing {
-                    ProgressView()
-                        .controlSize(.small)
-                } else {
-                    Image(systemName: "receipt")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 44, height: 44)
-            .background(.sageBackground, in: RoundedRectangle(cornerRadius: 12))
-            .contentShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .disabled(configuration.isParsing)
-        .accessibilityLabel(configuration.isParsing ? "Reading receipt" : "Receipt")
-        .accessibilityValue(configuration.isParsing ? "In progress" : "")
     }
 
     // MARK: - Details card
@@ -278,7 +194,6 @@ struct ExpenseInfoForm: View {
 
     private func dismissKeyboard() {
         focusedField = nil
-        isNameFieldFocused = false
     }
 
     // MARK: - Category picker (inline)
@@ -420,8 +335,7 @@ struct ExpenseInfoForm: View {
             date: $date,
             category: $category,
             tags: $tags,
-            note: $note,
-            isEditing: true
+            note: $note
         )
         .padding(.vertical, 20)
     }

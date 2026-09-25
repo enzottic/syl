@@ -13,7 +13,6 @@ enum SageTab: Equatable, Hashable {
     case stats
     case settings
     case search
-    case addExpense
 }
 
 /// Destinations pushed onto a tab's navigation stack. Shared across tabs because

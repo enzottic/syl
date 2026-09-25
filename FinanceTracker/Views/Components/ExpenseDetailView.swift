@@ -19,7 +19,6 @@ struct ExpenseDetailView: View {
     
     let expense: Expense
     
-    @State private var isEditing: Bool = false
     @State private var workingExpense: EditableExpense
     @State private var showingDeleteConfirmation: Bool = false
     @State private var saveErrorMessage: String?
@@ -53,8 +52,7 @@ struct ExpenseDetailView: View {
                 date: $workingExpense.date,
                 category: $workingExpense.category,
                 tags: $workingExpense.tags,
-                note: $workingExpense.note,
-                isEditing: true
+                note: $workingExpense.note
             )
             .padding(.top, 20)
             .padding(.bottom, 40)

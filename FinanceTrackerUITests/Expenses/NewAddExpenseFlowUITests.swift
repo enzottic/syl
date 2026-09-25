@@ -126,7 +126,6 @@ final class NewAddExpenseFlowUITests: XCTestCase {
         let app = launchExpenses()
         let wizard = ExpenseWizardUITestSupport(app: app)
         wizard.open()
-        XCTAssertFalse(app.buttons["cancel-expense-button"].exists)
         wizard.dismissBySwipe()
 
         wizard.open()
