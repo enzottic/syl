@@ -1,35 +1,35 @@
 import SwiftUI
 import WidgetKit
 
-struct MonthlySummaryEntry: TimelineEntry {
+struct WatchMonthlySummaryEntry: TimelineEntry {
     let date: Date
     let snapshot: WatchSnapshot?
 }
 
-struct MonthlySummaryProvider: TimelineProvider {
-    func placeholder(in context: Context) -> MonthlySummaryEntry {
-        MonthlySummaryEntry(date: WatchSnapshot.preview.generatedAt, snapshot: .preview)
+struct WatchMonthlySummaryProvider: TimelineProvider {
+    func placeholder(in context: Context) -> WatchMonthlySummaryEntry {
+        WatchMonthlySummaryEntry(date: WatchSnapshot.preview.generatedAt, snapshot: .preview)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (MonthlySummaryEntry) -> Void) {
-        completion(context.isPreview ? placeholder(in: context) : MonthlySummaryEntry(date: .now, snapshot: WatchSnapshotCache.load()))
+    func getSnapshot(in context: Context, completion: @escaping (WatchMonthlySummaryEntry) -> Void) {
+        completion(context.isPreview ? placeholder(in: context) : WatchMonthlySummaryEntry(date: .now, snapshot: WatchSnapshotCache.load()))
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<MonthlySummaryEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<WatchMonthlySummaryEntry>) -> Void) {
         let now = Date.now
         let snapshot = WatchSnapshotCache.load()
-        var entries = [MonthlySummaryEntry(date: now, snapshot: snapshot)]
+        var entries = [WatchMonthlySummaryEntry(date: now, snapshot: snapshot)]
         // Change the stale label at the boundary even if no phone transfer arrives.
         if let snapshot {
             let staleDate = min(snapshot.monthEnd, snapshot.generatedAt.addingTimeInterval(86_400))
-            if staleDate > now { entries.append(MonthlySummaryEntry(date: staleDate, snapshot: snapshot)) }
+            if staleDate > now { entries.append(WatchMonthlySummaryEntry(date: staleDate, snapshot: snapshot)) }
         }
         completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(3600))))
     }
 }
 
-struct MonthlySummaryWidgetView: View {
-    let entry: MonthlySummaryEntry
+struct WatchMonthlySummaryWidgetView: View {
+    let entry: WatchMonthlySummaryEntry
     @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
@@ -64,10 +64,10 @@ struct MonthlySummaryWidgetView: View {
 }
 
 @main
-struct MonthlySummaryWidget: Widget {
+struct WatchMonthlySummaryWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: WatchSnapshotCache.widgetKind, provider: MonthlySummaryProvider()) { entry in
-            MonthlySummaryWidgetView(entry: entry)
+        StaticConfiguration(kind: WatchSnapshotCache.widgetKind, provider: WatchMonthlySummaryProvider()) { entry in
+            WatchMonthlySummaryWidgetView(entry: entry)
         }
         .configurationDisplayName("Monthly spending")
         .description("Your spending and budget progress this month.")
@@ -76,9 +76,9 @@ struct MonthlySummaryWidget: Widget {
 }
 
 #Preview(as: .accessoryRectangular) {
-    MonthlySummaryWidget()
+    WatchMonthlySummaryWidget()
 } timeline: {
-    MonthlySummaryEntry(date: WatchSnapshot.preview.generatedAt, snapshot: .preview)
-    MonthlySummaryEntry(date: .now, snapshot: nil)
-    MonthlySummaryEntry(date: WatchSnapshot.preview.monthEnd, snapshot: .preview)
+    WatchMonthlySummaryEntry(date: WatchSnapshot.preview.generatedAt, snapshot: .preview)
+    WatchMonthlySummaryEntry(date: .now, snapshot: nil)
+    WatchMonthlySummaryEntry(date: WatchSnapshot.preview.monthEnd, snapshot: .preview)
 }

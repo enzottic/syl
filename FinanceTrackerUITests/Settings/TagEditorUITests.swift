@@ -186,8 +186,7 @@ final class TagEditorUITests: XCTestCase {
 
     private func tap(_ element: XCUIElement) {
         XCTAssertTrue(element.waitForExistence(timeout: timeout))
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
+        XCTAssertTrue(element.waitForHittability(timeout: timeout))
         element.tap()
     }
 

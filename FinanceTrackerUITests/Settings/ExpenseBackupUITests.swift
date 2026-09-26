@@ -107,13 +107,3 @@ final class ExpenseBackupUITests: XCTestCase {
         add(attachment)
     }
 }
-
-private extension XCUIElement {
-    func waitForHittability(timeout: TimeInterval) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "hittable == true"),
-            object: self
-        )
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
-    }
-}

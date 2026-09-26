@@ -1135,12 +1135,6 @@ final class FinanceTrackerUITests: XCTestCase {
 }
 
 private extension XCUIElement {
-    func waitForHittability(timeout: TimeInterval) -> Bool {
-        let predicate = NSPredicate(format: "hittable == true")
-        let expectation = XCTNSPredicateExpectation(predicate: predicate, object: self)
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
-    }
-
     func clearAndTypeText(_ text: String) {
         let currentText = value as? String ?? ""
         coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
