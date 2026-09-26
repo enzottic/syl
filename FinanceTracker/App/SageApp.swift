@@ -10,7 +10,6 @@ import SwiftData
 import AppIntents
 import SageKit
 import UserNotifications
-import Playgrounds
 
 @main
 struct SageApp: App {
@@ -243,9 +242,4 @@ struct MainAppPackage: AppIntentsPackage {
     static var includedPackages: [any AppIntentsPackage.Type] {
         [SageKitPackage.self]
     }
-}
-
-
-#Playground {
-
 }

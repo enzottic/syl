@@ -210,7 +210,6 @@
 		C61F44AA2F00D5360033F8B6 /* Exceptions for "FinanceTracker" folder in "FinanceTracker" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Config/Secrets.xcconfig,
 				Info.plist,
 			);
 			target = C66031C52E8073C60078DD15 /* FinanceTracker */;
