@@ -244,14 +244,6 @@
 			);
 			target = C6ED82B73053ADE3004DE5F2 /* FinanceTrackerWatch Watch App */;
 		};
-		C6F7DA3D2E9B5F4500A20A67 /* Exceptions for "FinanceTrackerWidget" folder in "FinanceTracker" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				DailyChartWidget.swift,
-				WidgetTimelineEntry.swift,
-			);
-			target = C66031C52E8073C60078DD15 /* FinanceTracker */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -302,7 +294,6 @@
 		C6B09FD62E92CF5200899162 /* FinanceTrackerWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				C6F7DA3D2E9B5F4500A20A67 /* Exceptions for "FinanceTrackerWidget" folder in "FinanceTracker" target */,
 				C6B09FE52E92CF5400899162 /* Exceptions for "FinanceTrackerWidget" folder in "FinanceTrackerWidgetExtension" target */,
 			);
 			path = FinanceTrackerWidget;
