@@ -17,6 +17,8 @@ struct DataDeletionService {
 
     // Deletes every expense. Recurring rules stay active unless the caller also deletes them.
     func deleteExpenses(includeRecurringRules: Bool) throws {
+        // A bulk delete only visits persisted models; include any pending inserts.
+        if modelContext.hasChanges { try modelContext.save() }
         try modelContext.delete(model: Expense.self)
 
         if includeRecurringRules {
@@ -30,6 +32,7 @@ struct DataDeletionService {
     // File removal cannot be rolled back if a later model operation fails. External copies are untouched.
     func deleteAllUserData(fileManager: FileManager = .default) throws {
         try Self.deleteLocalExport(fileManager: fileManager)
+        if modelContext.hasChanges { try modelContext.save() }
         try modelContext.delete(model: Expense.self)
         try modelContext.delete(model: RecurringExpenseRule.self)
         try modelContext.delete(model: ExpenseTag.self)

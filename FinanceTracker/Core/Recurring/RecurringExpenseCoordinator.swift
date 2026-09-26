@@ -44,14 +44,6 @@ final class RecurringExpenseCoordinator {
         }
     }
 
-    func stop() {
-        maintenanceTask?.cancel()
-        maintenanceTask = nil
-        for observer in observers { NotificationCenter.default.removeObserver(observer) }
-        observers.removeAll()
-        hasStarted = false
-    }
-
     private func observeCloudKitEvents() {
         let observer = NotificationCenter.default.addObserver(
             forName: NSPersistentCloudKitContainer.eventChangedNotification,

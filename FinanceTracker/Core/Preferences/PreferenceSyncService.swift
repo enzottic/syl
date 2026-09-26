@@ -171,10 +171,11 @@ final class PreferenceSyncService {
         publish([.hasCompletedSetup: true])
     }
 
-    // Explicit device deletion clears Syl's KVS keys even when ordinary sync is off.
+    // Keep sync consent unchanged while removing its old KVS values.
     // synchronize() only queues the change; it is not a server acknowledgement.
     @discardableResult
     func resetForDataDeletion() -> Bool {
+        guard hasConsent() else { return true }
         let deletionStore = store ?? makeStore()
         for key in Key.allCases { deletionStore.removeObject(forKey: key.storageKey) }
         return deletionStore.synchronize()

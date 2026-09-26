@@ -17,17 +17,10 @@ final public class ExpenseStore {
     
     let modelContainer: ModelContainer
     var context: ModelContext
-    private let isDataDeletionPending: @MainActor () -> Bool
 
-    public init(
-        modelContainer: ModelContainer,
-        isDataDeletionPending: @escaping @MainActor () -> Bool = {
-            SagePreferences.defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey)
-        }
-    ) {
+    public init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
         self.context = modelContainer.mainContext
-        self.isDataDeletionPending = isDataDeletionPending
     }
 
     // MARK: - Create
@@ -41,9 +34,6 @@ final public class ExpenseStore {
         tagID: UUID?,
         save: (ModelContext) throws -> Void = { try $0.save() }
     ) throws -> ExpenseEntity {
-        guard !isDataDeletionPending() else {
-            throw SaveError.deletionPending
-        }
         // Shortcut writes must not save or roll back pending edits in the app's context.
         let writeContext = ModelContext(modelContainer)
         writeContext.autosaveEnabled = false
@@ -62,14 +52,6 @@ final public class ExpenseStore {
         } catch {
             writeContext.rollback()
             throw error
-        }
-    }
-
-    public enum SaveError: LocalizedError {
-        case deletionPending
-
-        public var errorDescription: String? {
-            "Finish deleting local data before adding expenses."
         }
     }
 

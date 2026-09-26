@@ -20,6 +20,7 @@ class AppConfiguration {
     // Locks for cloud sync
     private var isApplyingRemote = false
     private var isRestoringValue = false
+    private var isResettingSettings = false
 
     var ledgerCurrencyCode: String {
         didSet {
@@ -36,8 +37,6 @@ class AppConfiguration {
     }
     private(set) var hasCompletedSetupOnAnotherDevice = false
     private(set) var cloudSyncStatus: PreferenceSyncService.Status = .stopped
-    private(set) var hasPendingLocalDeletion = false
-    private(set) var isWaitingForDeletionRestart = false
 
     func recheckPreferences() { preferenceSync.recheck() }
 
@@ -127,7 +126,6 @@ class AppConfiguration {
     @discardableResult
     func updateCloudSyncEnabled(_ enabled: Bool) -> Bool {
         guard supportsCloudSync else { return !enabled }
-        guard !enabled || !hasPendingLocalDeletion else { return false }
         isCloudSyncEnabled = enabled
         guard !isPreview, !isUITesting else { return true }
         return defaults.bool(forKey: Keys.isCloudSyncEnabled) == enabled
@@ -215,44 +213,12 @@ class AppConfiguration {
         }
     }
 
-    /// Suspends new sync sessions before deleting the local store. The current SwiftData
-    /// container keeps its launch-time configuration until the app next launches.
-    @discardableResult
-    func prepareForDataDeletion() -> (wasEnabled: Bool, wasPending: Bool) {
-        let previous = (wasEnabled: isCloudSyncEnabled, wasPending: hasPendingLocalDeletion)
-        guard supportsCloudSync, !isPreview, !isUITesting else { return previous }
-        hasPendingLocalDeletion = true
-        defaults.set(true, forKey: SageModelContainer.pendingLocalDeletionKey)
-        isCloudSyncEnabled = false
-        return previous
-    }
-
-    func cancelDataDeletion(previous: (wasEnabled: Bool, wasPending: Bool)) {
-        guard supportsCloudSync, !isPreview, !isUITesting else { return }
-        isWaitingForDeletionRestart = false
-        hasPendingLocalDeletion = previous.wasPending
-        if !previous.wasPending {
-            defaults.removeObject(forKey: SageModelContainer.pendingLocalDeletionKey)
-        }
-        isCloudSyncEnabled = previous.wasEnabled
-    }
-
-    func markLocalDeletionComplete() {
-        isWaitingForDeletionRestart = hasPendingLocalDeletion
-    }
-
-    func finishLocalDeletion() {
-        guard hasPendingLocalDeletion else { return }
-        hasPendingLocalDeletion = false
-        isWaitingForDeletionRestart = false
-        defaults.removeObject(forKey: SageModelContainer.pendingLocalDeletionKey)
-    }
-
     @discardableResult
     func resetAllSettings() -> Bool {
-        let preferencesQueued = supportsCloudSync && !isPreview && !isUITesting
-            ? preferenceSync.resetForDataDeletion() : true
-        isCloudSyncEnabled = false
+        // Keep the user's sync choice so the open SwiftData store can export deletions.
+        // Reset local values without publishing defaults before removing KVS keys.
+        isResettingSettings = true
+        defer { isResettingSettings = false }
         selectedAppearance = .system
         totalMonthlyIncome = 0
         needsPercent = 0.5
@@ -271,19 +237,22 @@ class AppConfiguration {
         dashboardWidgetOrder = DashboardWidgetID.defaultOrder
         ledgerCurrencyCode = isPreview || isUITesting ? "USD" : LedgerCurrency.suggestedCode()
         hasCompletedSetupOnAnotherDevice = false
+
+        let preferencesQueued = supportsCloudSync && !isPreview && !isUITesting
+            ? preferenceSync.resetForDataDeletion() : true
         
         guard !isPreview else { return preferencesQueued }
         
         LedgerCurrency.reset(defaults: defaults)
-        let localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
-            Keys.isCloudSyncEnabled, Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
+        var localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
+            Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
             Keys.billReminderDaysBefore, Keys.hideBillReminderDetails,
             Keys.billReminderTimeMinutes, Keys.dailyExpenseReminderEnabled, Keys.dailyExpenseReminderTimeMinutes,
         ]
+        if !supportsCloudSync || isUITesting { localKeys.append(Keys.isCloudSyncEnabled) }
         
         for key in localKeys { defaults.removeObject(forKey: key) }
         
-        if supportsCloudSync, !isUITesting { defaults.set(false, forKey: Keys.isCloudSyncEnabled) }
         WidgetCenter.shared.reloadAllTimelines()
         return preferencesQueued
     }
@@ -325,7 +294,6 @@ class AppConfiguration {
         self.isUITesting = isUITesting
         self.supportsCloudSync = supportsCloudSync
         self.defaults = defaults
-        _hasPendingLocalDeletion = supportsCloudSync && !isUITesting && defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey)
         preferenceSync = PreferenceSyncService(
             hasConsent: { supportsCloudSync && !isUITesting && defaults.bool(forKey: Keys.isCloudSyncEnabled) },
             makeStore: makeCloudStore,
@@ -336,8 +304,7 @@ class AppConfiguration {
         _ledgerCurrencyCode = LedgerCurrency.persistedCode(defaults: defaults)
             ?? (isUITesting ? "USD" : LedgerCurrency.suggestedCode())
         
-        _isCloudSyncEnabled = supportsCloudSync && !isUITesting && !hasPendingLocalDeletion
-            && defaults.bool(forKey: Keys.isCloudSyncEnabled)
+        _isCloudSyncEnabled = supportsCloudSync && !isUITesting && defaults.bool(forKey: Keys.isCloudSyncEnabled)
 
         _dashboardWidgetOrder = DashboardWidgetID.resolvedOrder(
             defaults.stringArray(forKey: Keys.dashboardWidgetOrder) ?? []
@@ -460,7 +427,7 @@ extension AppConfiguration {
         defaults.set(value, forKey: key.storageKey)
         
         // If we're applying a change from elsewhere already, then skip publishing
-        guard !isApplyingRemote else { return }
+        guard !isApplyingRemote, !isResettingSettings else { return }
         
         var values = [key: value]
         if Key.allocation.contains(key) {

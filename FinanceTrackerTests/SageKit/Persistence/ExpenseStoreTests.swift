@@ -10,19 +10,6 @@ struct ExpenseStoreTests {
     }
 
     @Test @MainActor
-    func shortcutWriteIsBlockedDuringDataDeletion() throws {
-        let container = try SageModelContainer.make(for: .test)
-        let store = ExpenseStore(modelContainer: container, isDataDeletionPending: { true })
-        #expect(throws: ExpenseStore.SaveError.self) {
-            _ = try store.addExpenseAndSave(
-                Expense(name: "Should not save", amount: 5, category: .needs),
-                tagID: nil
-            )
-        }
-        #expect(try container.mainContext.fetchCount(FetchDescriptor<Expense>()) == 0)
-    }
-
-    @Test @MainActor
     func isolatedWriteDoesNotSavePendingAppEdits() throws {
         let container = try SageModelContainer.make(for: .test)
         let store = ExpenseStore(modelContainer: container)

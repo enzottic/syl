@@ -29,6 +29,30 @@ struct DataDeletionServiceTests {
     }
 
     @Test @MainActor
+    func deletionIncludesUnsavedExpense() throws {
+        let container = try SageModelContainer.make(for: .test)
+        let context = container.mainContext
+        context.insert(Expense(name: "Unsaved", amount: 5, category: .wants))
+
+        try DataDeletionService(modelContext: context).deleteExpenses(includeRecurringRules: false)
+
+        #expect(try context.fetch(FetchDescriptor<Expense>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func fullResetIncludesUnsavedModels() throws {
+        let container = try SageModelContainer.make(for: .test)
+        let context = container.mainContext
+        context.insert(Expense(name: "Unsaved", amount: 5, category: .wants))
+        context.insert(ExpenseTag(name: "Unsaved tag", uiColor: .systemBlue, emoji: "💵"))
+
+        try DataDeletionService(modelContext: context).deleteAllUserData(fileManager: DeletionFileManager())
+
+        #expect(try context.fetch(FetchDescriptor<Expense>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<ExpenseTag>()).isEmpty)
+    }
+
+    @Test @MainActor
     func expensesAndRulesCannotGenerateNewExpenses() throws {
         let container = try SageModelContainer.make(for: .test)
         let context = container.mainContext

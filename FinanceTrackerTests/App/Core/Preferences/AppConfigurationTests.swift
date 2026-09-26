@@ -191,7 +191,7 @@ struct AppConfigurationTests {
     #endif
 
     @Test
-    func disabledConfigurationAcquiresCloudOnlyForDataDeletionReset() throws {
+    func disabledConfigurationNeverAcquiresCloudForInitializationEditsCurrencyOrReset() throws {
         let fixture = try Fixture()
         fixture.cloud.values = [SageModelContainer.cloudKitPreferenceKey: true, "appearance": "Dark"]
         let config = fixture.config
@@ -242,8 +242,9 @@ struct AppConfigurationTests {
         #expect(LedgerCurrency.persistedCode(defaults: fixture.defaults) == nil)
         #expect(!fixture.defaults.bool(forKey: SageModelContainer.cloudKitPreferenceKey))
         #expect(fixture.defaults.object(forKey: "totalMonthlyIncome") == nil)
-        #expect(fixture.acquisitions == 1)
-        #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
+        #expect(fixture.acquisitions == 0)
+        #expect(fixture.cloud.operations.isEmpty)
+        #expect(fixture.cloud.values["appearance"] as? String == "Dark")
     }
 
     @Test
@@ -753,8 +754,8 @@ struct AppConfigurationTests {
         config.resetAllSettings()
         fixture.post()
         await drainNotifications()
-        #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
-        #expect(fixture.acquisitions == 2)
+        #expect(fixture.cloud.operations.isEmpty)
+        #expect(fixture.acquisitions == 1)
     }
 
     @Test
@@ -810,8 +811,8 @@ struct AppConfigurationTests {
         #expect(config.selectedAppearance == .dark)
         #expect(config.cloudSyncStatus == .stopped)
         config.resetAllSettings()
-        #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
-        #expect(fixture.acquisitions == 2)
+        #expect(fixture.cloud.operations.isEmpty)
+        #expect(fixture.acquisitions == 1)
     }
 
     @Test
@@ -917,9 +918,10 @@ struct AppConfigurationTests {
     }
 
     @Test
-    func enabledResetDeletesCloudPreferencesBeforePersistingOptOutWithoutPublishingDefaults() throws {
+    func enabledResetDeletesCloudPreferencesAndKeepsSyncOnWithoutPublishingDefaults() throws {
         let fixture = try Fixture(enabled: true, currency: "USD")
-        fixture.cloud.values = [Key.ledgerCurrency.storageKey: "USD", "appearance": "Dark", "totalMonthlyIncome": 7000]
+        fixture.cloud.values = [Key.ledgerCurrency.storageKey: "USD", "appearance": "Dark",
+                                "totalMonthlyIncome": 7000, "hasCompletedSetup": true]
         let config = fixture.config
         fixture.cloud.operations.removeAll()
         fixture.cloud.onRemove = {
@@ -930,89 +932,12 @@ struct AppConfigurationTests {
         #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
         #expect(fixture.cloud.operations.last == .synchronize)
         #expect(fixture.cloud.writtenKeys.isEmpty)
-        #expect(!config.isCloudSyncEnabled)
-        #expect(!fixture.defaults.bool(forKey: SageModelContainer.cloudKitPreferenceKey))
-        #expect(config.cloudSyncStatus == .stopped)
+        #expect(config.isCloudSyncEnabled)
+        #expect(fixture.defaults.bool(forKey: SageModelContainer.cloudKitPreferenceKey))
+        #expect(config.cloudSyncStatus == .running)
+        #expect(fixture.cloud.values["hasCompletedSetup"] == nil)
         #expect(config.ledgerCurrencyCode == LedgerCurrency.suggestedCode())
         #expect(config.totalMonthlyIncome == 0)
-    }
-
-    @Test(arguments: [true, false])
-    func localDeletionClearsSyncedPreferencesAndSuspendsSync(enabled: Bool) throws {
-        let fixture = try Fixture(enabled: enabled, currency: "USD")
-        fixture.cloud.values = ["appearance": "Dark", "totalMonthlyIncome": 7000,
-                                "hasCompletedSetup": true, Key.ledgerCurrency.storageKey: "EUR"]
-        let config = fixture.config
-        let previous = config.prepareForDataDeletion()
-        #expect(previous.wasEnabled == enabled)
-        #expect(config.hasPendingLocalDeletion)
-        #expect(!config.isCloudSyncEnabled)
-        #expect(!config.updateCloudSyncEnabled(true))
-        #expect(fixture.defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey))
-
-        let queued = config.resetAllSettings()
-        config.markLocalDeletionComplete()
-        #expect(config.isWaitingForDeletionRestart)
-        #expect(queued)
-        #expect(fixture.cloud.values["appearance"] == nil)
-        #expect(fixture.cloud.values["hasCompletedSetup"] == nil)
-        #expect(Set(fixture.cloud.operations.filter {
-            if case .remove = $0 { return true }
-            return false
-        }) == Set(Key.allCases.map { .remove($0.storageKey) }))
-        config.finishLocalDeletion()
-        #expect(!config.hasPendingLocalDeletion)
-        #expect(!config.isWaitingForDeletionRestart)
-        #expect(!fixture.defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey))
-        #expect(config.updateCloudSyncEnabled(true))
-        #expect(config.totalMonthlyIncome == 0)
-        #expect(config.selectedAppearance == .system)
-        #expect(!config.hasCompletedSetupOnAnotherDevice)
-    }
-
-    @Test
-    func pendingLocalDeletionPersistsAcrossRelaunch() throws {
-        let fixture = try Fixture(enabled: true)
-        let config = fixture.config
-        _ = config.prepareForDataDeletion()
-        _ = config.resetAllSettings()
-        #expect(config.hasPendingLocalDeletion)
-        #expect(!config.updateCloudSyncEnabled(true))
-
-        let reopened = fixture.makeConfiguration()
-        #expect(reopened.hasPendingLocalDeletion)
-        #expect(!reopened.isCloudSyncEnabled)
-        reopened.resetAllSettings()
-        reopened.finishLocalDeletion()
-        #expect(!reopened.hasPendingLocalDeletion)
-    }
-
-    @Test
-    func unavailableKVSDoesNotBlockLocalCompletion() throws {
-        let fixture = try Fixture()
-        fixture.cloud.synchronizationResult = false
-        let config = fixture.config
-        _ = config.prepareForDataDeletion()
-        let queued = config.resetAllSettings()
-        #expect(!queued)
-        config.finishLocalDeletion()
-        #expect(!config.hasPendingLocalDeletion)
-    }
-
-    @Test
-    func failedLocalDeletionRestoresPriorStateButKeepsExistingRetry() throws {
-        let fixture = try Fixture(enabled: true)
-        let config = fixture.config
-        let initial = config.prepareForDataDeletion()
-        config.cancelDataDeletion(previous: initial)
-        #expect(config.isCloudSyncEnabled)
-        #expect(!config.hasPendingLocalDeletion)
-
-        _ = config.prepareForDataDeletion()
-        let retry = config.prepareForDataDeletion()
-        config.cancelDataDeletion(previous: retry)
-        #expect(config.hasPendingLocalDeletion)
-        #expect(!config.isCloudSyncEnabled)
     }
 
     private func drainNotifications() async {

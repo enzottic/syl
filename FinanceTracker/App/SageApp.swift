@@ -19,9 +19,9 @@ struct SageApp: App {
     @State private var appConfiguration = AppConfiguration()
     @State private var didCompleteUITestOnboarding = false
     
-    @State private var containerResult: Result<ModelContainer, any Error>?
-    @State private var recurringExpenseCoordinator: RecurringExpenseCoordinator?
-    @State private var recurringReminders: RecurringReminderCoordinator?
+    private let containerResult: Result<ModelContainer, any Error>
+    private let recurringExpenseCoordinator: RecurringExpenseCoordinator?
+    private let recurringReminders: RecurringReminderCoordinator?
     private let connectivity = WatchSnapshotSender.shared
     
     @MainActor
@@ -36,11 +36,8 @@ struct SageApp: App {
         // the next app launch.
         SageModelContainer.activateCloudKitPreference()
 
-        let containerResult: Result<ModelContainer, any Error>?
-        if SagePreferences.defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey) {
-            // Open the store without mirroring only when the local reset resumes.
-            containerResult = nil
-        } else if UITestConfiguration.isEnabled {
+        let containerResult: Result<ModelContainer, any Error>
+        if UITestConfiguration.isEnabled {
             containerResult = Result {
                 let container = try SageModelContainer.make(for: .test)
                 if let seedName = UITestConfiguration.seedExpenseName {
@@ -88,73 +85,59 @@ struct SageApp: App {
                 }
             }
         }
-        _containerResult = State(initialValue: containerResult)
-        let reminders: RecurringReminderCoordinator?
-        if case let .some(.success(container)) = containerResult,
+        self.containerResult = containerResult
+        if case let .success(container) = containerResult,
            !UITestConfiguration.isEnabled,
            ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1" {
-            reminders = RecurringReminderCoordinator(container: container)
+            recurringReminders = RecurringReminderCoordinator(container: container)
         } else {
-            reminders = nil
+            recurringReminders = nil
         }
-        _recurringReminders = State(initialValue: reminders)
 
         // Present notifications that fire while the app is foreground
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
 
         // Make ExpenseStore resolvable via @Dependency in App Intents.
-        if case let .some(.success(container)) = containerResult {
+        if case let .success(container) = containerResult {
             let expenseStore = ExpenseStore(modelContainer: container)
             AppDependencyManager.shared.add(dependency: expenseStore)
         }
 
         #if !DEBUG
-        let coordinator: RecurringExpenseCoordinator?
-        if case let .some(.success(container)) = containerResult {
-            coordinator = RecurringExpenseCoordinator(
+        if case let .success(container) = containerResult {
+            recurringExpenseCoordinator = RecurringExpenseCoordinator(
                 modelContainer: container,
                 cloudKitEnabled: SageModelContainer.isCloudKitEnabled
             )
         } else {
-            coordinator = nil
+            recurringExpenseCoordinator = nil
         }
         #else
-        let coordinator: RecurringExpenseCoordinator? = nil
+        recurringExpenseCoordinator = nil
         #endif
-        _recurringExpenseCoordinator = State(initialValue: coordinator)
-        coordinator?.start()
+
+        recurringExpenseCoordinator?.start()
 
         // Refresh dynamic shortcut parameter values after registering dependencies.
         // App Shortcut phrases are extracted at build time and discovered by the system.
-        if containerResult != nil {
-            SageShortcutsProvider.updateAppShortcutParameters()
-        }
+        SageShortcutsProvider.updateAppShortcutParameters()
 
     }
     
     var body: some Scene {
         WindowGroup {
-            if appConfiguration.isWaitingForDeletionRestart {
-                PendingDeletionRestartView()
-            } else {
-                switch containerResult {
-                case nil:
-                    PendingDeletionRecoveryView(finish: finishPendingDeletion)
-                case let .some(.success(container)):
-                    mainContent
-                        .modifier(RelativeDateRefreshModifier())
-                        .modelContainer(container)
-                case let .some(.failure(error)):
-                    DataStoreRecoveryView(error: error)
-                }
+            switch containerResult {
+            case let .success(container):
+                mainContent
+                    .modifier(RelativeDateRefreshModifier())
+                    .modelContainer(container)
+            case let .failure(error):
+                DataStoreRecoveryView(error: error)
             }
         }
         .environment(appConfiguration)
         .environment(\.recurringReminders, recurringReminders)
         .environment(\.categoryColors, appConfiguration.categoryColors)
-        .onChange(of: appConfiguration.isWaitingForDeletionRestart) { _, waiting in
-            if waiting { recurringExpenseCoordinator?.stop() }
-        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active || phase == .background else { return }
             publishMonthlySnapshot()
@@ -164,9 +147,8 @@ struct SageApp: App {
     private func publishMonthlySnapshot() {
         guard !UITestConfiguration.isEnabled,
               ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1",
-              !appConfiguration.hasPendingLocalDeletion,
               hasOpenedAppOnce,
-              case let .some(.success(container)) = containerResult else {
+              case let .success(container) = containerResult else {
             return
         }
         
@@ -185,41 +167,6 @@ struct SageApp: App {
         } catch {
             print("Could not prepare watch snapshot: \(error.localizedDescription)")
         }
-    }
-
-    @MainActor
-    private func finishPendingDeletion() async -> Bool {
-        let result = SageModelContainer.shared
-        guard case let .success(container) = result else { return false }
-        do {
-            // The old session could still have imported records after the first local deletion.
-            // This container opens with CloudKit disabled by the pending marker.
-            try DataDeletionService(modelContext: container.mainContext).deleteAllUserData()
-        } catch {
-            return false
-        }
-        appConfiguration.resetAllSettings()
-        appConfiguration.finishLocalDeletion()
-        UserDefaults.standard.removeObject(forKey: "hasOpenedAppOnce")
-        if let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
-            container: container,
-            categoryColors: appConfiguration.categoryColors,
-            currencyCode: appConfiguration.ledgerCurrencyCode,
-            monthlyBudget: 0
-        ) {
-            connectivity.sendUpdatedMonthlySnapshot(snapshot: snapshot)
-        }
-        let expenseStore = ExpenseStore(modelContainer: container)
-        AppDependencyManager.shared.add(dependency: expenseStore)
-        recurringReminders = RecurringReminderCoordinator(container: container)
-        #if !DEBUG
-        let coordinator = RecurringExpenseCoordinator(modelContainer: container, cloudKitEnabled: false)
-        recurringExpenseCoordinator = coordinator
-        coordinator.start()
-        #endif
-        SageShortcutsProvider.updateAppShortcutParameters()
-        containerResult = result
-        return true
     }
 
     @ViewBuilder
@@ -276,56 +223,6 @@ struct SageApp: App {
         
         UINavigationBar.appearance().standardAppearance = appearance
         UINavigationBar.appearance().scrollEdgeAppearance = appearance
-    }
-}
-
-private struct PendingDeletionRestartView: View {
-    var body: some View {
-        ContentUnavailableView(
-            "Data removed from this device",
-            systemImage: "icloud",
-            description: Text("Close Syl from the App Switcher first. Then open Settings > Apple Account > iCloud > Storage, select Syl, and tap Delete Data from iCloud. Reopen Syl to finish the local reset. Other devices with saved copies can upload them again. Sync remains off.")
-        )
-    }
-}
-
-private struct PendingDeletionRecoveryView: View {
-    let finish: () async -> Bool
-    @State private var isRunning = false
-    @State private var failed = false
-
-    var body: some View {
-        VStack(spacing: 16) {
-            if isRunning {
-                ProgressView("Finishing local reset")
-            } else {
-                ContentUnavailableView(
-                    "Local reset needs attention",
-                    systemImage: "externaldrive.badge.exclamationmark",
-                    description: Text("Syl could not finish clearing data on this device. Sync remains off. Delete the iCloud copy separately in Settings > Apple Account > iCloud > Storage.")
-                )
-                Button("Retry Local Reset") {
-                    Task { await attempt() }
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            if failed {
-                Text("Check available device storage, then retry. Syl has not confirmed deletion of any iCloud data.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .padding()
-        .task { await attempt() }
-    }
-
-    @MainActor
-    private func attempt() async {
-        guard !isRunning else { return }
-        isRunning = true
-        failed = !(await finish())
-        isRunning = false
     }
 }
 
