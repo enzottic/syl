@@ -7,10 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C60609063000000100000001 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60609063000000100000003 /* AppConfiguration.swift */; };
-		C60609063000000100000002 /* UITestConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60609063000000100000004 /* UITestConfiguration.swift */; };
-		C60609063000000200000001 /* ExpenseBackupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60609063000000200000003 /* ExpenseBackupService.swift */; };
-		C60609063000000300000001 /* DashboardWidgetID.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60609063000000300000003 /* DashboardWidgetID.swift */; };
 		C61109060000000000000001 /* FinanceTrackerWatchWidget.appex in Embed Watch App Extensions */ = {isa = PBXBuildFile; fileRef = C61109060000000000000002 /* FinanceTrackerWatchWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C62200012FFD000100000022 /* SageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C68EEE0F2FD7C7E8003C4FD6 /* SageKit.framework */; platformFilter = ios; };
 		C62400012FFF002400000001 /* SageKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C68EEE0F2FD7C7E8003C4FD6 /* SageKit.framework */; platformFilter = ios; };
@@ -142,10 +138,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		C60609063000000100000003 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppConfiguration.swift; path = FinanceTracker/Helpers/AppConfiguration.swift; sourceTree = SOURCE_ROOT; };
-		C60609063000000100000004 /* UITestConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = UITestConfiguration.swift; path = FinanceTracker/Helpers/UITestConfiguration.swift; sourceTree = SOURCE_ROOT; };
-		C60609063000000200000003 /* ExpenseBackupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExpenseBackupService.swift; path = FinanceTracker/Services/ExpenseBackupService.swift; sourceTree = SOURCE_ROOT; };
-		C60609063000000300000003 /* DashboardWidgetID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DashboardWidgetID.swift; path = FinanceTracker/Helpers/DashboardWidgetID.swift; sourceTree = SOURCE_ROOT; };
 		C60909063000000100000001 /* FinanceTracker-PR.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = "FinanceTracker-PR.xctestplan"; sourceTree = "<group>"; };
 		C61109060000000000000002 /* FinanceTrackerWatchWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinanceTrackerWatchWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		C62400032FFF002400000003 /* FinanceTrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FinanceTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -167,26 +159,30 @@
 		C60908063000000100000001 /* Exceptions for "FinanceTracker" folder in "FinanceTrackerTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Analytics/SpendingCalendarMonth.swift,
-				Money/AmountInput.swift,
-				Money/CentsFirstAmountInput.swift,
+				App/UITestConfiguration.swift,
+				Core/Analytics/SpendingCalendarMonth.swift,
+				Core/DataManagement/DataDeletionService.swift,
+				Core/DataManagement/ExpenseBackupCodec.swift,
+				Core/DataManagement/ExpenseBackupService.swift,
+				Core/DataManagement/ExpenseCSVCodec.swift,
+				Core/DataManagement/ExpenseImportService.swift,
+				Core/Money/AmountInput.swift,
+				Core/Money/CentsFirstAmountInput.swift,
+				Core/Notifications/DailyExpenseReminderScheduler.swift,
+				Core/Notifications/NotificationClient.swift,
+				Core/Notifications/RecurringReminderPlan.swift,
+				Core/Notifications/RecurringReminderScheduler.swift,
+				Core/Preferences/AppConfiguration.swift,
+				Core/Preferences/DashboardWidgetID.swift,
+				Core/Preferences/PreferenceSyncService.swift,
+				Core/Receipts/ReceiptImageImport.swift,
+				Core/Recurring/RecurringExpenseRepairService.swift,
+				Core/Recurring/RecurringExpenseSchedule.swift,
+				Core/Recurring/RecurringExpenseService.swift,
+				DesignSystem/FlowLayout.swift,
+				Features/Settings/Privacy/PrivacyPolicyNavigation.swift,
 				PreviewSupport/MockDataSeeder.swift,
 				"PreviewSupport/SageModelContainer+Preview.swift",
-				Serialization/ExpenseBackupCodec.swift,
-				Serialization/ExpenseCSVCodec.swift,
-				Services/DataDeletionService.swift,
-				Services/ExpenseImportService.swift,
-				Services/Notifications/DailyExpenseReminderScheduler.swift,
-				Services/Notifications/NotificationClient.swift,
-				Services/Notifications/RecurringReminderPlan.swift,
-				Services/Notifications/RecurringReminderScheduler.swift,
-				Services/PreferenceSyncService.swift,
-				Services/ReceiptImageImport.swift,
-				Services/RecurringExpenses/RecurringExpenseRepairService.swift,
-				Services/RecurringExpenses/RecurringExpenseSchedule.swift,
-				Services/RecurringExpenses/RecurringExpenseService.swift,
-				Views/Components/FlowLayout.swift,
-				Views/SettingsView/PrivacyPolicyNavigation.swift,
 			);
 			target = C62400062FFF002400000006 /* FinanceTrackerTests */;
 		};
@@ -379,17 +375,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		C60609063000000100000005 /* Production Test Sources */ = {
-			isa = PBXGroup;
-			children = (
-				C60609063000000100000003 /* AppConfiguration.swift */,
-				C60609063000000300000003 /* DashboardWidgetID.swift */,
-				C60609063000000200000003 /* ExpenseBackupService.swift */,
-				C60609063000000100000004 /* UITestConfiguration.swift */,
-			);
-			name = "Production Test Sources";
-			sourceTree = "<group>";
-		};
 		C66031BD2E8073C60078DD15 = {
 			isa = PBXGroup;
 			children = (
@@ -405,7 +390,6 @@
 				C6110906000000000000000A /* FinanceTrackerWatchWidget */,
 				C6B09FD62E92CF5200899162 /* FinanceTrackerWidget */,
 				C6B09FD12E92CF5200899162 /* Frameworks */,
-				C60609063000000100000005 /* Production Test Sources */,
 				C66031C72E8073C60078DD15 /* Products */,
 				C68EEE102FD7C7E8003C4FD6 /* SageKit */,
 				C6110906000000000000000B /* WatchShared */,
@@ -741,10 +725,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C60609063000000100000001 /* AppConfiguration.swift in Sources */,
-				C60609063000000300000001 /* DashboardWidgetID.swift in Sources */,
-				C60609063000000200000001 /* ExpenseBackupService.swift in Sources */,
-				C60609063000000100000002 /* UITestConfiguration.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
