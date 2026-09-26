@@ -48,11 +48,6 @@ public enum SageModelContainer {
         return defaults.bool(forKey: cloudKitPreferenceKey)
     }
 
-    public nonisolated static func setCloudKitPreference(_ enabled: Bool) {
-        guard supportsCloudSync else { return }
-        SagePreferences.defaults.set(enabled, forKey: cloudKitPreferenceKey)
-    }
-
     /// Applies the requested setting before the main app opens the store.
     public nonisolated static func activateCloudKitPreference() {
         guard supportsCloudSync else { return }

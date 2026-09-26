@@ -86,14 +86,6 @@ final public class ExpenseStore {
         return try context.fetch(descriptor)
     }
 
-    /// Finds and returns a single expense tag by its identifier
-    public func fetchTag(id: UUID) throws -> ExpenseTag? {
-        let descriptor = FetchDescriptor<ExpenseTag>(
-            predicate: #Predicate { $0.id == id }
-        )
-        return try context.fetch(descriptor).first
-    }
-
     public func fetchExpenses(from startDate: Date, to endDate: Date) -> [Expense] {
         let fetchDescriptor = ExpenseFetchDescriptors.range(start: startDate, end: endDate)
         return (try? context.fetch(fetchDescriptor)) ?? []
@@ -105,10 +97,6 @@ final public class ExpenseStore {
 
     public func monthlyTotal(category: ExpenseCategory, month: Date = .now) throws -> Double {
         try fetchExpenses(for: month).filter { $0.category == category }.total
-    }
-
-    public func monthlyTotal(tagId: UUID, month: Date = .now) throws -> Double {
-        try fetchExpenses(for: month).filter { ($0.tags ?? []).contains { $0.id == tagId } }.total
     }
 
     // MARK: - Budget
@@ -155,10 +143,6 @@ final public class ExpenseStore {
         public let wantsBudget: Double
         public let savingsBudget: Double
         public let recentExpenses: [ExpenseSnapshot]
-
-        public var totalUnspent: Double { Double(totalIncome) - totalSpent }
-        public var needsUtilization: Double { needsBudget > 0 ? needsSpent / needsBudget : 0 }
-        public var wantsUtilization: Double { wantsBudget > 0 ? wantsSpent / wantsBudget : 0 }
     }
 
     public func monthlySnapshot(for month: Date = .now) throws -> MonthlySnapshot {

@@ -20,14 +20,6 @@ public enum ExpenseCategory: String, CaseIterable, Codable, AppEnum {
         .savings: "Savings"
     ]
 
-    public var defaultColor: Color {
-        switch self {
-        case .needs: return Color("NeedColor")
-        case .wants: return Color("WantColor")
-        case .savings: return Color("SavingColor")
-        }
-    }
-
     public func color(in colors: CategoryColors) -> Color {
         colors.color(for: self)
     }

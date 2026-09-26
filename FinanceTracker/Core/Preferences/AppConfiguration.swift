@@ -39,10 +39,6 @@ class AppConfiguration {
 
     func recheckPreferences() { preferenceSync.recheck() }
 
-    static var isBillRemindersEnabled: Bool {
-        SagePreferences.defaults.bool(forKey: Keys.billRemindersEnabled)
-    }
-
     // Deliberately excluded from PreferenceSyncService.Key and all cloud snapshots.
     var dashboardWidgetOrder: [DashboardWidgetID] = DashboardWidgetID.defaultOrder {
         didSet {

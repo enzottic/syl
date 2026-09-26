@@ -24,27 +24,10 @@ public extension Double {
         }
         return currencyString(code: code)
     }
-
-    /// Whole-currency-unit format, for axis scales and other places showing a
-    /// range rather than an amount. Prefer `currencyString` for anything the
-    /// user reads as a real figure.
-    var currencyStringRounded: String {
-        guard let code = LedgerCurrency.currentCode else {
-            return "\(self.formatted(.number.precision(.fractionLength(0)))) (currency not confirmed)"
-        }
-        return currencyStringRounded(code: code)
-    }
 }
 
 public extension Int {
     func currencyString(code: String) -> String {
         formatted(.currency(code: code).precision(.fractionLength(0)))
-    }
-
-    var currencyString: String {
-        guard let code = LedgerCurrency.currentCode else {
-            return "\(self.formatted()) (currency not confirmed)"
-        }
-        return currencyString(code: code)
     }
 }
