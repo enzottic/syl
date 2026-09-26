@@ -244,6 +244,7 @@ struct AppConfigurationTests {
         #expect(fixture.defaults.object(forKey: "totalMonthlyIncome") == nil)
         #expect(fixture.acquisitions == 0)
         #expect(fixture.cloud.operations.isEmpty)
+        #expect(fixture.cloud.values["appearance"] as? String == "Dark")
     }
 
     @Test
@@ -917,9 +918,10 @@ struct AppConfigurationTests {
     }
 
     @Test
-    func enabledResetDeletesCloudPreferencesBeforePersistingOptOutWithoutPublishingDefaults() throws {
+    func enabledResetDeletesCloudPreferencesAndKeepsSyncOnWithoutPublishingDefaults() throws {
         let fixture = try Fixture(enabled: true, currency: "USD")
-        fixture.cloud.values = [Key.ledgerCurrency.storageKey: "USD", "appearance": "Dark", "totalMonthlyIncome": 7000]
+        fixture.cloud.values = [Key.ledgerCurrency.storageKey: "USD", "appearance": "Dark",
+                                "totalMonthlyIncome": 7000, "hasCompletedSetup": true]
         let config = fixture.config
         fixture.cloud.operations.removeAll()
         fixture.cloud.onRemove = {
@@ -930,9 +932,10 @@ struct AppConfigurationTests {
         #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
         #expect(fixture.cloud.operations.last == .synchronize)
         #expect(fixture.cloud.writtenKeys.isEmpty)
-        #expect(!config.isCloudSyncEnabled)
-        #expect(!fixture.defaults.bool(forKey: SageModelContainer.cloudKitPreferenceKey))
-        #expect(config.cloudSyncStatus == .stopped)
+        #expect(config.isCloudSyncEnabled)
+        #expect(fixture.defaults.bool(forKey: SageModelContainer.cloudKitPreferenceKey))
+        #expect(config.cloudSyncStatus == .running)
+        #expect(fixture.cloud.values["hasCompletedSetup"] == nil)
         #expect(config.ledgerCurrencyCode == LedgerCurrency.suggestedCode())
         #expect(config.totalMonthlyIncome == 0)
     }

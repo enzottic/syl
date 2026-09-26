@@ -18,9 +18,13 @@ struct SettingsView: View {
 
     @State private var showExpenseDeletionOptions = false
     @State private var showFullResetConfirmation = false
+    @State private var showSyncRestartNotice = false
     @State private var activeDataOperation: DataOperation?
 
     private var isChangingData: Bool { activeDataOperation != nil }
+    private var requiresSyncRestart: Bool {
+        config.supportsCloudSync && config.isCloudSyncEnabled != SageModelContainer.isCloudKitEnabled
+    }
 
     private var feedbackURL: URL? {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
@@ -92,7 +96,11 @@ struct SettingsView: View {
 
                 Section {
                     Button(role: .destructive) {
-                        showExpenseDeletionOptions = true
+                        if requiresSyncRestart {
+                            showSyncRestartNotice = true
+                        } else {
+                            showExpenseDeletionOptions = true
+                        }
                     } label: {
                         SettingsListItem(text: "Delete Expense Data", icon: "trash.fill", color: .red)
                             .foregroundStyle(.red)
@@ -100,14 +108,22 @@ struct SettingsView: View {
                     .disabled(isChangingData)
 
                     Button(role: .destructive) {
-                        showFullResetConfirmation = true
+                        if requiresSyncRestart {
+                            showSyncRestartNotice = true
+                        } else {
+                            showFullResetConfirmation = true
+                        }
                     } label: {
                         SettingsListItem(text: "Delete All Data", icon: "trash.circle.fill", color: .red)
                             .foregroundStyle(.red)
                     }
                     .disabled(isChangingData)
                 } footer: {
-                    Text("Delete All Data also removes settings and Syl's local CSV export. Copies saved or shared outside Syl are not deleted.")
+                    if config.supportsCloudSync {
+                        Text("With sync on, deletions and the preference reset can sync to iCloud. With sync off, only this device is cleared; old iCloud data can return if sync is enabled later.")
+                    } else {
+                        Text("Delete All Data removes Syl data, settings, and the local CSV export. Copies saved outside Syl remain.")
+                    }
                 }
 
                 #if DEBUG
@@ -153,7 +169,13 @@ struct SettingsView: View {
                 .disabled(isChangingData)
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Delete Expenses Only removes every expense, but recurring rules stay active and can create expenses again. Delete Expenses and Recurring Rules prevents those expenses from returning. Both actions are permanent.")
+                if config.supportsCloudSync {
+                    Text(config.isCloudSyncEnabled
+                         ? "Deletes expenses on this device and syncs their deletion to iCloud later. Records not yet on this device may remain in iCloud. Keeping recurring rules lets them create new expenses. Other devices update after sync completes."
+                         : "Expenses are deleted only on this device. Keeping recurring rules lets them create new expenses. Old iCloud expenses may return if you enable sync later.")
+                } else {
+                    Text("Both options remove expenses from this device. Keeping recurring rules lets them create new expenses.")
+                }
             }
             .alert("Delete All Data?", isPresented: $showFullResetConfirmation) {
                 Button("Delete All Data", role: .destructive) {
@@ -162,7 +184,18 @@ struct SettingsView: View {
                 .disabled(isChangingData)
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This permanently removes all expenses, recurring rules, tags, accounts, settings, and Syl's local CSV export. Copies saved to Files or shared outside Syl cannot be recalled and must be deleted separately. This cannot be undone.")
+                if config.supportsCloudSync {
+                    Text(config.isCloudSyncEnabled
+                         ? "Deletes Syl data and its local CSV export here, requests removal of synced preferences, and keeps sync on to export record deletions. Records not yet on this device may remain in iCloud. Other devices update later. External copies remain."
+                         : "This deletes Syl data, settings, and its local CSV export only on this device. Existing iCloud data and preferences remain and may return if you enable sync later. External copies remain.")
+                } else {
+                    Text("This permanently deletes expenses, recurring rules, tags, settings, and Syl's local CSV export from this device. Copies saved or shared outside Syl must be deleted separately.")
+                }
+            }
+            .alert("Restart Syl to Apply Sync", isPresented: $showSyncRestartNotice) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("The expense sync setting changed since Syl opened. Fully close and reopen Syl before deleting data so the action uses the sync setting you chose.")
             }
             .safeAreaInset(edge: .bottom) {
                 if let activeDataOperation {
@@ -179,14 +212,19 @@ struct SettingsView: View {
 
     private func performDataOperation(_ operation: DataOperation) async {
         guard activeDataOperation == nil else { return }
+        await Task.yield()
+        guard activeDataOperation == nil else { return }
+        guard !requiresSyncRestart else {
+            showSyncRestartNotice = true
+            return
+        }
         activeDataOperation = operation
         router.showToast(SageToast(message: operation.progressMessage + "…", kind: .progress))
         defer { activeDataOperation = nil }
 
-        await Task.yield()
-
         let deletionService = DataDeletionService(modelContext: modelContext)
         do {
+            var cloudPreferencesQueued = true
             switch operation {
             case .expensesOnly:
                 try deletionService.deleteExpenses(includeRecurringRules: false)
@@ -195,12 +233,21 @@ struct SettingsView: View {
                 reminders?.refresh()
             case .fullReset:
                 try deletionService.deleteAllUserData()
-                config.resetAllSettings()
+                cloudPreferencesQueued = config.resetAllSettings()
                 reminders?.refresh()
+                UserDefaults.standard.removeObject(forKey: "hasOpenedAppOnce")
+                for key in ["statsShowsNeedsLine", "statsShowsWantsLine", "statsShowsSavingsLine"] {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
             }
 
             WidgetCenter.shared.reloadAllTimelines()
-            router.showToast(SageToast(message: operation.successMessage, kind: .success))
+            publishWatchSnapshot()
+            router.showToast(SageToast(
+                message: cloudPreferencesQueued ? operation.successMessage
+                    : "Local data deleted. iCloud preference reset is unconfirmed; retry when iCloud is available.",
+                kind: cloudPreferencesQueued ? .success : .error
+            ))
         } catch {
             // Only pending model changes can be rolled back, not an already-removed CSV.
             deletionService.rollback()
@@ -208,6 +255,17 @@ struct SettingsView: View {
                 SageToast(message: operation.failureMessage, kind: .error)
             )
         }
+    }
+
+    private func publishWatchSnapshot() {
+        guard !UITestConfiguration.isEnabled,
+              let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
+                container: modelContext.container,
+                categoryColors: config.categoryColors,
+                currencyCode: config.ledgerCurrencyCode,
+                monthlyBudget: Double(config.totalMonthlyIncome)
+              ) else { return }
+        WatchSnapshotSender.shared.sendUpdatedMonthlySnapshot(snapshot: snapshot)
     }
 }
 
@@ -226,9 +284,9 @@ private enum DataOperation {
 
     var successMessage: String {
         switch self {
-        case .expensesOnly: "All expenses deleted. Recurring rules are still active."
-        case .expensesAndRecurringRules: "All expenses and recurring rules deleted."
-        case .fullReset: "Syl data, settings, and local export deleted. External copies are unchanged."
+        case .expensesOnly: "Expenses removed from this device. Recurring rules are still active."
+        case .expensesAndRecurringRules: "Expenses and recurring rules removed from this device."
+        case .fullReset: "Syl data, settings, and local export deleted."
         }
     }
 

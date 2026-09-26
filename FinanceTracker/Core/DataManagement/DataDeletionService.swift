@@ -17,6 +17,8 @@ struct DataDeletionService {
 
     // Deletes every expense. Recurring rules stay active unless the caller also deletes them.
     func deleteExpenses(includeRecurringRules: Bool) throws {
+        // A bulk delete only visits persisted models; include any pending inserts.
+        if modelContext.hasChanges { try modelContext.save() }
         try modelContext.delete(model: Expense.self)
 
         if includeRecurringRules {
@@ -29,6 +31,16 @@ struct DataDeletionService {
     // Removes Sage's local CSV export, then deletes all user-created records in the local model store.
     // File removal cannot be rolled back if a later model operation fails. External copies are untouched.
     func deleteAllUserData(fileManager: FileManager = .default) throws {
+        try Self.deleteLocalExport(fileManager: fileManager)
+        if modelContext.hasChanges { try modelContext.save() }
+        try modelContext.delete(model: Expense.self)
+        try modelContext.delete(model: RecurringExpenseRule.self)
+        try modelContext.delete(model: ExpenseTag.self)
+        try modelContext.delete(model: ExpenseAccount.self)
+        try modelContext.save()
+    }
+
+    static func deleteLocalExport(fileManager: FileManager = .default) throws {
         let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         
         let exportURL = documentsDirectory.appendingPathComponent("sage-export.csv")
@@ -47,12 +59,6 @@ struct DataDeletionService {
         } catch let error as CocoaError where error.code == .fileNoSuchFile || error.code == .fileReadNoSuchFile {
             // No local export is already the desired state, including on repeated resets.
         }
-
-        try modelContext.delete(model: Expense.self)
-        try modelContext.delete(model: RecurringExpenseRule.self)
-        try modelContext.delete(model: ExpenseTag.self)
-        try modelContext.delete(model: ExpenseAccount.self)
-        try modelContext.save()
     }
 
     func rollback() {

@@ -20,6 +20,7 @@ class AppConfiguration {
     // Locks for cloud sync
     private var isApplyingRemote = false
     private var isRestoringValue = false
+    private var isResettingSettings = false
 
     var ledgerCurrencyCode: String {
         didSet {
@@ -212,9 +213,12 @@ class AppConfiguration {
         }
     }
 
-    func resetAllSettings() {
-        preferenceSync.reset() // Removal is authorized only before disabling consent.
-        isCloudSyncEnabled = false
+    @discardableResult
+    func resetAllSettings() -> Bool {
+        // Keep the user's sync choice so the open SwiftData store can export deletions.
+        // Reset local values without publishing defaults before removing KVS keys.
+        isResettingSettings = true
+        defer { isResettingSettings = false }
         selectedAppearance = .system
         totalMonthlyIncome = 0
         needsPercent = 0.5
@@ -233,20 +237,24 @@ class AppConfiguration {
         dashboardWidgetOrder = DashboardWidgetID.defaultOrder
         ledgerCurrencyCode = isPreview || isUITesting ? "USD" : LedgerCurrency.suggestedCode()
         hasCompletedSetupOnAnotherDevice = false
+
+        let preferencesQueued = supportsCloudSync && !isPreview && !isUITesting
+            ? preferenceSync.resetForDataDeletion() : true
         
-        guard !isPreview else { return }
+        guard !isPreview else { return preferencesQueued }
         
         LedgerCurrency.reset(defaults: defaults)
-        let localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
-            Keys.isCloudSyncEnabled, Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
+        var localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
+            Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
             Keys.billReminderDaysBefore, Keys.hideBillReminderDetails,
             Keys.billReminderTimeMinutes, Keys.dailyExpenseReminderEnabled, Keys.dailyExpenseReminderTimeMinutes,
         ]
+        if !supportsCloudSync || isUITesting { localKeys.append(Keys.isCloudSyncEnabled) }
         
         for key in localKeys { defaults.removeObject(forKey: key) }
         
-        if supportsCloudSync, !isUITesting { defaults.set(false, forKey: Keys.isCloudSyncEnabled) }
         WidgetCenter.shared.reloadAllTimelines()
+        return preferencesQueued
     }
 
     convenience init() {
@@ -419,7 +427,7 @@ extension AppConfiguration {
         defaults.set(value, forKey: key.storageKey)
         
         // If we're applying a change from elsewhere already, then skip publishing
-        guard !isApplyingRemote else { return }
+        guard !isApplyingRemote, !isResettingSettings else { return }
         
         var values = [key: value]
         if Key.allocation.contains(key) {
