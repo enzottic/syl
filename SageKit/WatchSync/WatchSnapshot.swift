@@ -8,6 +8,9 @@ import Foundation
 import SwiftUI
 
 public struct WatchSnapshot: Codable, Identifiable {
+    /// Key for the encoded snapshot in the WatchConnectivity application context.
+    public static let applicationContextKey = "snapshot"
+
     public let generatedAt: Date
     
     public let monthStart: Date

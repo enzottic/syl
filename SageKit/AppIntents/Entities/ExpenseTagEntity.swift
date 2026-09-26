@@ -26,6 +26,12 @@ public struct ExpenseTagEntity: AppEntity {
     }
 }
 
+public extension ExpenseTag {
+    var entity: ExpenseTagEntity {
+        ExpenseTagEntity(id: self.id, name: self.name, emoji: self.emoji, symbolName: self.symbolName)
+    }
+}
+
 @MainActor
 public struct ExpenseTagEntityQuery: EntityQuery {
     @Dependency

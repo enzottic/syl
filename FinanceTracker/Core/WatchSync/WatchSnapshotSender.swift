@@ -66,7 +66,7 @@ class WatchSnapshotSender: NSObject, WCSessionDelegate {
     func sendUpdatedMonthlySnapshot(snapshot: WatchSnapshot) {
         do {
             let snapshotData = try JSONEncoder().encode(snapshot)
-            let payload: [String:Any] = ["snapshot": snapshotData]
+            let payload: [String:Any] = [WatchSnapshot.applicationContextKey: snapshotData]
             setContext(to: payload)
         } catch {
             print("Encoding Watch snapshot failed: \(error.localizedDescription)")

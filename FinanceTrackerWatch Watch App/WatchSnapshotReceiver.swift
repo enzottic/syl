@@ -33,7 +33,7 @@ class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
             if activationState == .activated {
                 print("Watch connectivity activated")
                 // Restore the last delivered context even if no new transfer arrives.
-                if let data = session.receivedApplicationContext["snapshot"] as? Data {
+                if let data = session.receivedApplicationContext[WatchSnapshot.applicationContextKey] as? Data {
                     applySnapshot(data)
                 }
             }
@@ -42,7 +42,7 @@ class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
     
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
         print("Watch received application context")
-        guard let data = applicationContext["snapshot"] as? Data else {
+        guard let data = applicationContext[WatchSnapshot.applicationContextKey] as? Data else {
             print("Watch context is missing snapshot data")
             return
         }
