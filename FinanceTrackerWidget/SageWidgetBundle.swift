@@ -1,5 +1,5 @@
 //
-//  FinanceTrackerWidgetBundle.swift
+//  SageWidgetBundle.swift
 //  FinanceTrackerWidget
 //
 //  Created by Enzo on 10/5/25.

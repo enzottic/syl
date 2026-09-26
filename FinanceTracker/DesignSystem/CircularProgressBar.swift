@@ -1,5 +1,5 @@
 //
-//  CircularProgressView.swift
+//  CircularProgressBar.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 12/24/25.

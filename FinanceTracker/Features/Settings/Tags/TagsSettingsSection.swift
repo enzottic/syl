@@ -128,12 +128,12 @@ struct TagsSettingsSection: View {
             }
         }
         .sheet(isPresented: $showAddTagSheet) {
-            AddExpenseTagSheet()
+            TagEditorSheet()
                 .presentationBackground(.sageBackground)
                 .presentationDetents([.medium, .large])
         }
         .sheet(item: $tagToEdit) { tag in
-            AddExpenseTagSheet(tagToEdit: tag)
+            TagEditorSheet(tagToEdit: tag)
                 .presentationBackground(.background)
                 .presentationDetents([.large])
         }

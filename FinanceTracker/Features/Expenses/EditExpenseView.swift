@@ -1,5 +1,5 @@
 //
-//  ExpenseDetailView.swift
+//  EditExpenseView.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 10/11/25.
@@ -9,7 +9,7 @@ import SwiftData
 import WidgetKit
 import SageKit
 
-struct ExpenseDetailView: View {
+struct EditExpenseView: View {
     @Environment(AppConfiguration.self) private var config
     @Environment(\.dismiss) var dismiss
     @Environment(\.modelContext) var modelContext
@@ -231,7 +231,7 @@ private struct EditableExpense {
     }()
 
     NavigationStack {
-        ExpenseDetailView(expense: fixture.expense)
+        EditExpenseView(expense: fixture.expense)
     }
     .environmentInjection(container: fixture.container)
 }

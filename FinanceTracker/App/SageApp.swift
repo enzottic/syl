@@ -23,7 +23,7 @@ struct SageApp: App {
     private let containerResult: Result<ModelContainer, any Error>
     private let recurringExpenseCoordinator: RecurringExpenseCoordinator?
     private let recurringReminders: RecurringReminderCoordinator?
-    private let connectivity = iOSConnectivity.shared
+    private let connectivity = WatchSnapshotSender.shared
     
     @MainActor
     init() {
@@ -154,69 +154,14 @@ struct SageApp: App {
         }
         
         do {
-            let generatedAt = Date.now
-            let calendar = Calendar.current
-            
-            guard let month = calendar.dateInterval(of: .month, for: generatedAt),
-                  let daysInMonth = calendar.range(of: .day, in: .month, for: generatedAt),
-                  let weekStart = calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: generatedAt)) else {
+            guard let snapshot = try WatchSnapshotBuilder.makeSnapshot(
+                container: container,
+                categoryColors: appConfiguration.categoryColors,
+                currencyCode: appConfiguration.ledgerCurrencyCode,
+                monthlyBudget: Double(appConfiguration.totalMonthlyIncome)
+            ) else {
                 return
             }
-            
-            let store = ExpenseStore(modelContainer: container)
-            
-            let expenses = try container.mainContext.fetch(
-                ExpenseFetchDescriptors.range(start: min(month.start, weekStart), end: month.end)
-            )
-            
-            let summary = SpendingMonthSummary(month: month.start, expenses: expenses, now: generatedAt, calendar: calendar)
-            let dailyTotals = Dictionary(grouping: expenses.filter { $0.date <= generatedAt }) {
-                calendar.startOfDay(for: $0.date)
-            }.mapValues { $0.reduce(0) { $0 + $1.amount } }
-            let recentDays = (0..<7).compactMap { offset -> WatchDailySpending? in
-                guard let date = calendar.date(byAdding: .day, value: offset, to: weekStart) else { return nil }
-                return WatchDailySpending(date: date, amount: dailyTotals[date] ?? 0)
-            }
-            
-            // Resolve adaptive colors for the Watch, independently of the iPhone's appearance.
-            var environment = EnvironmentValues()
-            environment.colorScheme = .dark
-            let colors = appConfiguration.categoryColors
-            let categories = ExpenseCategory.allCases.map { category in
-                let points = (summary.categoryDays[category] ?? []).map {
-                    WatchSpendingPoint(
-                        day: $0.day,
-                        cumulativeSpent: $0.total
-                    )
-                }
-                
-                return WatchCategorySnapshot(
-                    categoryName: category.rawValue,
-                    totalSpent: points.last?.cumulativeSpent ?? 0,
-                    monthlyBudget: store.budget(for: category),
-                    color: SnapshotColor(
-                        colors.color(for: category),
-                        environment: environment
-                    ),
-                    spendingPoints: points
-                )
-            }
-
-            let snapshot = WatchSnapshot(
-                generatedAt: generatedAt,
-                monthStart: month.start,
-                monthEnd: month.end,
-                timeZoneIdentifier: calendar.timeZone.identifier,
-                currencyCode: appConfiguration.ledgerCurrencyCode,
-                totalSpent: summary.total,
-                monthlyBudget: Double(appConfiguration.totalMonthlyIncome),
-                categories: categories,
-                daysInMonth: daysInMonth.count,
-                spendingPoints: summary.days.map {
-                    WatchSpendingPoint(day: $0.day, cumulativeSpent: $0.total)
-                },
-                recentDailySpending: recentDays
-            )
             
             connectivity.sendUpdatedMonthlySnapshot(snapshot: snapshot)
             

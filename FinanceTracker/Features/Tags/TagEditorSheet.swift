@@ -1,5 +1,5 @@
 //
-//  AddExpenseTagSheet.swift
+//  TagEditorSheet.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 10/19/25.
@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 import SageKit
 
-struct AddExpenseTagSheet: View {
+struct TagEditorSheet: View {
     @Environment(AppConfiguration.self) private var config
     @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
@@ -323,7 +323,7 @@ private struct TagDraft: Equatable {
 #Preview {
     @Previewable @State var container = try! SageModelContainer.make(for: .previewEmpty)
 
-    AddExpenseTagSheet()
+    TagEditorSheet()
         .modelContainer(container)
         .environment(AppConfiguration.preview)
 }

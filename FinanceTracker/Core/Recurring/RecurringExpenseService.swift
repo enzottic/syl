@@ -1,18 +1,18 @@
 //
 //  RecurringExpenseService.swift
-//  SageKit
+//  FinanceTracker
 //
 
 import Foundation
 import SageKit
 import SwiftData
 
-public nonisolated struct RecurringExpenseMaintenanceResult: Equatable, Sendable {
-    public let generatedCount: Int
-    public let skippedCount: Int
-    public let repair: RecurringExpenseRepairResult
+nonisolated struct RecurringExpenseMaintenanceResult: Equatable, Sendable {
+    let generatedCount: Int
+    let skippedCount: Int
+    let repair: RecurringExpenseRepairResult
 
-    public init(
+    init(
         generatedCount: Int = 0,
         skippedCount: Int = 0,
         repair: RecurringExpenseRepairResult = RecurringExpenseRepairResult()
@@ -24,17 +24,17 @@ public nonisolated struct RecurringExpenseMaintenanceResult: Equatable, Sendable
 }
 
 @MainActor
-public final class RecurringExpenseService {
+final class RecurringExpenseService {
     private let modelContext: ModelContext
 
-    public init(modelContext: ModelContext) {
+    init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
 
     /// Repairs duplicates and generates missing expenses for all rules through the given date.
     /// An occurrence key, and not only the rule cursor, makes repeated calls safe.
     @discardableResult
-    public func generateAllExpenses(through date: Date, calendar: Calendar = .current) throws -> RecurringExpenseMaintenanceResult {
+    func generateAllExpenses(through date: Date, calendar: Calendar = .current) throws -> RecurringExpenseMaintenanceResult {
         do {
             let expenses = try modelContext.fetch(RecurringExpenseRepairService.recurringIdentityExpensesDescriptor())
             let repair = RecurringExpenseRepairService(modelContext: modelContext).repair(expenses: expenses)

@@ -100,7 +100,7 @@ struct TagPicker: View {
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .sheet(isPresented: $newTagSheetIsPresented) {
-            AddExpenseTagSheet { newTag in
+            TagEditorSheet { newTag in
                 selectedTags.append(newTag)
             }
         }

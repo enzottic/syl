@@ -1,5 +1,5 @@
 //
-//  RecurringRulesSection.swift
+//  RecurringExpensesSettingsSection.swift
 //  FinanceTracker
 //
 import SwiftUI

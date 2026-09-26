@@ -1,6 +1,6 @@
 //
 //  DataDeletionService.swift
-//  SageKit
+//  FinanceTracker
 //
 
 import Foundation
@@ -8,15 +8,15 @@ import SageKit
 import SwiftData
 
 @MainActor
-public struct DataDeletionService {
+struct DataDeletionService {
     private let modelContext: ModelContext
 
-    public init(modelContext: ModelContext) {
+    init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
 
     // Deletes every expense. Recurring rules stay active unless the caller also deletes them.
-    public func deleteExpenses(includeRecurringRules: Bool) throws {
+    func deleteExpenses(includeRecurringRules: Bool) throws {
         try modelContext.delete(model: Expense.self)
 
         if includeRecurringRules {
@@ -28,7 +28,7 @@ public struct DataDeletionService {
 
     // Removes Sage's local CSV export, then deletes all user-created records in the local model store.
     // File removal cannot be rolled back if a later model operation fails. External copies are untouched.
-    public func deleteAllUserData(fileManager: FileManager = .default) throws {
+    func deleteAllUserData(fileManager: FileManager = .default) throws {
         let documentsDirectory = try fileManager.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
         
         let exportURL = documentsDirectory.appendingPathComponent("sage-export.csv")
@@ -55,7 +55,7 @@ public struct DataDeletionService {
         try modelContext.save()
     }
 
-    public func rollback() {
+    func rollback() {
         modelContext.rollback()
     }
 }

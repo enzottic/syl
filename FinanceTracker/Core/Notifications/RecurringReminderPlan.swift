@@ -2,27 +2,27 @@ import Foundation
 import SageKit
 
 @MainActor
-public enum RecurringReminderPlan {
-    public struct Summary: Equatable {
-        public let identifier: String
-        public let fireDate: Date
-        public let title: String
-        public let body: String
+enum RecurringReminderPlan {
+    struct Summary: Equatable {
+        let identifier: String
+        let fireDate: Date
+        let title: String
+        let body: String
     }
 
-    public enum PlanningError: Error, Equatable {
+    enum PlanningError: Error, Equatable {
         case advanceLimitExceeded(ruleID: UUID)
         case invalidDate
     }
 
-    public static func owns(_ identifier: String) -> Bool {
+    static func owns(_ identifier: String) -> Bool {
         identifier.hasPrefix("sage.recurring.v1.")
             || identifier.hasPrefix("recurring-day-")
             || identifier.hasPrefix("recurring-added-")
     }
 
     // Generates the next 89 days of recurring reminder summaries to schedule notifications for
-    public static func summaries(
+    static func summaries(
         rules: [RecurringExpenseRule],
         daysBefore: Int = 1,
         timeMinutes: Int = 540,

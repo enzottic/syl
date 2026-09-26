@@ -1,7 +1,7 @@
 import Foundation
 import SageKit
 
-public extension RecurrenceFrequency {
+extension RecurrenceFrequency {
     /// Legacy stepping. Fixed schedules use `RecurringExpenseSchedule` instead.
     nonisolated func nextOccurrence(after date: Date, calendar: Calendar = .current) -> Date? {
         switch self {
@@ -14,7 +14,7 @@ public extension RecurrenceFrequency {
     }
 }
 
-public extension RecurringExpenseRule {
+extension RecurringExpenseRule {
     /// The next date this rule will generate an expense, or nil once it has passed `endDate`.
     ///
     /// A rule that has generated before steps one interval from its last generation; one that
@@ -34,12 +34,12 @@ public extension RecurringExpenseRule {
 
 /// One schedule for generation and upcoming dates. Display calendars do not
 /// override a fixed rule's Gregorian calendar and persisted time zone.
-public nonisolated struct RecurringExpenseSchedule {
+nonisolated struct RecurringExpenseSchedule {
     private let rule: RecurringExpenseRule
     private let calendar: Calendar
     private let isFixed: Bool
 
-    public init(rule: RecurringExpenseRule, legacyCalendar: Calendar = .current) {
+    init(rule: RecurringExpenseRule, legacyCalendar: Calendar = .current) {
         self.rule = rule
         isFixed = rule.recurrenceTimeZoneIdentifier != nil
         if let identifier = rule.recurrenceTimeZoneIdentifier {
@@ -52,7 +52,7 @@ public nonisolated struct RecurringExpenseSchedule {
         }
     }
 
-    public func firstPendingOccurrence() -> Date? {
+    func firstPendingOccurrence() -> Date? {
         var cursor = rule.lastGeneratedDate
         if isFixed, let boundary = rule.recurrenceEffectiveDate,
            rule.frequency == .monthly, boundary >= rule.startDate {
@@ -73,7 +73,7 @@ public nonisolated struct RecurringExpenseSchedule {
         return next
     }
 
-    public func nextOccurrence(after date: Date) -> Date? {
+    func nextOccurrence(after date: Date) -> Date? {
         guard isFixed else {
             guard let next = rule.frequency.nextOccurrence(after: date, calendar: calendar), next > date else { return nil }
             return bounded(next)
@@ -129,15 +129,15 @@ public nonisolated struct RecurringExpenseSchedule {
     }
 }
 
-public nonisolated enum RecurringScheduleEditError: LocalizedError {
+nonisolated enum RecurringScheduleEditError: LocalizedError {
     case endBeforeStart
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         "End date must be on or after the start date."
     }
 }
 
-public extension RecurringExpenseRule {
+extension RecurringExpenseRule {
     /// Apply only after confirmation; the caller owns saving/rollback with other edits.
     /// Keeps expense identities and values. Skips catch-up through the latest of now,
     /// the old cursor, prior boundary and recorded occurrence identities. Monthly rules

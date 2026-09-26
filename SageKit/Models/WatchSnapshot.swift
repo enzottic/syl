@@ -1,5 +1,5 @@
 //
-//  ExpenseWatchSnapshot.swift
+//  WatchSnapshot.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 9/10/26.

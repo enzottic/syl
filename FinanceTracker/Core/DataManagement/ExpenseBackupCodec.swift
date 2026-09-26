@@ -3,15 +3,15 @@ import SageKit
 import SwiftData
 import UIKit
 
-public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
-    public var format: String
-    public var version: Int
-    public var currency: String
-    public var tags: [Tag]
-    public var expenses: [Record]
-    public var recurringRules: [Rule]
+nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
+    var format: String
+    var version: Int
+    var currency: String
+    var tags: [Tag]
+    var expenses: [Record]
+    var recurringRules: [Rule]
 
-    public init(currency: String, tags: [Tag], expenses: [Record], recurringRules: [Rule] = [], format: String = "sage.expense-backup", version: Int = 2) {
+    init(currency: String, tags: [Tag], expenses: [Record], recurringRules: [Rule] = [], format: String = "sage.expense-backup", version: Int = 2) {
         self.format = format
         self.version = version
         self.currency = currency
@@ -22,7 +22,7 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey { case format, version, currency, tags, expenses, recurringRules }
 
-    public init(from decoder: Decoder) throws {
+    init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         format = try values.decode(String.self, forKey: .format)
         version = try values.decode(Int.self, forKey: .version)
@@ -32,21 +32,21 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
         recurringRules = version == 1 ? [] : try values.decode([Rule].self, forKey: .recurringRules)
     }
 
-    public struct Rule: Codable, Equatable, Sendable {
-        public var id: String
-        public var name: String
-        public var amount: String
-        public var category: String
-        public var note: String
-        public var tagIDs: [String]
-        public var frequency: String
-        public var startDateSecondsSince2001: Double
-        public var endDateSecondsSince2001: Double?
-        public var lastGeneratedDateSecondsSince2001: Double?
-        public var recurrenceTimeZoneIdentifier: String?
-        public var recurrenceEffectiveDateSecondsSince2001: Double?
+    struct Rule: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var amount: String
+        var category: String
+        var note: String
+        var tagIDs: [String]
+        var frequency: String
+        var startDateSecondsSince2001: Double
+        var endDateSecondsSince2001: Double?
+        var lastGeneratedDateSecondsSince2001: Double?
+        var recurrenceTimeZoneIdentifier: String?
+        var recurrenceEffectiveDateSecondsSince2001: Double?
 
-        public init(id: String, name: String, amount: String, category: String, note: String, tagIDs: [String],
+        init(id: String, name: String, amount: String, category: String, note: String, tagIDs: [String],
                     frequency: String, startDateSecondsSince2001: Double, endDateSecondsSince2001: Double? = nil,
                     lastGeneratedDateSecondsSince2001: Double? = nil, recurrenceTimeZoneIdentifier: String? = nil,
                     recurrenceEffectiveDateSecondsSince2001: Double? = nil) {
@@ -70,7 +70,7 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
                  recurrenceEffectiveDateSecondsSince2001
         }
 
-        public init(from decoder: Decoder) throws {
+        init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             id = try values.decode(String.self, forKey: .id)
             name = try values.decode(String.self, forKey: .name)
@@ -87,7 +87,7 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             recurrenceEffectiveDateSecondsSince2001 = try values.decode(Double?.self, forKey: .recurrenceEffectiveDateSecondsSince2001)
         }
 
-        public func encode(to encoder: Encoder) throws {
+        func encode(to encoder: Encoder) throws {
             var values = encoder.container(keyedBy: CodingKeys.self)
             try values.encode(id, forKey: .id)
             try values.encode(name, forKey: .name)
@@ -104,12 +104,12 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
         }
     }
 
-    public struct Tag: Codable, Equatable, Sendable {
-        public var id: String
-        public var name: String
-        public var appearance: Appearance?
+    struct Tag: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var appearance: Appearance?
 
-        public init(id: String, name: String, appearance: Appearance? = nil) {
+        init(id: String, name: String, appearance: Appearance? = nil) {
             self.id = id
             self.name = name
             self.appearance = appearance
@@ -121,12 +121,12 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             appearance = try Appearance(color: tag.uiColor, emoji: tag.emoji, symbolName: tag.symbolName)
         }
 
-        public struct Appearance: Codable, Equatable, Sendable {
-            public var emoji: String
-            public var symbolName: String?
+        struct Appearance: Codable, Equatable, Sendable {
+            var emoji: String
+            var symbolName: String?
             // Extended sRGB RGBA preserves wide-gamut colors without clipping to 0...1.
-            public var light: [Double]
-            public var dark: [Double]
+            var light: [Double]
+            var dark: [Double]
 
             @MainActor init(color: UIColor, emoji: String, symbolName: String?) throws {
                 self.emoji = emoji
@@ -152,18 +152,18 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
         }
     }
 
-    public struct Record: Codable, Equatable, Sendable {
-        public var id: String
-        public var name: String
-        public var dateSecondsSince2001: Double
-        public var amount: String
-        public var category: String
-        public var note: String
-        public var tagIDs: [String]
-        public var recurringExpenseID: String?
-        public var recurringOccurrenceKey: String?
+    struct Record: Codable, Equatable, Sendable {
+        var id: String
+        var name: String
+        var dateSecondsSince2001: Double
+        var amount: String
+        var category: String
+        var note: String
+        var tagIDs: [String]
+        var recurringExpenseID: String?
+        var recurringOccurrenceKey: String?
 
-        public init(id: String, name: String, dateSecondsSince2001: Double, amount: String, category: String,
+        init(id: String, name: String, dateSecondsSince2001: Double, amount: String, category: String,
                     note: String, tagIDs: [String], recurringExpenseID: String? = nil, recurringOccurrenceKey: String? = nil) {
             self.id = id
             self.name = name
@@ -180,7 +180,7 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             case id, name, dateSecondsSince2001, amount, category, note, tagIDs, recurringExpenseID, recurringOccurrenceKey
         }
 
-        public init(from decoder: Decoder) throws {
+        init(from decoder: Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
             id = try values.decode(String.self, forKey: .id)
             name = try values.decode(String.self, forKey: .name)
@@ -194,7 +194,7 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             recurringOccurrenceKey = try values.decode(String?.self, forKey: .recurringOccurrenceKey)
         }
 
-        public func encode(to encoder: Encoder) throws {
+        func encode(to encoder: Encoder) throws {
             var values = encoder.container(keyedBy: CodingKeys.self)
             try values.encode(id, forKey: .id)
             try values.encode(name, forKey: .name)
@@ -207,20 +207,20 @@ public nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             try values.encode(recurringOccurrenceKey, forKey: .recurringOccurrenceKey)
         }
 
-        public var date: Date { Date(timeIntervalSinceReferenceDate: dateSecondsSince2001) }
+        var date: Date { Date(timeIntervalSinceReferenceDate: dateSecondsSince2001) }
 
-        public var effectiveOccurrenceKey: String? {
+        var effectiveOccurrenceKey: String? {
             guard let rawRule = recurringExpenseID, let rule = UUID(uuidString: rawRule) else { return nil }
             return recurringOccurrenceKey ?? RecurringExpenseOccurrence.safeKey(ruleID: rule, scheduledDate: date)
         }
     }
 }
 
-public nonisolated enum ExpenseBackupError: LocalizedError, Equatable {
+nonisolated enum ExpenseBackupError: LocalizedError, Equatable {
     case invalid(String)
     case unsupportedVersion(Int)
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .invalid(let detail): "Invalid expense backup: \(detail)"
         case .unsupportedVersion(let version): "Expense backup version \(version) is not supported. Update Syl before importing this file."
@@ -228,8 +228,8 @@ public nonisolated enum ExpenseBackupError: LocalizedError, Equatable {
     }
 }
 
-public nonisolated enum ExpenseBackupCodec {
-    public static func decode(_ data: Data) throws -> ExpenseBackup {
+nonisolated enum ExpenseBackupCodec {
+    static func decode(_ data: Data) throws -> ExpenseBackup {
         struct Header: Decodable { let format: String; let version: Int }
         let header = try JSONDecoder().decode(Header.self, from: data)
         guard header.format == "sage.expense-backup" else { throw ExpenseBackupError.invalid("unrecognized format.") }
@@ -239,7 +239,7 @@ public nonisolated enum ExpenseBackupCodec {
         return backup
     }
 
-    public static func encode(_ backup: ExpenseBackup) throws -> Data {
+    static func encode(_ backup: ExpenseBackup) throws -> Data {
         try validate(backup)
         var canonical = backup
         canonical.tags = backup.tags.map { .init(id: $0.id.lowercased(), name: $0.name, appearance: $0.appearance) }.sorted { $0.id < $1.id }
@@ -263,7 +263,7 @@ public nonisolated enum ExpenseBackupCodec {
         return try encoder.encode(canonical)
     }
 
-    public static func validate(_ backup: ExpenseBackup) throws {
+    static func validate(_ backup: ExpenseBackup) throws {
         guard backup.format == "sage.expense-backup" else { throw ExpenseBackupError.invalid("unrecognized format.") }
         guard [1, 2].contains(backup.version) else { throw ExpenseBackupError.unsupportedVersion(backup.version) }
         guard backup.version >= 2 || backup.recurringRules.isEmpty else {
@@ -350,7 +350,7 @@ public nonisolated enum ExpenseBackupCodec {
     }
 
     /// Reads only saved data. Never saves, repairs, or examines the UI context.
-    @MainActor public static func snapshot(modelContainer: ModelContainer, currency: String) throws -> ExpenseBackup {
+    @MainActor static func snapshot(modelContainer: ModelContainer, currency: String) throws -> ExpenseBackup {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
         let expenses = try context.fetch(FetchDescriptor<Expense>())

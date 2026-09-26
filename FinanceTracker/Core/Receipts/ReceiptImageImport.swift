@@ -1,17 +1,17 @@
 //
 //  ReceiptImageImport.swift
-//  SageKit
+//  FinanceTracker
 //
 
 import Foundation
 import ImageIO
 
-public nonisolated enum ReceiptImageImport {
-    public enum Error: LocalizedError {
+nonisolated enum ReceiptImageImport {
+    enum Error: LocalizedError {
         case unsupportedURL
         case invalidImage
 
-        public var errorDescription: String? {
+        var errorDescription: String? {
             switch self {
             case .unsupportedURL:
                 "Syl can only import receipt files from this action."
@@ -21,7 +21,7 @@ public nonisolated enum ReceiptImageImport {
         }
     }
 
-    public static func loadData(from url: URL) throws -> Data {
+    static func loadData(from url: URL) throws -> Data {
         guard url.isFileURL else { throw Error.unsupportedURL }
 
         let hasSecurityScopedAccess = url.startAccessingSecurityScopedResource()

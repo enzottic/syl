@@ -2,28 +2,28 @@ import Foundation
 import SageKit
 
 /// A Sunday-first month of recorded spending and future recurring occurrences.
-public nonisolated struct SpendingCalendarMonth {
-    public struct UpcomingExpense: Identifiable {
-        public let id: String
-        public let name: String
-        public let amount: Double
-        public let category: ExpenseCategory
-        public let date: Date
+nonisolated struct SpendingCalendarMonth {
+    struct UpcomingExpense: Identifiable {
+        let id: String
+        let name: String
+        let amount: Double
+        let category: ExpenseCategory
+        let date: Date
     }
 
-    public struct Day: Identifiable {
-        public let date: Date
-        public let expenses: [Expense]
-        public let upcomingExpenses: [UpcomingExpense]
-        public var upcomingAmount: Double { upcomingExpenses.reduce(0) { $0 + $1.amount } }
-        public var amount: Double { expenses.reduce(0) { $0 + $1.amount } + upcomingAmount }
-        public var id: Date { date }
+    struct Day: Identifiable {
+        let date: Date
+        let expenses: [Expense]
+        let upcomingExpenses: [UpcomingExpense]
+        var upcomingAmount: Double { upcomingExpenses.reduce(0) { $0 + $1.amount } }
+        var amount: Double { expenses.reduce(0) { $0 + $1.amount } + upcomingAmount }
+        var id: Date { date }
     }
 
-    public let leadingEmptyDays: Int
-    public let days: [Day]
+    let leadingEmptyDays: Int
+    let days: [Day]
 
-    public init(month: Date, expenses: [Expense], recurringRules: [RecurringExpenseRule] = [], now: Date = .now, existingRecurringExpenses: [Expense] = [], calendar: Calendar = .current) {
+    init(month: Date, expenses: [Expense], recurringRules: [RecurringExpenseRule] = [], now: Date = .now, existingRecurringExpenses: [Expense] = [], calendar: Calendar = .current) {
         guard let interval = calendar.dateInterval(of: .month, for: month),
               let dayRange = calendar.range(of: .day, in: .month, for: month) else {
             leadingEmptyDays = 0

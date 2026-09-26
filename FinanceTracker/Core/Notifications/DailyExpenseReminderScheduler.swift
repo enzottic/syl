@@ -4,12 +4,12 @@ import UserNotifications
 
 @MainActor
 @Observable
-public final class DailyExpenseReminderScheduler {
-    public static let identifier = "sage.daily-expense-entry.v1"
+final class DailyExpenseReminderScheduler {
+    static let identifier = "sage.daily-expense-entry.v1"
 
-    public private(set) var errorMessage: String?
-    public private(set) var isRefreshing = false
-    public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    private(set) var errorMessage: String?
+    private(set) var isRefreshing = false
+    private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
     private struct Inputs: Equatable {
         let enabled: Bool
@@ -21,12 +21,12 @@ public final class DailyExpenseReminderScheduler {
     @ObservationIgnored private var revision: UInt64 = 0
     @ObservationIgnored private var worker: Task<Void, Never>?
 
-    public init(client: (any NotificationClient)? = nil) {
+    init(client: (any NotificationClient)? = nil) {
         self.client = client ?? UNNotificationClient()
     }
 
     /// Reads permission without prompting and coalesces refreshes into one worker.
-    public func refresh(enabled: Bool, timeMinutes: Int = 1200) {
+    func refresh(enabled: Bool, timeMinutes: Int = 1200) {
         inputs = Inputs(enabled: enabled, timeMinutes: (0..<1440).contains(timeMinutes) ? timeMinutes : 1200)
         revision &+= 1
         guard worker == nil else { return }
@@ -34,7 +34,7 @@ public final class DailyExpenseReminderScheduler {
         worker = Task { await run() }
     }
 
-    public func waitUntilIdle() async {
+    func waitUntilIdle() async {
         while let worker { await worker.value }
     }
 

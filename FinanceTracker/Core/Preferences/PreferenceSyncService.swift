@@ -1,7 +1,7 @@
 import Foundation
 import SageKit
 
-public nonisolated protocol CloudPreferenceStore: AnyObject {
+nonisolated protocol CloudPreferenceStore: AnyObject {
     func object(forKey key: String) -> Any?
     func set(_ value: Any?, forKey key: String)
     func removeObject(forKey key: String)
@@ -12,20 +12,20 @@ extension NSUbiquitousKeyValueStore: CloudPreferenceStore {}
 
 // Responsible for syncing preferences to the iCloud KVS. Listens to events for updates
 @MainActor
-public final class PreferenceSyncService {
-    public enum Key: String, CaseIterable, Sendable {
+final class PreferenceSyncService {
+    enum Key: String, CaseIterable, Sendable {
         case appearance, totalMonthlyIncome, needsPercent, wantsPercent, savingsPercent
         case smartTaggingMode, hasCompletedSetup, ledgerCurrency
 
-        public var storageKey: String {
+        var storageKey: String {
             self == .ledgerCurrency ? LedgerCurrency.storageKey : rawValue
         }
 
-        public static let allocation: Set<Key> = [.needsPercent, .wantsPercent, .savingsPercent]
+        static let allocation: Set<Key> = [.needsPercent, .wantsPercent, .savingsPercent]
     }
 
-    public struct Snapshot {
-        public let keys: Set<Key>
+    struct Snapshot {
+        let keys: Set<Key>
         private let values: [Key: Any]
 
         fileprivate init(keys: Set<Key>, values: [Key: Any]) {
@@ -33,16 +33,16 @@ public final class PreferenceSyncService {
             self.values = values
         }
 
-        public subscript(key: Key) -> Any? { values[key] }
+        subscript(key: Key) -> Any? { values[key] }
     }
 
-    public enum Status: Equatable {
+    enum Status: Equatable {
         case stopped, running, synchronizationUnavailable, quotaExceeded, accountChanged
     }
 
-    public var onChange: ((Snapshot) -> Void)?
-    public var onStatusChange: ((Status) -> Void)?
-    public private(set) var status: Status = .stopped {
+    var onChange: ((Snapshot) -> Void)?
+    var onStatusChange: ((Status) -> Void)?
+    private(set) var status: Status = .stopped {
         didSet { if status != oldValue { onStatusChange?(status) } }
     }
 
@@ -53,7 +53,7 @@ public final class PreferenceSyncService {
     private var observer: NSObjectProtocol?
     private var generation: UInt64 = 0
 
-    public init(
+    init(
         hasConsent: @escaping () -> Bool,
         makeStore: (() -> any CloudPreferenceStore)? = nil,
         notificationCenter: NotificationCenter = .default
@@ -76,7 +76,7 @@ public final class PreferenceSyncService {
     }
 
     // Explicit start/re-enable. A successful synchronize is not server confirmation.
-    public func start() {
+    func start() {
         guard hasConsent() else { stop(); return }
         guard store == nil else { return }
         
@@ -103,7 +103,7 @@ public final class PreferenceSyncService {
         read(Set(Key.allCases))
     }
 
-    public func stop() {
+    func stop() {
         generation &+= 1
         if let observer { notificationCenter.removeObserver(observer) }
         observer = nil
@@ -111,7 +111,7 @@ public final class PreferenceSyncService {
         status = .stopped
     }
 
-    public func recheck() {
+    func recheck() {
         guard let store = activeStore else { return }
         
         let synchronized = store.synchronize()
@@ -162,17 +162,17 @@ public final class PreferenceSyncService {
     }
 
     // Validation belongs to the configuration; transport only requires consent and available quota.
-    public func publish(_ values: [Key: Any]) {
+    func publish(_ values: [Key: Any]) {
         guard let store = activeStore, status != .quotaExceeded else { return }
         for (key, value) in values { store.set(value, forKey: key.storageKey) }
     }
 
-    public func markSetupComplete() {
+    func markSetupComplete() {
         publish([.hasCompletedSetup: true])
     }
 
     // Call before revoking consent. Off means no acquisition, even for deletion.
-    public func reset() {
+    func reset() {
         guard let store = activeStore else { return }
         for key in Key.allCases { store.removeObject(forKey: key.storageKey) }
         store.synchronize()

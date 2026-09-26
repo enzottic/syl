@@ -64,7 +64,7 @@ extension View {
         navigationDestination(for: AppRoute.self) { route in
             switch route {
             case .expenseDetail(let expense):
-                ExpenseDetailView(expense: expense)
+                EditExpenseView(expense: expense)
             case .categoryDetail(let category, let month):
                 CategoryDetailView(category: category, month: month)
             }

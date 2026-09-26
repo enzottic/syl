@@ -1,5 +1,5 @@
 //
-//  watchOSConnectivity.swift
+//  WatchSnapshotReceiver.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 9/10/26.
@@ -9,8 +9,8 @@ import Foundation
 import WatchConnectivity
 import WidgetKit
 
-class watchOSConnectivity: NSObject, WCSessionDelegate {
-    static let shared = watchOSConnectivity()
+class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
+    static let shared = WatchSnapshotReceiver()
     
     override init() {
         super.init()

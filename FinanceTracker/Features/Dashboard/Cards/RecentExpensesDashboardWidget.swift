@@ -1,5 +1,5 @@
 //
-//  RecentExpensesWidget.swift
+//  RecentExpensesDashboardWidget.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 7/12/26.

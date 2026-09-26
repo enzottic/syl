@@ -1,8 +1,8 @@
 import Foundation
 import SageKit
 
-public nonisolated enum AmountInput {
-    public static func parse(
+nonisolated enum AmountInput {
+    static func parse(
         _ text: String,
         currencyCode: String,
         requiresPositive: Bool = false,
@@ -14,11 +14,11 @@ public nonisolated enum AmountInput {
         return amount
     }
 
-    public static func text(for amount: Double, locale: Locale = .current) -> String {
+    static func text(for amount: Double, locale: Locale = .current) -> String {
         amount.formatted(.number.locale(locale).grouping(.never).precision(.fractionLength(0...16)))
     }
 
-    public static func parse(_ text: String, locale: Locale = .current) -> Double? {
+    static func parse(_ text: String, locale: Locale = .current) -> Double? {
         let formatter = NumberFormatter()
         formatter.locale = locale
         formatter.numberStyle = .decimal

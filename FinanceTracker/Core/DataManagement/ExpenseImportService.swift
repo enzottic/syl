@@ -3,36 +3,36 @@ import SageKit
 import SwiftData
 import UIKit
 
-public nonisolated enum ExpenseImportSource: Equatable, Sendable {
+nonisolated enum ExpenseImportSource: Equatable, Sendable {
     case backup(ExpenseBackup)
     case csv([ExportableExpense])
 
-    public var count: Int {
+    var count: Int {
         switch self { case .backup(let backup): backup.expenses.count; case .csv(let rows): rows.count }
     }
-    public var isCSV: Bool { if case .csv = self { true } else { false } }
-    public var requiresCurrencyConsent: Bool {
+    var isCSV: Bool { if case .csv = self { true } else { false } }
+    var requiresCurrencyConsent: Bool {
         if case .csv(let rows) = self { rows.contains { $0.currencyCode == nil } } else { false }
     }
-    public var ruleCount: Int {
+    var ruleCount: Int {
         if case .backup(let backup) = self { backup.recurringRules.count } else { 0 }
     }
 }
 
-public nonisolated struct ExpenseImportResult: Equatable, Sendable {
-    public let inserted: Int
-    public let skipped: Int
-    public let newTags: Int
-    public var insertedRules: Int = 0
-    public var skippedRules: Int = 0
-    public var totalInserted: Int { inserted + insertedRules }
+nonisolated struct ExpenseImportResult: Equatable, Sendable {
+    let inserted: Int
+    let skipped: Int
+    let newTags: Int
+    var insertedRules: Int = 0
+    var skippedRules: Int = 0
+    var totalInserted: Int { inserted + insertedRules }
 }
 
-public nonisolated struct ExpenseImportPlan: Equatable {
-    public let source: ExpenseImportSource
-    public let currency: String
-    public let creatingTagNames: [String]
-    public let result: ExpenseImportResult
+nonisolated struct ExpenseImportPlan: Equatable {
+    let source: ExpenseImportSource
+    let currency: String
+    let creatingTagNames: [String]
+    let result: ExpenseImportResult
     fileprivate let added: Set<Int>
     fileprivate let matches: [Int: ExpenseImportIdentity]
     fileprivate let tagMatches: [String: PersistentIdentifier]
@@ -50,7 +50,7 @@ private nonisolated struct ExpenseImportIdentity: Equatable {
     let effectiveKey: String?
 }
 
-public nonisolated enum ExpenseImportError: LocalizedError, Equatable {
+nonisolated enum ExpenseImportError: LocalizedError, Equatable {
     case conflict
     case ambiguousTag(String)
     case changed
@@ -58,7 +58,7 @@ public nonisolated enum ExpenseImportError: LocalizedError, Equatable {
     case currencyChanged
     case conflictingRules
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .conflict: "Conflicting expense identities were found. No expenses were saved. Resolve the existing copies before importing."
         case .ambiguousTag(let name): "More than one saved tag matches '\(name)'. Resolve those tags before importing; Syl will not choose one arbitrarily."
@@ -71,16 +71,16 @@ public nonisolated enum ExpenseImportError: LocalizedError, Equatable {
 }
 
 @MainActor
-public struct ExpenseImportService {
+struct ExpenseImportService {
     private let modelContainer: ModelContainer
     private static var activeContainers = Set<ObjectIdentifier>()
 
-    public init(modelContainer: ModelContainer) {
+    init(modelContainer: ModelContainer) {
         self.modelContainer = modelContainer
     }
 
     /// A read-only review of persisted identities, not a similarity comparison.
-    public func plan(_ source: ExpenseImportSource, ledgerCurrencyCode: String, creatingTagNames: [String] = []) throws -> ExpenseImportPlan {
+    func plan(_ source: ExpenseImportSource, ledgerCurrencyCode: String, creatingTagNames: [String] = []) throws -> ExpenseImportPlan {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
         return try plan(source, currency: ledgerCurrencyCode, creatingTagNames: creatingTagNames, context: context)
@@ -172,7 +172,7 @@ public struct ExpenseImportService {
                                  addedRules: addedRules, ruleMatches: ruleMatches)
     }
 
-    public func execute(
+    func execute(
         _ reviewed: ExpenseImportPlan,
         allowLegacy: Bool = false,
         currencyGate: () throws -> String,
@@ -293,7 +293,7 @@ public struct ExpenseImportService {
     }
 
     /// CSV compatibility API: every row appends with a fresh UUID.
-    public func importExpenses(
+    func importExpenses(
         _ expenses: [ExportableExpense], ledgerCurrencyCode: String, allowLegacy: Bool = false,
         creatingTagNames: [String] = [], progress: (Int) -> Void = { _ in },
         save: (ModelContext) throws -> Void = { try $0.save() }

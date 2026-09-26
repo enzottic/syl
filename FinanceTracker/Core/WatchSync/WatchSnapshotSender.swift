@@ -1,5 +1,5 @@
 //
-//  iOSConnectivity.swift
+//  WatchSnapshotSender.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 9/10/26.
@@ -9,8 +9,8 @@ import Foundation
 import SageKit
 import WatchConnectivity
 
-class iOSConnectivity: NSObject, WCSessionDelegate {
-    static let shared = iOSConnectivity()
+class WatchSnapshotSender: NSObject, WCSessionDelegate {
+    static let shared = WatchSnapshotSender()
     private var pendingPayload: [String: Any]?
     
     override init() {

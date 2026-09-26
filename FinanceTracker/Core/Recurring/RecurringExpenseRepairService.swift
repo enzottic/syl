@@ -2,27 +2,27 @@ import Foundation
 import SageKit
 import SwiftData
 
-public nonisolated struct RecurringExpenseRepairResult: Equatable, Sendable {
-    public let backfilledCount: Int
-    public let removedCount: Int
+nonisolated struct RecurringExpenseRepairResult: Equatable, Sendable {
+    let backfilledCount: Int
+    let removedCount: Int
 
-    public init(backfilledCount: Int = 0, removedCount: Int = 0) {
+    init(backfilledCount: Int = 0, removedCount: Int = 0) {
         self.backfilledCount = backfilledCount
         self.removedCount = removedCount
     }
 }
 
 @MainActor
-public final class RecurringExpenseRepairService {
+final class RecurringExpenseRepairService {
     private let modelContext: ModelContext
 
-    public init(modelContext: ModelContext) {
+    init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
 
     /// Backfills occurrence identities and keeps one generated expense per occurrence key.
     /// The caller owns the save so repair and generation can use one transaction.
-    public func repair() throws -> RecurringExpenseRepairResult {
+    func repair() throws -> RecurringExpenseRepairResult {
         let expenses = try modelContext.fetch(Self.recurringIdentityExpensesDescriptor())
         return repair(expenses: expenses)
     }

@@ -1,5 +1,5 @@
 //
-//  AddExpenseShortcut.swift
+//  SageShortcutsProvider.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 10/4/25.

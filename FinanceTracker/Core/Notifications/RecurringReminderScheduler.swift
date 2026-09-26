@@ -4,7 +4,7 @@ import UserNotifications
 
 @MainActor
 @Observable
-public final class RecurringReminderScheduler {
+final class RecurringReminderScheduler {
     static let historyKey = "sage.recurring.scheduleHistory.v1"
     private static let privateCategory = "sage.recurring.v1.private"
 
@@ -26,12 +26,12 @@ public final class RecurringReminderScheduler {
     @ObservationIgnored private var worker: Task<Void, Never>?
     
     // UI-facing state
-    public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
-    public private(set) var errorMessage: String?
-    public private(set) var scheduledCount: Int = 0
-    public private(set) var isRefreshing: Bool = false
+    private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    private(set) var errorMessage: String?
+    private(set) var scheduledCount: Int = 0
+    private(set) var isRefreshing: Bool = false
 
-    public init(
+    init(
         defaults: UserDefaults,
         client: (any NotificationClient)? = nil,
         now: @escaping () -> Date = Date.init
@@ -43,7 +43,7 @@ public final class RecurringReminderScheduler {
     }
 
     // Coalesces refreshes into one worker; the plan is evaluated only for current inputs.
-    public func refresh(
+    func refresh(
         enabled: Bool,
         hideDetails: Bool,
         plan: @escaping @MainActor () throws -> [RecurringReminderPlan.Summary]
@@ -57,7 +57,7 @@ public final class RecurringReminderScheduler {
         worker = Task { await run() }
     }
 
-    public func waitUntilIdle() async {
+    func waitUntilIdle() async {
         while let worker { await worker.value }
     }
 

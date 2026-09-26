@@ -1,5 +1,5 @@
 //
-//  ExpenseInfoFormNew.swift
+//  ExpenseInfoForm.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 5/19/26.

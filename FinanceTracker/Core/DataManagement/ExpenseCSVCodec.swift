@@ -1,27 +1,27 @@
 //
 //  ExpenseCSVCodec.swift
-//  SageKit
+//  FinanceTracker
 //
 
 import Foundation
 import SageKit
 
-public nonisolated struct ExportableExpense: Sendable, Equatable {
-    public let name: String
-    public let date: Date
-    public let amount: Double
-    public let category: String
+nonisolated struct ExportableExpense: Sendable, Equatable {
+    let name: String
+    let date: Date
+    let amount: Double
+    let category: String
     /// Pipe-joined tag names. This keeps the CSV format compatible with older Sage exports.
-    public let tag: String
-    public let note: String
+    let tag: String
+    let note: String
     /// Nil only for rows from legacy six-column exports or newly prepared export data.
-    public let currencyCode: String?
+    let currencyCode: String?
 
-    public var tagNames: [String] {
+    var tagNames: [String] {
         tag.split(separator: "|").map(String.init)
     }
 
-    public init(name: String, date: Date, amount: Double, category: String, tag: String, note: String, currencyCode: String? = nil) {
+    init(name: String, date: Date, amount: Double, category: String, tag: String, note: String, currencyCode: String? = nil) {
         self.name = name
         self.date = date
         self.amount = amount
@@ -32,7 +32,23 @@ public nonisolated struct ExportableExpense: Sendable, Equatable {
     }
 }
 
-public nonisolated enum ExpenseCSVError: LocalizedError, Equatable {
+extension [Expense] {
+    func toExportable() -> [ExportableExpense] {
+        map {
+            let tags = ($0.tags?.isEmpty == false ? $0.tags : $0.tag.map { [$0] }) ?? []
+            return ExportableExpense(
+                name: $0.name,
+                date: $0.date,
+                amount: $0.amount,
+                category: $0.category.rawValue,
+                tag: tags.map(\.name).joined(separator: "|"),
+                note: $0.note
+            )
+        }
+    }
+}
+
+nonisolated enum ExpenseCSVError: LocalizedError, Equatable {
     case invalidHeader(expected: [String], actual: [String])
     case malformedCSV(row: Int, reason: String)
     case invalidColumnCount(row: Int, expected: Int, actual: Int)
@@ -44,7 +60,7 @@ public nonisolated enum ExpenseCSVError: LocalizedError, Equatable {
     case currencyMismatch(expected: String, actual: String)
     case legacyCurrencyConfirmationRequired
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .invalidHeader(let expected, let actual):
             return "Invalid CSV header. Expected \(expected.joined(separator: ",")); found \(actual.joined(separator: ","))."
@@ -70,11 +86,11 @@ public nonisolated enum ExpenseCSVError: LocalizedError, Equatable {
     }
 }
 
-public nonisolated enum ExpenseCSVCodec {
-    public static let legacyHeader = ["name", "date", "amount", "category", "tag", "note"]
-    public static let header = legacyHeader + ["currency"]
+nonisolated enum ExpenseCSVCodec {
+    static let legacyHeader = ["name", "date", "amount", "category", "tag", "note"]
+    static let header = legacyHeader + ["currency"]
 
-    public static func encode(_ expenses: [ExportableExpense], currencyCode: String) throws -> String {
+    static func encode(_ expenses: [ExportableExpense], currencyCode: String) throws -> String {
         try validateCurrency(expenses, ledgerCurrencyCode: currencyCode, allowLegacy: true)
         let dateStyle = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
         let rows = expenses.map { expense in
@@ -94,7 +110,7 @@ public nonisolated enum ExpenseCSVCodec {
         return ([header.joined(separator: ",")] + rows).joined(separator: "\r\n")
     }
 
-    public static func decode(_ csv: String) throws -> [ExportableExpense] {
+    static func decode(_ csv: String) throws -> [ExportableExpense] {
         let records = try parseRecords(csv)
         guard let headerRecord = records.first else {
             throw ExpenseCSVError.invalidHeader(expected: header, actual: [])
@@ -159,7 +175,7 @@ public nonisolated enum ExpenseCSVCodec {
     }
 
     /// Validate the complete batch before insertion. Legacy rows need currency consent.
-    public static func validateCurrency(
+    static func validateCurrency(
         _ expenses: [ExportableExpense],
         ledgerCurrencyCode: String,
         allowLegacy: Bool = false

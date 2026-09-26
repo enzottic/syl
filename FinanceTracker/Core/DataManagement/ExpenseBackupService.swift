@@ -51,19 +51,3 @@ final class ExpenseBackupService: Sendable {
         return url
     }
 }
-
-extension [Expense] {
-    func toExportable() -> [ExportableExpense] {
-        map {
-            let tags = ($0.tags?.isEmpty == false ? $0.tags : $0.tag.map { [$0] }) ?? []
-            return ExportableExpense(
-                name: $0.name,
-                date: $0.date,
-                amount: $0.amount,
-                category: $0.category.rawValue,
-                tag: tags.map(\.name).joined(separator: "|"),
-                note: $0.note
-            )
-        }
-    }
-}

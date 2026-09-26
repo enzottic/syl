@@ -5,7 +5,7 @@ import WidgetKit
 import PhotosUI
 import Photos
 
-struct NewAddExpenseSheet: View {
+struct AddExpenseSheet: View {
     enum AddExpenseStep: Int {
         case name, amount, category, date, details
     }
@@ -152,7 +152,7 @@ struct NewAddExpenseSheet: View {
             ExpenseDatePage(date: $draft.date, isRecurring: $draft.isRecurring,
                             frequency: $draft.recurrenceFrequency, allowsRecurrence: (draft.amount ?? 0) > 0)
         case .details:
-            ExpenseTagsPage(tags: $draft.tags, note: $draft.note, isNoteFocused: $isNoteFocused,
+            ExpenseDetailsPage(tags: $draft.tags, note: $draft.note, isNoteFocused: $isNoteFocused,
                             aiSuggestedTagIDs: aiSuggestedTagIDs)
         }
     }
@@ -291,6 +291,6 @@ struct NewAddExpenseSheet: View {
 
 #Preview {
     Text("Expense entry")
-        .sheet(isPresented: .constant(true)) { NewAddExpenseSheet() }
+        .sheet(isPresented: .constant(true)) { AddExpenseSheet() }
         .environmentInjection()
 }

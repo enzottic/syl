@@ -1,7 +1,7 @@
 import SwiftUI
 import SageKit
 
-struct ExpenseTagsPage: View {
+struct ExpenseDetailsPage: View {
     @Binding var tags: [ExpenseTag]
     @Binding var note: String
     var isNoteFocused: FocusState<Bool>.Binding

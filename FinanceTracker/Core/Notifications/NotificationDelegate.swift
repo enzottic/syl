@@ -4,15 +4,7 @@
 //
 
 import UserNotifications
-import Observation
 import SageKit
-
-@MainActor @Observable
-final class ReminderNavigation {
-    static let shared = ReminderNavigation()
-    var isRequested = false
-    var isExpenseEntryRequested = false
-}
 
 /// Without a delegate, iOS silently drops notifications that fire while the app is foreground.
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {

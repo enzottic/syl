@@ -10,7 +10,7 @@ import SwiftUI
 @main
 struct FinanceTrackerWatch_Watch_AppApp: App {
     @State private var snapshotManager = SnapshotManager.shared
-    private let connectivity = watchOSConnectivity.shared
+    private let connectivity = WatchSnapshotReceiver.shared
 
     init() {
         #if DEBUG

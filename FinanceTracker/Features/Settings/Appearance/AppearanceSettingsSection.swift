@@ -1,5 +1,5 @@
 //
-//  AppearancePicker.swift
+//  AppearanceSettingsSection.swift
 //  FinanceTracker
 //
 //  Created by Enzo on 10/15/25.

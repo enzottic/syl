@@ -14,9 +14,9 @@ import UIKit
 //   Wants:   $1,500
 //   Savings: $1,000  ← never exceeded
 
-public nonisolated enum MockDataSeeder {
+nonisolated enum MockDataSeeder {
 
-    public static func seed(into context: ModelContext, seedsAppConfiguration: Bool = true) {
+    static func seed(into context: ModelContext, seedsAppConfiguration: Bool = true) {
         // Guards against re-seeding an already-populated store
         let existingCount = (try? context.fetchCount(FetchDescriptor<Expense>())) ?? 0
         guard existingCount == 0 else { return }
