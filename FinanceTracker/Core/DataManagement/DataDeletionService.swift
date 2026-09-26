@@ -4,8 +4,6 @@
 //
 
 import Foundation
-import CloudKit
-import CoreData
 import SageKit
 import SwiftData
 
@@ -62,53 +60,5 @@ struct DataDeletionService {
 
     func rollback() {
         modelContext.rollback()
-    }
-}
-
-/// Run only before SwiftData opens its store. Core Data records the user purge in
-/// its mirroring metadata, unlike an out-of-band CKDatabase zone delete.
-@MainActor
-enum CloudDataDeletionService {
-    static func purgeMirroredData() async throws {
-        guard let groupURL = FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: SageModelContainer.appGroupIdentifier
-        ) else {
-            throw SageModelContainer.Error.appGroupUnavailable
-        }
-        guard let model = NSManagedObjectModel.makeManagedObjectModel(
-            for: Schema(versionedSchema: SageSchemaV9.self)
-        ) else {
-            throw CocoaError(.coderInvalidValue)
-        }
-        let description = NSPersistentStoreDescription(url: groupURL.appending(path: "Sage.sqlite"))
-        description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
-            containerIdentifier: "iCloud.me.enzottic.FinanceTracker"
-        )
-        description.shouldAddStoreAsynchronously = false
-        let container = NSPersistentCloudKitContainer(name: "Sage", managedObjectModel: model)
-        container.persistentStoreDescriptions = [description]
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            container.loadPersistentStores { _, error in
-                if let error { continuation.resume(throwing: error) }
-                else { continuation.resume() }
-            }
-        }
-        let zoneID = CKRecordZone.ID(zoneName: "com.apple.coredata.cloudkit.zone")
-        do {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-                container.purgeObjectsAndRecordsInZone(with: zoneID, in: nil) { _, error in
-                    if let error { continuation.resume(throwing: error) }
-                    else { continuation.resume() }
-                }
-            }
-        } catch {
-            if let store = container.persistentStoreCoordinator.persistentStores.first {
-                try? container.persistentStoreCoordinator.remove(store)
-            }
-            throw error
-        }
-        if let store = container.persistentStoreCoordinator.persistentStores.first {
-            try container.persistentStoreCoordinator.remove(store)
-        }
     }
 }

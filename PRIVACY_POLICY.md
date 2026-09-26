@@ -35,13 +35,17 @@ delete existing local or iCloud data.
 Your saved data remains until you delete it. In Syl's Settings:
 
 - *Delete Expense Data* removes expenses, with an option to also remove recurring expense rules.
-- *Delete All Data* removes expenses, recurring rules, tags, and preferences.
+- *Delete Data on This Device* removes expenses, recurring rules, tags, preferences,
+  and Syl's local CSV export. It turns off Syl's iCloud sync and requests removal
+  of Syl's synced preference keys.
 
-Data in iCloud is deleted when you delete an expense with sync still enabled. If sync is off,
-cloud copies will remain in iCloud until removed through a device with sync enabled, or
-if data is deleted manually in your Apple Account settings. Other devices, such as your
-Apple Watch, may retain older data until they receive an update. Removing the iPhone app
-does not delete iCloud data or copies on other devices.
+Deleting an expense while sync is active may also remove its iCloud copy after sync
+completes. *Delete Data on This Device* does not confirm deletion of the iCloud
+copy. To remove it, close Syl, then use *Settings → Apple Account → iCloud → Storage → Syl →
+Delete Data from iCloud*. Other devices with local copies may upload them again
+if sync resumes. Devices such as your Apple Watch may retain older data until they
+receive an update. Removing the iPhone app does not delete iCloud data or copies
+on other devices.
 
 ## Imports and exports
 

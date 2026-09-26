@@ -22,7 +22,7 @@ final public class ExpenseStore {
     public init(
         modelContainer: ModelContainer,
         isDataDeletionPending: @escaping @MainActor () -> Bool = {
-            SagePreferences.defaults.bool(forKey: SageModelContainer.pendingCloudDeletionKey)
+            SagePreferences.defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey)
         }
     ) {
         self.modelContainer = modelContainer
@@ -69,7 +69,7 @@ final public class ExpenseStore {
         case deletionPending
 
         public var errorDescription: String? {
-            "Finish Delete All Data before adding expenses."
+            "Finish deleting local data before adding expenses."
         }
     }
 

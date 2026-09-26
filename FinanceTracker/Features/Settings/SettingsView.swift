@@ -102,17 +102,17 @@ struct SettingsView: View {
                     Button(role: .destructive) {
                         showFullResetConfirmation = true
                     } label: {
-                        SettingsListItem(text: "Delete All Data", icon: "trash.circle.fill", color: .red)
+                        SettingsListItem(text: "Delete Data on This Device", icon: "trash.circle.fill", color: .red)
                             .foregroundStyle(.red)
                     }
                     .disabled(isChangingData)
                 } footer: {
-                    if config.hasPendingCloudDeletion {
-                        Text("iCloud deletion is pending. Sync stays off. Close Syl from the App Switcher, then reopen it while connected to iCloud to finish deletion.")
+                    if config.hasPendingLocalDeletion {
+                        Text("Local reset is pending. Sync stays off. Close Syl, delete its iCloud copy in iCloud Storage, then reopen Syl to finish clearing this device.")
                     } else if config.supportsCloudSync {
-                        Text("Delete All Data removes Syl data here. iCloud deletion finishes after you close Syl from the App Switcher and reopen it. Other devices update after iCloud syncs; copies saved outside Syl remain.")
+                        Text("Delete Data on This Device clears local records, settings, and Syl's CSV export. It turns off sync and requests removal of synced preferences. Delete the iCloud record copy separately in iCloud Storage.")
                     } else {
-                        Text("Delete All Data removes Syl data, settings, and the local CSV export. Copies saved outside Syl remain.")
+                        Text("Delete Data on This Device removes Syl data, settings, and the local CSV export. Copies saved outside Syl remain.")
                     }
                 }
 
@@ -165,15 +165,15 @@ struct SettingsView: View {
                     Text("Both options remove expenses from this device. Keeping recurring rules lets them create new expenses.")
                 }
             }
-            .alert("Delete All Data?", isPresented: $showFullResetConfirmation) {
-                Button("Delete All Data", role: .destructive) {
+            .alert("Delete Data on This Device?", isPresented: $showFullResetConfirmation) {
+                Button("Delete Device Data", role: .destructive) {
                     Task { await performDataOperation(.fullReset) }
                 }
                 .disabled(isChangingData)
                 Button("Cancel", role: .cancel) {}
             } message: {
                 if config.supportsCloudSync {
-                    Text("This removes expenses, recurring rules, tags, settings, and Syl's local CSV export here, then deletes Syl's iCloud data after you close Syl from the App Switcher and reopen it, even if sync is off. Sync stays off until deletion finishes. Other devices may show old data until iCloud updates. Copies saved or shared outside Syl must be deleted separately.")
+                    Text("This removes Syl data, settings, and its local CSV export from this device, turns off sync, and requests removal of synced preferences. To remove the iCloud record copy, close Syl and delete it in Apple Settings. Other devices with saved copies can upload them again.")
                 } else {
                     Text("This permanently deletes expenses, recurring rules, tags, settings, and Syl's local CSV export from this device. Copies saved or shared outside Syl must be deleted separately.")
                 }
@@ -219,7 +219,7 @@ struct SettingsView: View {
                 reminders?.refresh()
                 publishEmptyWatchSnapshot()
                 WidgetCenter.shared.reloadAllTimelines()
-                if config.hasPendingCloudDeletion {
+                if config.hasPendingLocalDeletion {
                     config.markLocalDeletionComplete()
                     return
                 }

@@ -37,8 +37,8 @@ struct SageApp: App {
         SageModelContainer.activateCloudKitPreference()
 
         let containerResult: Result<ModelContainer, any Error>?
-        if SagePreferences.defaults.bool(forKey: SageModelContainer.pendingCloudDeletionKey) {
-            // The Core Data purge must run before SwiftData opens this shared store.
+        if SagePreferences.defaults.bool(forKey: SageModelContainer.pendingLocalDeletionKey) {
+            // Open the store without mirroring only when the local reset resumes.
             containerResult = nil
         } else if UITestConfiguration.isEnabled {
             containerResult = Result {
@@ -164,6 +164,7 @@ struct SageApp: App {
     private func publishMonthlySnapshot() {
         guard !UITestConfiguration.isEnabled,
               ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1",
+              !appConfiguration.hasPendingLocalDeletion,
               hasOpenedAppOnce,
               case let .some(.success(container)) = containerResult else {
             return
@@ -188,36 +189,35 @@ struct SageApp: App {
 
     @MainActor
     private func finishPendingDeletion() async -> Bool {
+        let result = SageModelContainer.shared
+        guard case let .success(container) = result else { return false }
         do {
-            try DataDeletionService.deleteLocalExport()
+            // The old session could still have imported records after the first local deletion.
+            // This container opens with CloudKit disabled by the pending marker.
+            try DataDeletionService(modelContext: container.mainContext).deleteAllUserData()
         } catch {
             return false
         }
-        let preferencesQueued = appConfiguration.resetAllSettings()
-        guard await appConfiguration.finishCloudDeletion(preferencesQueued: preferencesQueued) else {
-            return false
-        }
+        appConfiguration.resetAllSettings()
+        appConfiguration.finishLocalDeletion()
         UserDefaults.standard.removeObject(forKey: "hasOpenedAppOnce")
-        let result = SageModelContainer.shared
-        if case let .success(container) = result {
-            if let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
-                container: container,
-                categoryColors: appConfiguration.categoryColors,
-                currencyCode: appConfiguration.ledgerCurrencyCode,
-                monthlyBudget: 0
-            ) {
-                connectivity.sendUpdatedMonthlySnapshot(snapshot: snapshot)
-            }
-            let expenseStore = ExpenseStore(modelContainer: container)
-            AppDependencyManager.shared.add(dependency: expenseStore)
-            recurringReminders = RecurringReminderCoordinator(container: container)
-            #if !DEBUG
-            let coordinator = RecurringExpenseCoordinator(modelContainer: container, cloudKitEnabled: false)
-            recurringExpenseCoordinator = coordinator
-            coordinator.start()
-            #endif
-            SageShortcutsProvider.updateAppShortcutParameters()
+        if let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
+            container: container,
+            categoryColors: appConfiguration.categoryColors,
+            currencyCode: appConfiguration.ledgerCurrencyCode,
+            monthlyBudget: 0
+        ) {
+            connectivity.sendUpdatedMonthlySnapshot(snapshot: snapshot)
         }
+        let expenseStore = ExpenseStore(modelContainer: container)
+        AppDependencyManager.shared.add(dependency: expenseStore)
+        recurringReminders = RecurringReminderCoordinator(container: container)
+        #if !DEBUG
+        let coordinator = RecurringExpenseCoordinator(modelContainer: container, cloudKitEnabled: false)
+        recurringExpenseCoordinator = coordinator
+        coordinator.start()
+        #endif
+        SageShortcutsProvider.updateAppShortcutParameters()
         containerResult = result
         return true
     }
@@ -282,9 +282,9 @@ struct SageApp: App {
 private struct PendingDeletionRestartView: View {
     var body: some View {
         ContentUnavailableView(
-            "Deletion continues on next launch",
+            "Data removed from this device",
             systemImage: "icloud",
-            description: Text("Syl removed the data on this iPhone. Close Syl from the App Switcher, then reopen it while connected to iCloud to finish deleting the iCloud copy. Sync stays off until deletion succeeds.")
+            description: Text("Close Syl from the App Switcher first. Then open Settings > Apple Account > iCloud > Storage, select Syl, and tap Delete Data from iCloud. Reopen Syl to finish the local reset. Other devices with saved copies can upload them again. Sync remains off.")
         )
     }
 }
@@ -297,20 +297,20 @@ private struct PendingDeletionRecoveryView: View {
     var body: some View {
         VStack(spacing: 16) {
             if isRunning {
-                ProgressView("Finishing iCloud deletion")
+                ProgressView("Finishing local reset")
             } else {
                 ContentUnavailableView(
-                    "iCloud deletion pending",
-                    systemImage: "icloud.slash",
-                    description: Text("Connect to iCloud to finish deleting Syl data. Sync remains off until this succeeds.")
+                    "Local reset needs attention",
+                    systemImage: "externaldrive.badge.exclamationmark",
+                    description: Text("Syl could not finish clearing data on this device. Sync remains off. Delete the iCloud copy separately in Settings > Apple Account > iCloud > Storage.")
                 )
-                Button("Retry iCloud Deletion") {
+                Button("Retry Local Reset") {
                     Task { await attempt() }
                 }
                 .buttonStyle(.borderedProminent)
             }
             if failed {
-                Text("Syl could not finish iCloud deletion. Check your connection and iCloud account, then retry.")
+                Text("Check available device storage, then retry. Syl has not confirmed deletion of any iCloud data.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

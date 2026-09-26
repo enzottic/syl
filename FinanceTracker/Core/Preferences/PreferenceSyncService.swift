@@ -171,7 +171,7 @@ final class PreferenceSyncService {
         publish([.hasCompletedSetup: true])
     }
 
-    // Delete All Data explicitly authorizes clearing these keys even when ordinary sync is off.
+    // Explicit device deletion clears Syl's KVS keys even when ordinary sync is off.
     // synchronize() only queues the change; it is not a server acknowledgement.
     @discardableResult
     func resetForDataDeletion() -> Bool {
