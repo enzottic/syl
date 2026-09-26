@@ -11,7 +11,7 @@ struct CategorySpotlightEntry: WidgetCurrencyEntry {
     var currencyCode: String? = LedgerCurrency.currentCode
 
     var utilization: Double { budget > 0 ? spent / budget : 0 }
-    var remaining: Double { budget - spent }
+    var status: BudgetStatus { BudgetStatus(spent: spent, budget: budget, goal: category.budgetGoal) }
 
     static func preview(category: ExpenseCategory) -> CategorySpotlightEntry {
         switch category {

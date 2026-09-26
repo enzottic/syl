@@ -30,4 +30,14 @@ struct MonthlySummaryEntry: WidgetCurrencyEntry {
         ],
         currencyCode: "USD"
     )
+
+    /// Spending with no income set, as after onboarding with $0 or Delete All Data.
+    static let noIncomePreview = MonthlySummaryEntry(
+        date: .now, totalSpent: 243.57, totalIncome: 0,
+        wantsSpent: 62.15, wantsBudget: 0,
+        needsSpent: 181.42, needsBudget: 0,
+        savingsSpent: 0, savingsBudget: 0,
+        recentExpenses: Array(preview.recentExpenses.prefix(2)),
+        currencyCode: "USD"
+    )
 }

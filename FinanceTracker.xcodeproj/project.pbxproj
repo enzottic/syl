@@ -196,6 +196,7 @@
 		C61109060000000000000006 /* Exceptions for "SageKit" folder in "FinanceTrackerWatchWidget" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Models/BudgetStatus.swift,
 				WatchSync/WatchSnapshot.swift,
 			);
 			target = C61109060000000000000004 /* FinanceTrackerWatchWidget */;
@@ -238,6 +239,7 @@
 		C6ED84A43053BCE7004DE5F2 /* Exceptions for "SageKit" folder in "FinanceTrackerWatch Watch App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Models/BudgetStatus.swift,
 				WatchSync/WatchSnapshot.swift,
 			);
 			target = C6ED82B73053ADE3004DE5F2 /* FinanceTrackerWatch Watch App */;

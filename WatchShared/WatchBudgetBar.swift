@@ -33,18 +33,19 @@ struct WatchBudgetRemaining: View {
     var isSavings = false
 
     var body: some View {
-        if budget <= 0 {
-            Text(isSavings ? "No savings target" : "No budget set")
-        } else if isSavings {
-            if spent >= budget {
-                Text("Target reached")
-            } else {
-                Text("\((budget - spent).formatted(.currency(code: currencyCode))) to target")
-            }
-        } else if spent > budget {
-            Text("\((spent - budget).formatted(.currency(code: currencyCode))) over budget")
-        } else {
-            Text("\((budget - spent).formatted(.currency(code: currencyCode))) left")
+        switch BudgetStatus(spent: spent, budget: budget, goal: isSavings ? .target : .limit) {
+        case .noBudget:
+            Text("No budget set")
+        case .noTarget:
+            Text("No savings target")
+        case .underBudget(let remaining):
+            Text("\(remaining.formatted(.currency(code: currencyCode))) left")
+        case .overBudget(let amount):
+            Text("\(amount.formatted(.currency(code: currencyCode))) over budget")
+        case .belowTarget(let remaining):
+            Text("\(remaining.formatted(.currency(code: currencyCode))) to target")
+        case .targetReached:
+            Text("Target reached")
         }
     }
 }

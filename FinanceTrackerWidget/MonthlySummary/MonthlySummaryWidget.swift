@@ -14,8 +14,8 @@ struct MonthlySummaryEntryView: View {
     @Environment(\.categoryColors) private var categoryColors
     let entry: MonthlySummaryEntry
 
-    var remaining: Double { Double(entry.totalIncome) - entry.totalSpent }
-    var isOverBudget: Bool { remaining < 0 }
+    /// Income is the overall budget, so the total only turns red once income is set and exceeded.
+    var isOverBudget: Bool { BudgetStatus(spent: entry.totalSpent, budget: Double(entry.totalIncome)).isOverBudget }
 
     var body: some View {
         Group {
@@ -51,16 +51,19 @@ struct MonthlySummaryEntryView: View {
             Divider()
 
             VStack(spacing: 6) {
-                compactCategoryRow(name: "Needs", spent: entry.needsSpent, budget: entry.needsBudget, color: categoryColors.needs)
-                compactCategoryRow(name: "Wants", spent: entry.wantsSpent, budget: entry.wantsBudget, color: categoryColors.wants)
-                compactCategoryRow(name: "Savings", spent: entry.savingsSpent, budget: entry.savingsBudget, color: categoryColors.savings)
+                compactCategoryRow(.needs, spent: entry.needsSpent, budget: entry.needsBudget)
+                compactCategoryRow(.wants, spent: entry.wantsSpent, budget: entry.wantsBudget)
+                compactCategoryRow(.savings, spent: entry.savingsSpent, budget: entry.savingsBudget)
             }
         }
     }
 
-    func compactCategoryRow(name: String, spent: Double, budget: Double, color: Color) -> some View {
+    func compactCategoryRow(_ category: ExpenseCategory, spent: Double, budget: Double) -> some View {
+        let name = category.rawValue
+        let color = category.color(in: categoryColors)
         let utilization = budget > 0 ? spent / budget : 0
-        let isOverBudget = spent > budget
+        let status = BudgetStatus(spent: spent, budget: budget, goal: category.budgetGoal)
+        let isOverBudget = status.isOverBudget
         return VStack(spacing: 3) {
             HStack {
                 Circle()
@@ -70,7 +73,7 @@ struct MonthlySummaryEntryView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(budget > 0 ? utilization.formatted(.percent.precision(.fractionLength(0))) : (isOverBudget ? "Over budget" : "No budget"))
+                Text(status.hasBudget ? utilization.formatted(.percent.precision(.fractionLength(0))) : entry.description(of: status))
                     .font(.caption2)
                     .fontWeight(.medium)
                     .foregroundStyle(isOverBudget ? .red : .primary)
@@ -92,7 +95,7 @@ struct MonthlySummaryEntryView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(name)
-        .accessibilityValue(categoryAccessibilityValue(spent: spent, budget: budget))
+        .accessibilityValue(categoryAccessibilityValue(spent: spent, budget: budget, status: status))
     }
 
     // MARK: - Medium/Large: header + full category rows
@@ -119,9 +122,9 @@ struct MonthlySummaryEntryView: View {
             }
 
             VStack(spacing: 8) {
-                fullCategoryRow(name: "Needs", spent: entry.needsSpent, budget: entry.needsBudget, color: categoryColors.needs)
-                fullCategoryRow(name: "Wants", spent: entry.wantsSpent, budget: entry.wantsBudget, color: categoryColors.wants)
-                fullCategoryRow(name: "Savings", spent: entry.savingsSpent, budget: entry.savingsBudget, color: categoryColors.savings)
+                fullCategoryRow(.needs, spent: entry.needsSpent, budget: entry.needsBudget)
+                fullCategoryRow(.wants, spent: entry.wantsSpent, budget: entry.wantsBudget)
+                fullCategoryRow(.savings, spent: entry.savingsSpent, budget: entry.savingsBudget)
             }
         }
     }
@@ -147,9 +150,9 @@ struct MonthlySummaryEntryView: View {
             Spacer()
 
             VStack(spacing: 10) {
-                fullCategoryRow(name: "Needs", spent: entry.needsSpent, budget: entry.needsBudget, color: categoryColors.needs)
-                fullCategoryRow(name: "Wants", spent: entry.wantsSpent, budget: entry.wantsBudget, color: categoryColors.wants)
-                fullCategoryRow(name: "Savings", spent: entry.savingsSpent, budget: entry.savingsBudget, color: categoryColors.savings)
+                fullCategoryRow(.needs, spent: entry.needsSpent, budget: entry.needsBudget)
+                fullCategoryRow(.wants, spent: entry.wantsSpent, budget: entry.wantsBudget)
+                fullCategoryRow(.savings, spent: entry.savingsSpent, budget: entry.savingsBudget)
             }
             
             Spacer()
@@ -182,9 +185,12 @@ struct MonthlySummaryEntryView: View {
         }
     }
 
-    func fullCategoryRow(name: String, spent: Double, budget: Double, color: Color) -> some View {
+    func fullCategoryRow(_ category: ExpenseCategory, spent: Double, budget: Double) -> some View {
+        let name = category.rawValue
+        let color = category.color(in: categoryColors)
         let utilization = budget > 0 ? spent / budget : 0
-        let isOverBudget = spent > budget
+        let status = BudgetStatus(spent: spent, budget: budget, goal: category.budgetGoal)
+        let isOverBudget = status.isOverBudget
         return VStack(spacing: 4) {
             HStack {
                 Text(isOverBudget ? "\(name) (over)" : name)
@@ -196,7 +202,7 @@ struct MonthlySummaryEntryView: View {
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(isOverBudget ? .red : .primary)
-                Text(budget > 0 ? "/ \(entry.currencyString(budget))" : "No budget")
+                Text(status.hasBudget ? "/ \(entry.currencyString(budget))" : entry.description(of: status))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -208,19 +214,11 @@ struct MonthlySummaryEntryView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(name)
-        .accessibilityValue(categoryAccessibilityValue(spent: spent, budget: budget))
+        .accessibilityValue(categoryAccessibilityValue(spent: spent, budget: budget, status: status))
     }
 
-    func categoryAccessibilityValue(spent: Double, budget: Double) -> String {
-        let status: String
-        if spent > budget {
-            status = "\(entry.currencyString(spent - budget)) over budget"
-        } else if budget <= 0 {
-            status = "No budget"
-        } else {
-            status = "\(entry.currencyString(budget - spent)) left"
-        }
-        return "\(entry.currencyString(spent)) spent, budget \(entry.currencyString(budget)), \(status)"
+    func categoryAccessibilityValue(spent: Double, budget: Double, status: BudgetStatus) -> String {
+        "\(entry.currencyString(spent)) spent, budget \(entry.currencyString(budget)), \(entry.description(of: status))"
     }
 }
 
@@ -266,16 +264,19 @@ struct MonthlySummaryWidget: Widget {
     MonthlySummaryWidget()
 } timeline: {
     MonthlySummaryEntry.preview
+    MonthlySummaryEntry.noIncomePreview
 }
 
 #Preview("Medium", as: .systemMedium) {
     MonthlySummaryWidget()
 } timeline: {
     MonthlySummaryEntry.preview
+    MonthlySummaryEntry.noIncomePreview
 }
 
 #Preview("Large", as: .systemLarge) {
     MonthlySummaryWidget()
 } timeline: {
     MonthlySummaryEntry.preview
+    MonthlySummaryEntry.noIncomePreview
 }

@@ -17,10 +17,17 @@ final public class ExpenseStore {
     
     let modelContainer: ModelContainer
     var context: ModelContext
+    /// Where income and allocations are read from; tests pass an isolated store.
+    let preferences: UserDefaults
 
-    public init(modelContainer: ModelContainer) {
+    public convenience init(modelContainer: ModelContainer) {
+        self.init(modelContainer: modelContainer, preferences: SagePreferences.defaults)
+    }
+
+    init(modelContainer: ModelContainer, preferences: UserDefaults) {
         self.modelContainer = modelContainer
         self.context = modelContainer.mainContext
+        self.preferences = preferences
     }
 
     // MARK: - Create
@@ -102,15 +109,14 @@ final public class ExpenseStore {
     // MARK: - Budget
 
     public func budget(for category: ExpenseCategory) -> Double {
-        let defaults = SagePreferences.defaults
-        let income = Double(defaults.integer(forKey: "totalMonthlyIncome"))
+        let income = Double(preferences.integer(forKey: "totalMonthlyIncome"))
         switch category {
         case .needs:
-            return income * (defaults.object(forKey: "needsPercent") as? Double ?? 0.5)
+            return income * (preferences.object(forKey: "needsPercent") as? Double ?? 0.5)
         case .wants:
-            return income * (defaults.object(forKey: "wantsPercent") as? Double ?? 0.3)
+            return income * (preferences.object(forKey: "wantsPercent") as? Double ?? 0.3)
         case .savings:
-            return income * (defaults.object(forKey: "savingsPercent") as? Double ?? 0.2)
+            return income * (preferences.object(forKey: "savingsPercent") as? Double ?? 0.2)
         }
     }
 
@@ -118,17 +124,21 @@ final public class ExpenseStore {
         ExpenseCategory.allCases.map { budget(for: $0) }.reduce(0, +)
     }
 
-    public func remainingBudget(for category: ExpenseCategory, month: Date = .now) throws -> Double {
-        budget(for: category) - (try monthlyTotal(category: category, month: month))
-    }
-
-    public func totalRemainingBudget(month: Date = .now) throws -> Double {
-        totalBudget() - (try monthlyTotal(for: month))
+    /// How the month's spending compares with a category's budget (or savings target),
+    /// or with the total budget when `category` is nil.
+    public func budgetStatus(for category: ExpenseCategory?, month: Date = .now) throws -> BudgetStatus {
+        guard let category else {
+            return BudgetStatus(spent: try monthlyTotal(for: month), budget: totalBudget())
+        }
+        return BudgetStatus(
+            spent: try monthlyTotal(category: category, month: month),
+            budget: budget(for: category),
+            goal: category.budgetGoal
+        )
     }
 
     public var totalMonthlyIncome: Int {
-        let defaults = SagePreferences.defaults
-        return defaults.integer(forKey: "totalMonthlyIncome")
+        preferences.integer(forKey: "totalMonthlyIncome")
     }
 
     // MARK: - Widget snapshot

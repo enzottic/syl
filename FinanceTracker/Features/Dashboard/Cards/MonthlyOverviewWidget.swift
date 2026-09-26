@@ -26,9 +26,9 @@ struct MonthlyOverviewWidget: View {
         totalBudget == 0 ? 0 : totalSpent / totalBudget
     }
 
-    private var remaining: Double { max(totalBudget - totalSpent, 0) }
+    private var status: BudgetStatus { BudgetStatus(spent: totalSpent, budget: totalBudget) }
 
-    private var isOverBudget: Bool { totalSpent > totalBudget + 0.001 }
+    private var isOverBudget: Bool { status.isOverBudget }
 
     private var tint: Color { isOverBudget ? .red : .sage }
 
@@ -54,9 +54,7 @@ struct MonthlyOverviewWidget: View {
                 .padding(.top, 12)
 
                 HStack {
-                    Text(isOverBudget
-                         ? "\((totalSpent - totalBudget).currencyString(code: config.ledgerCurrencyCode)) over"
-                         : "\(remaining.currencyString(code: config.ledgerCurrencyCode)) remaining")
+                    statusText
                         .font(.subheadline)
                         .foregroundStyle(isOverBudget ? .red : .secondary)
 
@@ -67,6 +65,16 @@ struct MonthlyOverviewWidget: View {
                     }
                 }
             }
+        }
+    }
+
+    private var statusText: Text {
+        let code = config.ledgerCurrencyCode
+        return switch status {
+        case .overBudget(let amount): Text("\(amount.currencyString(code: code)) over")
+        case .underBudget(let remaining): Text("\(remaining.currencyString(code: code)) remaining")
+        // The total is a spending limit, so the savings-target statuses don't occur.
+        case .noBudget, .noTarget, .belowTarget, .targetReached: Text("No budget set")
         }
     }
 

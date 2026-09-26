@@ -13,12 +13,8 @@ struct CategorySpotlightEntryView: View {
     @Environment(\.categoryColors) private var categoryColors
     let entry: CategorySpotlightEntry
 
-    var isOverBudget: Bool { entry.spent > entry.budget }
-    var budgetStatus: String {
-        if isOverBudget { return "\(entry.currencyString(entry.spent - entry.budget)) over budget" }
-        if entry.budget <= 0 { return "No budget" }
-        return "\(entry.currencyString(entry.remaining)) left"
-    }
+    var status: BudgetStatus { entry.status }
+    var isOverBudget: Bool { status.isOverBudget }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -28,7 +24,7 @@ struct CategorySpotlightEntryView: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(entry.budget > 0 ? entry.utilization.formatted(.percent.precision(.fractionLength(0))) : "No budget")
+                Text(status.hasBudget ? entry.utilization.formatted(.percent.precision(.fractionLength(0))) : entry.description(of: status))
                     .font(.caption2)
                     .foregroundStyle(isOverBudget ? .red : .secondary)
             }
@@ -52,19 +48,9 @@ struct CategorySpotlightEntryView: View {
                     Text("of \(entry.currencyString(entry.budget))")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                    Group {
-                        if isOverBudget {
-                            Text("over budget")
-                                .foregroundStyle(.red)
-                        } else if entry.budget <= 0 {
-                            Text("No budget")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text("\(entry.currencyString(entry.remaining)) left")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .font(.caption2)
+                    Text(isOverBudget ? "over budget" : entry.description(of: status))
+                        .font(.caption2)
+                        .foregroundStyle(isOverBudget ? .red : .secondary)
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -72,7 +58,7 @@ struct CategorySpotlightEntryView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(entry.category.rawValue)
-        .accessibilityValue("\(entry.currencyString(entry.spent)) spent, budget \(entry.currencyString(entry.budget)), \(budgetStatus)")
+        .accessibilityValue("\(entry.currencyString(entry.spent)) spent, budget \(entry.currencyString(entry.budget)), \(entry.description(of: status))")
     }
 }
 
@@ -118,4 +104,6 @@ struct CategorySpotlightWidget: Widget {
     CategorySpotlightWidget()
 } timeline: {
     CategorySpotlightEntry.preview(category: .needs)
+    CategorySpotlightEntry(date: .now, category: .needs, spent: 86.40, budget: 0, currencyCode: "USD")
+    CategorySpotlightEntry(date: .now, category: .savings, spent: 1600, budget: 1400, currencyCode: "USD")
 }

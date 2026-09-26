@@ -23,6 +23,11 @@ public enum ExpenseCategory: String, CaseIterable, Codable, AppEnum {
     public func color(in colors: CategoryColors) -> Color {
         colors.color(for: self)
     }
+
+    /// Savings has a target to reach. The other categories have a limit to stay under.
+    public var budgetGoal: BudgetStatus.Goal {
+        self == .savings ? .target : .limit
+    }
     
     public var description: String {
         switch self {

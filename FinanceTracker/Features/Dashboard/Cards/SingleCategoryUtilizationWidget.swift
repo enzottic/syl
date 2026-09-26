@@ -55,8 +55,8 @@ struct SingleCategoryUtilizationWidget: View {
         min(max(utilization, 0), 1)
     }
 
-    private var remaining: Double { max(budget - spent, 0) }
-    private var isOverBudget: Bool { spent > budget + 0.001 }
+    private var status: BudgetStatus { BudgetStatus(spent: spent, budget: budget, goal: category.budgetGoal) }
+    private var isOverBudget: Bool { status.isOverBudget }
     private var tint: Color { isOverBudget ? .red : category.color(in: categoryColors) }
 
     var body: some View {
@@ -127,10 +127,22 @@ struct SingleCategoryUtilizationWidget: View {
 
                 Spacer()
 
-                Text(isOverBudget ? "\((spent - budget).currencyString(code: config.ledgerCurrencyCode)) over" : "\(remaining.currencyString(code: config.ledgerCurrencyCode)) left")
+                statusText
                     .font(.caption)
                     .foregroundStyle(isOverBudget ? .red : .secondary)
             }
+        }
+    }
+
+    private var statusText: Text {
+        let code = config.ledgerCurrencyCode
+        return switch status {
+        case .noBudget: Text("No budget set")
+        case .noTarget: Text("No savings target")
+        case .underBudget(let remaining): Text("\(remaining.currencyString(code: code)) left")
+        case .overBudget(let amount): Text("\(amount.currencyString(code: code)) over")
+        case .belowTarget(let remaining): Text("\(remaining.currencyString(code: code)) to target")
+        case .targetReached: Text("Target reached")
         }
     }
 
