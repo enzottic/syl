@@ -29,7 +29,7 @@
     {
       "selectedTests" : [
         "ExpenseBackupUITests\/testBackupExportAndFilesCancellation()",
-        "ExpenseDetailsSheetUITests\/testFinalCalendarKeepsFooterVisibleAndPreservesSelectedDate()",
+        "ExpenseDetailsSheetUITests\/testCalendarKeepsFooterVisibleAndPreservesSelectedDate()",
         "ExpensesMonthPickerUITests\/testTitlePickerFiltersExpensesAndSupportsFutureYears()",
         "FinanceTrackerUITests\/testCompletesOnboarding()",
         "FinanceTrackerUITests\/testDeletesExpense()",
@@ -43,10 +43,9 @@
         "FinanceTrackerUITests\/testRefundAmountPersistsAfterSavingAndReopening()",
         "FinanceTrackerUITests\/testSearchesExpenses()",
         "FinanceTrackerUITests\/testShowAllRestoresMonthAndClearsDetail()",
-        "LedgerCurrencyUITests\/testChangingAndCancellingCurrencyPreservesExpenseAmount()",
-        "NewAddExpenseFlowUITests\/testCancelBlankAndKeepEditingThenDiscardPopulatedDraft()",
         "NewAddExpenseFlowUITests\/testKeyboardFooterFramesAndDateRoundTripWithAnimations()",
         "NewAddExpenseFlowUITests\/testNotesTagsAndRecurrenceSurviveEveryBackStepAndPersist()",
+        "NewAddExpenseFlowUITests\/testSwipingAwayDiscardsBlankAndPopulatedDrafts()",
         "StatsViewUITests\/testCategoryFilterExcludesExpenseAndAllCategoriesRestoresTotal()",
         "StatsViewUITests\/testTappingMonthlyHistorySelectsTheMonthEvenWithNoSpending()",
         "TagEditorUITests\/testTagControlsAndSavedSelection()",
