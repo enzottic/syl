@@ -171,10 +171,12 @@ final class PreferenceSyncService {
         publish([.hasCompletedSetup: true])
     }
 
-    // Call before revoking consent. Off means no acquisition, even for deletion.
-    func reset() {
-        guard let store = activeStore else { return }
-        for key in Key.allCases { store.removeObject(forKey: key.storageKey) }
-        store.synchronize()
+    // Delete All Data explicitly authorizes clearing these keys even when ordinary sync is off.
+    // synchronize() only queues the change; it is not a server acknowledgement.
+    @discardableResult
+    func resetForDataDeletion() -> Bool {
+        let deletionStore = store ?? makeStore()
+        for key in Key.allCases { deletionStore.removeObject(forKey: key.storageKey) }
+        return deletionStore.synchronize()
     }
 }

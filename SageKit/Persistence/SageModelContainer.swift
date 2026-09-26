@@ -32,16 +32,19 @@ public enum SageModelContainer {
     public nonisolated static let supportsCloudSync = false
     public nonisolated static let cloudKitPreferenceKey = "dev.isCloudSyncEnabled"
     private nonisolated static let activeCloudKitPreferenceKey = "dev.activeCloudSyncEnabled"
+    public nonisolated static let pendingCloudDeletionKey = "dev.pendingCloudDeletion"
     #else
     public nonisolated static let supportsCloudSync = true
     public nonisolated static let cloudKitPreferenceKey = "isCloudSyncEnabled"
     private nonisolated static let activeCloudKitPreferenceKey = "activeCloudSyncEnabled"
+    public nonisolated static let pendingCloudDeletionKey = "pendingCloudDeletion"
     #endif
 
     // The CloudKit setting used by every process that opens the shared store.
     public nonisolated static var isCloudKitEnabled: Bool {
         guard supportsCloudSync else { return false }
         let defaults = SagePreferences.defaults
+        guard !defaults.bool(forKey: pendingCloudDeletionKey) else { return false }
         if defaults.object(forKey: activeCloudKitPreferenceKey) != nil {
             return defaults.bool(forKey: activeCloudKitPreferenceKey)
         }
@@ -52,7 +55,7 @@ public enum SageModelContainer {
     public nonisolated static func activateCloudKitPreference() {
         guard supportsCloudSync else { return }
         let defaults = SagePreferences.defaults
-        let requestedValue = defaults.bool(forKey: cloudKitPreferenceKey)
+        let requestedValue = !defaults.bool(forKey: pendingCloudDeletionKey) && defaults.bool(forKey: cloudKitPreferenceKey)
         defaults.set(requestedValue, forKey: activeCloudKitPreferenceKey)
     }
 

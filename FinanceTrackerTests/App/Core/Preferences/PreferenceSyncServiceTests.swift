@@ -14,7 +14,6 @@ struct PreferenceSyncServiceTests {
         fixture.service.start()
         fixture.exerciseOutbound()
         fixture.service.recheck()
-        fixture.service.reset()
         fixture.post(reason: NSUbiquitousKeyValueStoreServerChange)
         await drainNotifications()
         #expect(fixture.acquisitions == 0)
@@ -28,7 +27,6 @@ struct PreferenceSyncServiceTests {
         fixture.snapshots.removeAll()
         fixture.exerciseOutbound()
         fixture.service.recheck()
-        fixture.service.reset()
         fixture.post(reason: NSUbiquitousKeyValueStoreInitialSyncChange)
         await drainNotifications()
         #expect(fixture.acquisitions == 1)
@@ -139,7 +137,6 @@ struct PreferenceSyncServiceTests {
         fixture.cloud.operations.removeAll()
         fixture.post(reason: NSUbiquitousKeyValueStoreServerChange)
         fixture.exerciseOutbound()
-        fixture.service.reset()
         await drainNotifications()
         #expect(fixture.cloud.operations.isEmpty)
     }
@@ -178,7 +175,6 @@ struct PreferenceSyncServiceTests {
         #expect(fixture.statuses.last == .accountChanged)
         fixture.exerciseOutbound()
         fixture.service.recheck()
-        fixture.service.reset()
         #expect(fixture.cloud.operations.isEmpty)
         #expect(fixture.snapshots.isEmpty)
         fixture.cloud.values["appearance"] = "Dark"
@@ -237,19 +233,28 @@ struct PreferenceSyncServiceTests {
     }
 
     @Test
-    func resetRemovesOnlyExistingPreferenceKeysWhileConsentStillEnabled() {
-        let fixture = Fixture(enabled: true)
-        fixture.service.start()
-        fixture.cloud.operations.removeAll()
-        fixture.service.reset()
-        #expect(fixture.consent)
-        #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
-        #expect(fixture.cloud.operations.last == .synchronize)
-        fixture.consent = false
-        fixture.service.stop()
-        fixture.cloud.operations.removeAll()
-        fixture.service.reset()
-        #expect(fixture.cloud.operations.isEmpty)
+    func dataDeletionRemovesKeysWithSyncOnOrOff() {
+        for enabled in [true, false] {
+            let fixture = Fixture(enabled: enabled)
+            fixture.cloud.values = ["appearance": "Dark", "totalMonthlyIncome": 7000,
+                                    "hasCompletedSetup": true, Key.ledgerCurrency.storageKey: "USD"]
+            if enabled { fixture.service.start() }
+            fixture.cloud.operations.removeAll()
+            #expect(fixture.service.resetForDataDeletion())
+            #expect(fixture.acquisitions == 1)
+            #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
+            #expect(fixture.cloud.values["appearance"] == nil)
+            #expect(fixture.cloud.values["hasCompletedSetup"] == nil)
+            #expect(fixture.cloud.operations.last == .synchronize)
+        }
+    }
+
+    @Test
+    func failedDeletionSynchronizationIsReported() {
+        let fixture = Fixture()
+        fixture.cloud.synchronizationResult = false
+        #expect(!fixture.service.resetForDataDeletion())
+        #expect(fixture.acquisitions == 1)
     }
 
     private func drainNotifications() async {

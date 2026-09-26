@@ -16,6 +16,7 @@ class AppConfiguration {
     let supportsCloudSync: Bool
     private let defaults: UserDefaults
     private let preferenceSync: PreferenceSyncService
+    private let deleteCloudZone: @MainActor () async throws -> Void
     
     // Locks for cloud sync
     private var isApplyingRemote = false
@@ -36,6 +37,8 @@ class AppConfiguration {
     }
     private(set) var hasCompletedSetupOnAnotherDevice = false
     private(set) var cloudSyncStatus: PreferenceSyncService.Status = .stopped
+    private(set) var hasPendingCloudDeletion = false
+    private(set) var isWaitingForDeletionRestart = false
 
     func recheckPreferences() { preferenceSync.recheck() }
 
@@ -125,6 +128,7 @@ class AppConfiguration {
     @discardableResult
     func updateCloudSyncEnabled(_ enabled: Bool) -> Bool {
         guard supportsCloudSync else { return !enabled }
+        guard !enabled || !hasPendingCloudDeletion else { return false }
         isCloudSyncEnabled = enabled
         guard !isPreview, !isUITesting else { return true }
         return defaults.bool(forKey: Keys.isCloudSyncEnabled) == enabled
@@ -212,8 +216,50 @@ class AppConfiguration {
         }
     }
 
-    func resetAllSettings() {
-        preferenceSync.reset() // Removal is authorized only before disabling consent.
+    /// Suspends new sync sessions before deleting the local store. The current SwiftData
+    /// container keeps its launch-time configuration until the app next launches.
+    @discardableResult
+    func prepareForDataDeletion() -> (wasEnabled: Bool, wasPending: Bool) {
+        let previous = (wasEnabled: isCloudSyncEnabled, wasPending: hasPendingCloudDeletion)
+        guard supportsCloudSync, !isPreview, !isUITesting else { return previous }
+        hasPendingCloudDeletion = true
+        defaults.set(true, forKey: SageModelContainer.pendingCloudDeletionKey)
+        isCloudSyncEnabled = false
+        return previous
+    }
+
+    func cancelDataDeletion(previous: (wasEnabled: Bool, wasPending: Bool)) {
+        guard supportsCloudSync, !isPreview, !isUITesting else { return }
+        isWaitingForDeletionRestart = false
+        hasPendingCloudDeletion = previous.wasPending
+        if !previous.wasPending {
+            defaults.removeObject(forKey: SageModelContainer.pendingCloudDeletionKey)
+        }
+        isCloudSyncEnabled = previous.wasEnabled
+    }
+
+    func markLocalDeletionComplete() {
+        isWaitingForDeletionRestart = hasPendingCloudDeletion
+    }
+
+    func finishCloudDeletion(preferencesQueued: Bool) async -> Bool {
+        guard hasPendingCloudDeletion else { return true }
+        guard preferencesQueued else { return false }
+        do {
+            try await deleteCloudZone()
+        } catch {
+            return false
+        }
+        hasPendingCloudDeletion = false
+        isWaitingForDeletionRestart = false
+        defaults.removeObject(forKey: SageModelContainer.pendingCloudDeletionKey)
+        return true
+    }
+
+    @discardableResult
+    func resetAllSettings() -> Bool {
+        let preferencesQueued = supportsCloudSync && !isPreview && !isUITesting
+            ? preferenceSync.resetForDataDeletion() : true
         isCloudSyncEnabled = false
         selectedAppearance = .system
         totalMonthlyIncome = 0
@@ -234,7 +280,7 @@ class AppConfiguration {
         ledgerCurrencyCode = isPreview || isUITesting ? "USD" : LedgerCurrency.suggestedCode()
         hasCompletedSetupOnAnotherDevice = false
         
-        guard !isPreview else { return }
+        guard !isPreview else { return preferencesQueued }
         
         LedgerCurrency.reset(defaults: defaults)
         let localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
@@ -247,6 +293,7 @@ class AppConfiguration {
         
         if supportsCloudSync, !isUITesting { defaults.set(false, forKey: Keys.isCloudSyncEnabled) }
         WidgetCenter.shared.reloadAllTimelines()
+        return preferencesQueued
     }
 
     convenience init() {
@@ -269,6 +316,7 @@ class AppConfiguration {
         supportsCloudSync = SageModelContainer.supportsCloudSync
         defaults = .standard
         preferenceSync = PreferenceSyncService(hasConsent: { false })
+        deleteCloudZone = {}
 
         _ledgerCurrencyCode = "USD"
         _totalMonthlyIncome = 5_000
@@ -280,12 +328,15 @@ class AppConfiguration {
         isUITesting: Bool = false,
         supportsCloudSync: Bool = SageModelContainer.supportsCloudSync,
         makeCloudStore: (() -> any CloudPreferenceStore)? = nil,
+        deleteCloudZone: @escaping @MainActor () async throws -> Void = { try await CloudDataDeletionService.purgeMirroredData() },
         notificationCenter: NotificationCenter = .default
     ) {
         self.isPreview = false
         self.isUITesting = isUITesting
         self.supportsCloudSync = supportsCloudSync
         self.defaults = defaults
+        self.deleteCloudZone = deleteCloudZone
+        _hasPendingCloudDeletion = supportsCloudSync && !isUITesting && defaults.bool(forKey: SageModelContainer.pendingCloudDeletionKey)
         preferenceSync = PreferenceSyncService(
             hasConsent: { supportsCloudSync && !isUITesting && defaults.bool(forKey: Keys.isCloudSyncEnabled) },
             makeStore: makeCloudStore,
@@ -296,7 +347,8 @@ class AppConfiguration {
         _ledgerCurrencyCode = LedgerCurrency.persistedCode(defaults: defaults)
             ?? (isUITesting ? "USD" : LedgerCurrency.suggestedCode())
         
-        _isCloudSyncEnabled = supportsCloudSync && !isUITesting && defaults.bool(forKey: Keys.isCloudSyncEnabled)
+        _isCloudSyncEnabled = supportsCloudSync && !isUITesting && !hasPendingCloudDeletion
+            && defaults.bool(forKey: Keys.isCloudSyncEnabled)
 
         _dashboardWidgetOrder = DashboardWidgetID.resolvedOrder(
             defaults.stringArray(forKey: Keys.dashboardWidgetOrder) ?? []
