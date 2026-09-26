@@ -42,7 +42,8 @@ Deleting an expense while sync is active may also remove its iCloud copy after s
 completes. Syl queues deletions for records present on this device; records that
 have not yet synced onto it may still exist in iCloud. With sync on, *Delete All
 Data* also queues CloudKit record deletions and requests removal of Syl's synced
-preference values. With sync off, both
+preference values. You can remove remaining cloud data from iCloud Storage in
+Apple Settings. With sync off, both
 deletion actions are local: existing iCloud records and preferences remain and
 may return if you enable sync later. Changes to expense sync take effect after
 fully closing and reopening Syl; Syl asks you to do this before deleting if the

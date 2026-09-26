@@ -171,7 +171,7 @@ struct SettingsView: View {
             } message: {
                 if config.supportsCloudSync {
                     Text(config.isCloudSyncEnabled
-                         ? "Expenses on this device are deleted and their CloudKit deletions sync when iCloud is available. Keeping recurring rules lets them create new expenses. Other devices update after sync completes."
+                         ? "Deletes expenses on this device and syncs their deletion to iCloud later. Records not yet on this device may remain in iCloud. Keeping recurring rules lets them create new expenses. Other devices update after sync completes."
                          : "Expenses are deleted only on this device. Keeping recurring rules lets them create new expenses. Old iCloud expenses may return if you enable sync later.")
                 } else {
                     Text("Both options remove expenses from this device. Keeping recurring rules lets them create new expenses.")
@@ -186,7 +186,7 @@ struct SettingsView: View {
             } message: {
                 if config.supportsCloudSync {
                     Text(config.isCloudSyncEnabled
-                         ? "This deletes Syl data and its local CSV export here, requests removal of synced preferences, and keeps sync on so record deletions can reach CloudKit. Other devices update after sync completes. External copies remain."
+                         ? "Deletes Syl data and its local CSV export here, requests removal of synced preferences, and keeps sync on to export record deletions. Records not yet on this device may remain in iCloud. Other devices update later. External copies remain."
                          : "This deletes Syl data, settings, and its local CSV export only on this device. Existing iCloud data and preferences remain and may return if you enable sync later. External copies remain.")
                 } else {
                     Text("This permanently deletes expenses, recurring rules, tags, settings, and Syl's local CSV export from this device. Copies saved or shared outside Syl must be deleted separately.")
