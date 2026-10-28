@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 @MainActor
 final class FinanceTrackerUITests: XCTestCase {
@@ -387,7 +388,7 @@ final class FinanceTrackerUITests: XCTestCase {
         app.launchEnvironment["SAGE_UI_TEST_ONBOARDING"] = "1"
         app.launchArguments += [
             "-UIPreferredContentSizeCategoryName",
-            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge"
+            UIContentSizeCategory.accessibilityExtraExtraExtraLarge.rawValue
         ]
         app.launch()
 
@@ -580,7 +581,7 @@ final class FinanceTrackerUITests: XCTestCase {
     func testNewExpenseSupportsLongNameAtLargestAccessibilityTextSize() {
         let app = launchApp(launchArguments: [
             "-UIPreferredContentSizeCategoryName",
-            "UICTContentSizeCategoryAccessibilityExtraExtraExtraLarge"
+            UIContentSizeCategory.accessibilityExtraExtraExtraLarge.rawValue
         ])
         openExpenses(in: app)
         openNewExpense(in: app)
