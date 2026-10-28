@@ -1,9 +1,9 @@
 # Syl Privacy Policy
 
-Last updated: September 25, 2026
+Last updated: October 28, 2026
 
-Syl keeps your financial data on your devices and, if you choose, in your private
-iCloud storage. Your expenses are never sent to the developer. Syl does not
+Syl stores your financial data on your devices and automatically syncs it with
+your private iCloud storage when available. Your expenses are never sent to the developer. Syl does not
 sell your data, show advertisements, or use your financial data for advertising
 or profiling.
 
@@ -20,15 +20,16 @@ is treated like any other expense.
 
 ## iCloud Sync
 
-iCloud Sync is optional and off by default on each device. When enabled, Syl
-syncs your financial records through your private iCloud database and supported
-settings through Apple's iCloud preference storage. Apple operates iCloud under
-its own terms and [privacy policy](https://www.apple.com/legal/privacy/).
+Syl automatically syncs financial records through your private iCloud database
+and supported settings through Apple's iCloud preference storage when available.
+Apple operates iCloud under its own terms and
+[privacy policy](https://www.apple.com/legal/privacy/).
 
-You can turn sync off in *Settings → Backup → Enable iCloud Sync*. Settings
-sync stops immediately; fully close and reopen Syl to apply the change to expense
-sync. Previously queued activity may still finish. Turning sync off does not
-delete existing local or iCloud data.
+You can manage Syl's iCloud access in the Settings app under your Apple Account
+and iCloud. Disabling access or signing out can remove iCloud-synced data from
+this device. Export a backup beforehand if you want a separate copy. Sync may be
+delayed or unavailable while offline, when storage is full, or when iCloud access
+is disabled. Syl's development builds use separate, local-only storage.
 
 ## Retention and deletion
 
@@ -37,11 +38,17 @@ Your saved data remains until you delete it. In Syl's Settings:
 - *Delete Expense Data* removes expenses, with an option to also remove recurring expense rules.
 - *Delete All Data* removes expenses, recurring rules, tags, and preferences.
 
-Data in iCloud is deleted when you delete an expense with sync still enabled. If sync is off,
-cloud copies will remain in iCloud until removed through a device with sync enabled, or
-if data is deleted manually in your Apple Account settings. Other devices, such as your
-Apple Watch, may retain older data until they receive an update. Removing the iPhone app
-does not delete iCloud data or copies on other devices.
+When iCloud is available, Syl saves local record deletions for synchronization
+and requests removal of synced preferences during Delete All Data. It keeps
+sync enabled so those deletions can propagate. Local completion does not confirm
+that every cloud copy was deleted. Records not yet downloaded to this device
+may remain in iCloud. With iCloud access disabled, cloud copies may return when
+access is restored. Remaining cloud data can be managed separately in your
+Apple Account's iCloud storage settings.
+
+Other devices, such as your Apple Watch, may retain older data until they receive
+an update. Removing the iPhone app does not delete iCloud data or copies on other
+devices.
 
 ## Imports and exports
 

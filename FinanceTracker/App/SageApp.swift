@@ -32,10 +32,6 @@ struct SageApp: App {
             WhatsNewStore.markCurrentVersionSeen()
         }
 
-        // Keep the store configuration stable across the app, widgets, and App Intents until
-        // the next app launch.
-        SageModelContainer.activateCloudKitPreference()
-
         let containerResult: Result<ModelContainer, any Error>
         if UITestConfiguration.isEnabled {
             containerResult = Result {
@@ -107,7 +103,7 @@ struct SageApp: App {
         if case let .success(container) = containerResult {
             recurringExpenseCoordinator = RecurringExpenseCoordinator(
                 modelContainer: container,
-                cloudKitEnabled: SageModelContainer.isCloudKitEnabled
+                cloudKitEnabled: SageModelContainer.supportsCloudSync
             )
         } else {
             recurringExpenseCoordinator = nil
@@ -140,6 +136,7 @@ struct SageApp: App {
         .environment(\.categoryColors, appConfiguration.categoryColors)
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active || phase == .background else { return }
+            if phase == .active { appConfiguration.recheckPreferences() }
             publishMonthlySnapshot()
         }
     }

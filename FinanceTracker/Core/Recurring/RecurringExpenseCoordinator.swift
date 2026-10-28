@@ -86,6 +86,9 @@ final class RecurringExpenseCoordinator {
 
         importIsActive = false
         if event.succeeded {
+            // Imported expenses and edits affect widgets even when recurring
+            // maintenance has nothing to generate or repair.
+            WidgetCenter.shared.reloadAllTimelines()
             scheduleMaintenance(afterNanoseconds: 500_000_000)
         } else {
             scheduleMaintenance(afterNanoseconds: 5_000_000_000)

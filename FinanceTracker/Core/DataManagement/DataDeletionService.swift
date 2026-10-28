@@ -17,6 +17,8 @@ struct DataDeletionService {
 
     // Deletes every expense. Recurring rules stay active unless the caller also deletes them.
     func deleteExpenses(includeRecurringRules: Bool) throws {
+        // Bulk deletion only sees persisted rows; include pending inserts first.
+        if modelContext.hasChanges { try modelContext.save() }
         try modelContext.delete(model: Expense.self)
 
         if includeRecurringRules {
@@ -48,6 +50,8 @@ struct DataDeletionService {
             // No local export is already the desired state, including on repeated resets.
         }
 
+        // Bulk deletion only sees persisted rows; include pending inserts first.
+        if modelContext.hasChanges { try modelContext.save() }
         try modelContext.delete(model: Expense.self)
         try modelContext.delete(model: RecurringExpenseRule.self)
         try modelContext.delete(model: ExpenseTag.self)

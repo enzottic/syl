@@ -6,7 +6,7 @@ import SageKit
 
 
 // Handles preserving settings for Sage, including wants/needs/savings percentages, smart tagging preferences, appearance, and more.
-// Exist as a local storage only, but settings are persisted in iCloud via the PreferenceSyncService, if enabled.
+// Saves settings locally and automatically syncs supported preferences through iCloud.
 @MainActor @Observable
 class AppConfiguration {
     private typealias Key = PreferenceSyncService.Key
@@ -108,28 +108,6 @@ class AppConfiguration {
         didSet { persist(smartTaggingMode.rawValue, key: .smartTaggingMode) }
     }
 
-    private(set) var isCloudSyncEnabled: Bool = false {
-        didSet {
-            guard supportsCloudSync, !isPreview, !isUITesting else { return }
-            defaults.set(isCloudSyncEnabled, forKey: Keys.isCloudSyncEnabled)
-            if isCloudSyncEnabled {
-                preferenceSync.start()
-            } else {
-                preferenceSync.stop()
-                hasCompletedSetupOnAnotherDevice = false
-            }
-        }
-    }
-
-    /// Reports local consent persistence, not iCloud availability or server confirmation.
-    @discardableResult
-    func updateCloudSyncEnabled(_ enabled: Bool) -> Bool {
-        guard supportsCloudSync else { return !enabled }
-        isCloudSyncEnabled = enabled
-        guard !isPreview, !isUITesting else { return true }
-        return defaults.bool(forKey: Keys.isCloudSyncEnabled) == enabled
-    }
-
     var needsColor: Color = Color("NeedColor") {
         didSet {
             guard !isPreview else { return }
@@ -212,9 +190,13 @@ class AppConfiguration {
         }
     }
 
-    func resetAllSettings() {
-        preferenceSync.reset() // Removal is authorized only before disabling consent.
-        isCloudSyncEnabled = false
+    @discardableResult
+    func resetAllSettings() -> Bool {
+        // Reset local values without uploading fallback defaults after removing cloud keys.
+        let wasApplyingRemote = isApplyingRemote
+        isApplyingRemote = true
+        defer { isApplyingRemote = wasApplyingRemote }
+        let cloudPreferencesQueued = preferenceSync.reset()
         selectedAppearance = .system
         totalMonthlyIncome = 0
         needsPercent = 0.5
@@ -234,19 +216,19 @@ class AppConfiguration {
         ledgerCurrencyCode = isPreview || isUITesting ? "USD" : LedgerCurrency.suggestedCode()
         hasCompletedSetupOnAnotherDevice = false
         
-        guard !isPreview else { return }
+        guard !isPreview else { return cloudPreferencesQueued }
         
         LedgerCurrency.reset(defaults: defaults)
         let localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
-            Keys.isCloudSyncEnabled, Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
+            Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
             Keys.billReminderDaysBefore, Keys.hideBillReminderDetails,
             Keys.billReminderTimeMinutes, Keys.dailyExpenseReminderEnabled, Keys.dailyExpenseReminderTimeMinutes,
         ]
         
         for key in localKeys { defaults.removeObject(forKey: key) }
         
-        if supportsCloudSync, !isUITesting { defaults.set(false, forKey: Keys.isCloudSyncEnabled) }
         WidgetCenter.shared.reloadAllTimelines()
+        return cloudPreferencesQueued
     }
 
     convenience init() {
@@ -268,7 +250,7 @@ class AppConfiguration {
         isUITesting = false
         supportsCloudSync = SageModelContainer.supportsCloudSync
         defaults = .standard
-        preferenceSync = PreferenceSyncService(hasConsent: { false })
+        preferenceSync = PreferenceSyncService(isEnabled: { false })
 
         _ledgerCurrencyCode = "USD"
         _totalMonthlyIncome = 5_000
@@ -287,7 +269,7 @@ class AppConfiguration {
         self.supportsCloudSync = supportsCloudSync
         self.defaults = defaults
         preferenceSync = PreferenceSyncService(
-            hasConsent: { supportsCloudSync && !isUITesting && defaults.bool(forKey: Keys.isCloudSyncEnabled) },
+            isEnabled: { supportsCloudSync && !isUITesting },
             makeStore: makeCloudStore,
             notificationCenter: notificationCenter
         )
@@ -295,8 +277,6 @@ class AppConfiguration {
         // Initialize @Observable storage directly so loading never invokes persistence observers.
         _ledgerCurrencyCode = LedgerCurrency.persistedCode(defaults: defaults)
             ?? (isUITesting ? "USD" : LedgerCurrency.suggestedCode())
-        
-        _isCloudSyncEnabled = supportsCloudSync && !isUITesting && defaults.bool(forKey: Keys.isCloudSyncEnabled)
 
         _dashboardWidgetOrder = DashboardWidgetID.resolvedOrder(
             defaults.stringArray(forKey: Keys.dashboardWidgetOrder) ?? []
@@ -350,11 +330,11 @@ class AppConfiguration {
         preferenceSync.onChange = { [weak self] in self?.applyRemote($0) }
         preferenceSync.onStatusChange = { [weak self] status in
             guard let self else { return }
-            if status == .accountChanged { self.updateCloudSyncEnabled(false) }
+            if status == .accountChanged { self.hasCompletedSetupOnAnotherDevice = false }
             self.cloudSyncStatus = status
         }
         
-        if isCloudSyncEnabled { preferenceSync.start() }
+        preferenceSync.start()
         
         // Keep widget-facing defaults populated without sending fallback values to iCloud.
         defaults.set(dashboardWidgetOrder.map(\.rawValue), forKey: Keys.dashboardWidgetOrder)
@@ -477,7 +457,6 @@ extension AppConfiguration {
 extension AppConfiguration {
     enum Keys {
         static let dashboardWidgetOrder = "dashboardWidgetOrder"
-        static let isCloudSyncEnabled = SageModelContainer.cloudKitPreferenceKey
         static let needsColor = "categoryColorNeeds"
         static let wantsColor = "categoryColorWants"
         static let savingsColor = "categoryColorSavings"

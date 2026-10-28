@@ -46,7 +46,7 @@ final class PreferenceSyncService {
         didSet { if status != oldValue { onStatusChange?(status) } }
     }
 
-    private let hasConsent: () -> Bool
+    private let isEnabled: () -> Bool
     private let makeStore: () -> any CloudPreferenceStore
     private let notificationCenter: NotificationCenter
     private var store: (any CloudPreferenceStore)?
@@ -54,11 +54,11 @@ final class PreferenceSyncService {
     private var generation: UInt64 = 0
 
     init(
-        hasConsent: @escaping () -> Bool,
+        isEnabled: @escaping () -> Bool,
         makeStore: (() -> any CloudPreferenceStore)? = nil,
         notificationCenter: NotificationCenter = .default
     ) {
-        self.hasConsent = hasConsent
+        self.isEnabled = isEnabled
         self.makeStore = makeStore ?? { NSUbiquitousKeyValueStore.default }
         self.notificationCenter = notificationCenter
     }
@@ -68,16 +68,16 @@ final class PreferenceSyncService {
     }
 
     private var activeStore: (any CloudPreferenceStore)? {
-        guard hasConsent() else {
+        guard isEnabled() else {
             if store != nil { stop() }
             return nil
         }
         return store
     }
 
-    // Explicit start/re-enable. A successful synchronize is not server confirmation.
+    // Automatic startup. A successful synchronize is not server confirmation.
     func start() {
-        guard hasConsent() else { stop(); return }
+        guard isEnabled() else { stop(); return }
         guard store == nil else { return }
         
         generation &+= 1
@@ -112,6 +112,12 @@ final class PreferenceSyncService {
     }
 
     func recheck() {
+        // Account transitions invalidate queued callbacks. Reacquire and read the current
+        // account on foreground without publishing preferences from the previous account.
+        if store == nil {
+            start()
+            return
+        }
         guard let store = activeStore else { return }
         
         let synchronized = store.synchronize()
@@ -161,7 +167,7 @@ final class PreferenceSyncService {
         return snapshot
     }
 
-    // Validation belongs to the configuration; transport only requires consent and available quota.
+    // Validation belongs to the configuration; transport requires an enabled build and available quota.
     func publish(_ values: [Key: Any]) {
         guard let store = activeStore, status != .quotaExceeded else { return }
         for (key, value) in values { store.set(value, forKey: key.storageKey) }
@@ -171,10 +177,13 @@ final class PreferenceSyncService {
         publish([.hasCompletedSetup: true])
     }
 
-    // Call before revoking consent. Off means no acquisition, even for deletion.
-    func reset() {
-        guard let store = activeStore else { return }
-        for key in Key.allCases { store.removeObject(forKey: key.storageKey) }
-        store.synchronize()
+    // Acquire a store even after an account change stopped the regular observer.
+    // synchronize() requests delivery; success is not a server acknowledgement.
+    @discardableResult
+    func reset() -> Bool {
+        guard isEnabled() else { return true }
+        let deletionStore = store ?? makeStore()
+        for key in Key.allCases { deletionStore.removeObject(forKey: key.storageKey) }
+        return deletionStore.synchronize()
     }
 }

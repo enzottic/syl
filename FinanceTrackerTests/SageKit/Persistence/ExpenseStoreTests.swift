@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import Testing
 import UIKit
@@ -7,6 +8,51 @@ import UIKit
 struct ExpenseStoreTests {
     private enum SaveFailure: Error {
         case expected
+    }
+
+    @Test @MainActor
+    func testAndPreviewContainersRemainLocal() throws {
+        for purpose in [SageModelContainer.Purpose.test, .preview, .previewEmpty] {
+            let container = try SageModelContainer.make(for: purpose)
+            #expect(container.configurations.first?.cloudKitContainerIdentifier == nil)
+            #expect(container.configurations.first?.isStoredInMemoryOnly == true)
+        }
+    }
+
+    @Test @MainActor
+    func freshWidgetContextReadsChangesSavedByAnotherContainer() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storeURL = directory.appendingPathComponent("Sage.sqlite")
+        let schema = Schema(versionedSchema: SageSchemaV9.self)
+
+        func openContainer() throws -> ModelContainer {
+            try ModelContainer(
+                for: schema,
+                configurations: [ModelConfiguration(
+                    schema: schema, url: storeURL, cloudKitDatabase: .none
+                )]
+            )
+        }
+
+        let widgetContainer = try openContainer()
+        let appContainer = try openContainer()
+        let initialContext = ModelContext(widgetContainer)
+        #expect(try initialContext.fetch(FetchDescriptor<Expense>()).isEmpty)
+
+        let appContext = ModelContext(appContainer)
+        appContext.insert(Expense(name: "Imported", amount: 12))
+        try appContext.save()
+
+        let freshContext = ModelContext(widgetContainer)
+        let widgetStore = ExpenseStore(
+            modelContainer: widgetContainer,
+            preferences: .standard,
+            context: freshContext
+        )
+        #expect(try widgetStore.fetchExpenses().map(\.name) == ["Imported"])
     }
 
     @Test @MainActor

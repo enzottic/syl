@@ -32,7 +32,6 @@ struct OnboardingView: View {
     @State private var didLoadCurrency = false
     @State private var needsPercent: Double = 50
     @State private var wantsPercent: Double = 30
-    @State private var cloudSyncEnabled = false
     @State private var tagTemplates = ExpenseTag.suggestedTags
     @State private var selectedTagNames: Set<String> = Set(ExpenseTag.suggestedTags.map(\.name))
     @State private var recurringRemindersEnabled = false
@@ -417,12 +416,10 @@ struct OnboardingView: View {
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 16) {
-                Toggle("Enable iCloud Sync", isOn: $cloudSyncEnabled)
-                    .font(.headline)
-                    .tint(.sageTint)
-                    .accessibilityIdentifier("onboarding-sync-toggle")
-                    .disabled(!config.supportsCloudSync)
-                Text(!config.supportsCloudSync ? "iCloud sync is unavailable in this dev build." : cloudSyncEnabled ? "Preference sync starts when you finish setup. Fully close and reopen Syl to enable expense sync." : "Preferences stay on this device. If expense sync was previously enabled, fully close and reopen Syl to turn it off.")
+                Text(config.supportsCloudSync
+                     ? "Syl automatically syncs expenses and supported settings with your private iCloud storage when available. You can manage Syl’s iCloud access in the Settings app."
+                     : "This dev build keeps expenses and settings on this device, separate from your main Syl install.")
+                    .accessibilityIdentifier("onboarding-sync-description")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -580,10 +577,6 @@ struct OnboardingView: View {
 
     private func completeOnboarding() {
         guard (monthlyIncome ?? 0) > 0 else { return }
-        guard config.updateCloudSyncEnabled(cloudSyncEnabled) else {
-            completionErrorMessage = "Syl could not save your sync preference. Try again."
-            return
-        }
         do {
             for tag in tagTemplates where selectedTagNames.contains(tag.name) {
                 modelContext.insert(tag)

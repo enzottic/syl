@@ -246,6 +246,14 @@ final class FinanceTrackerUITests: XCTestCase {
         XCTAssertEqual(total.label, Double(5000).formatted(.currency(code: "EUR").locale(Locale(identifier: "en_GB")).precision(.fractionLength(0))))
     }
 
+    func testBackupExplainsAutomaticSyncWithoutAnInAppToggle() {
+        let app = launchApp()
+        tap(app.tabBars.buttons["Settings"], named: "Settings")
+        tap(app.buttons["Backup"], named: "Backup")
+        XCTAssertTrue(app.staticTexts["Automatic iCloud Sync"].waitForExistence(timeout: timeout))
+        XCTAssertFalse(app.switches["Enable iCloud Sync"].exists)
+    }
+
     func testOnboardingValidatesIncomeAndRetainsStateWhenGoingBack() {
         let app = launchApp(showsOnboarding: true)
         tap("onboarding-get-started-button", in: app)
@@ -268,18 +276,10 @@ final class FinanceTrackerUITests: XCTestCase {
         tap("onboarding-budget-continue-button", in: app)
         tap("onboarding-allocation-continue-button", in: app)
 
-        let syncToggle = app.switches["onboarding-sync-toggle"]
-        XCTAssertTrue(syncToggle.waitForExistence(timeout: timeout))
-        XCTAssertTrue(scrollToVisibility(of: syncToggle, in: app))
-        XCTAssertEqual(syncToggle.value as? String, "0")
-        #if DEBUG
-        let expectedSyncValue = "0"
-        XCTAssertFalse(syncToggle.isEnabled, "Dev builds must remain local-only.")
-        #else
-        let expectedSyncValue = "1"
-        tap(syncToggle, named: "onboarding-sync-toggle")
-        XCTAssertEqual(syncToggle.value as? String, "1")
-        #endif
+        let syncDescription = app.staticTexts["onboarding-sync-description"]
+        XCTAssertTrue(syncDescription.waitForExistence(timeout: timeout))
+        XCTAssertTrue(scrollToVisibility(of: syncDescription, in: app))
+        XCTAssertFalse(app.switches["onboarding-sync-toggle"].exists)
         tap("onboarding-sync-continue-button", in: app)
 
         let shoppingTag = app.buttons["onboarding-tag-Shopping"]
@@ -298,8 +298,7 @@ final class FinanceTrackerUITests: XCTestCase {
         XCTAssertTrue(shoppingTag.waitForExistence(timeout: timeout))
         XCTAssertFalse(shoppingTag.isSelected, "Tag deselection must survive returning from the summary.")
         tap("onboarding-back-button", in: app)
-        XCTAssertTrue(syncToggle.waitForExistence(timeout: timeout))
-        XCTAssertEqual(syncToggle.value as? String, expectedSyncValue, "Sync selection must survive going back.")
+        XCTAssertTrue(syncDescription.waitForExistence(timeout: timeout))
         tap("onboarding-back-button", in: app)
         XCTAssertTrue(app.buttons["onboarding-allocation-continue-button"].waitForExistence(timeout: timeout))
         tap("onboarding-back-button", in: app)
@@ -309,8 +308,7 @@ final class FinanceTrackerUITests: XCTestCase {
 
         tap("onboarding-budget-continue-button", in: app)
         tap("onboarding-allocation-continue-button", in: app)
-        XCTAssertTrue(syncToggle.waitForExistence(timeout: timeout))
-        XCTAssertEqual(syncToggle.value as? String, expectedSyncValue)
+        XCTAssertTrue(syncDescription.waitForExistence(timeout: timeout))
         tap("onboarding-sync-continue-button", in: app)
         XCTAssertTrue(app.buttons["onboarding-tags-continue-button"].waitForExistence(timeout: timeout),
                       "Continue did not leave the sync step.")
@@ -401,7 +399,7 @@ final class FinanceTrackerUITests: XCTestCase {
             ("onboarding-get-started-button", welcomeTitle),
             ("onboarding-budget-continue-button", incomeField),
             ("onboarding-allocation-continue-button", app.descendants(matching: .any)["onboarding-needs-divider"].firstMatch),
-            ("onboarding-sync-continue-button", app.switches["onboarding-sync-toggle"]),
+            ("onboarding-sync-continue-button", app.staticTexts["onboarding-sync-description"]),
             ("onboarding-tags-continue-button", app.staticTexts["onboarding-tags-count"]),
             ("onboarding-reminders-continue-button", app.switches["onboarding-recurring-reminders-toggle"]),
             ("onboarding-start-tracking-button", app.staticTexts["onboarding-plan-total"])

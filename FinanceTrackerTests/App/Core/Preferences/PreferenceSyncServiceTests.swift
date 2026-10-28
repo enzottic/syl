@@ -139,7 +139,6 @@ struct PreferenceSyncServiceTests {
         fixture.cloud.operations.removeAll()
         fixture.post(reason: NSUbiquitousKeyValueStoreServerChange)
         fixture.exerciseOutbound()
-        fixture.service.reset()
         await drainNotifications()
         #expect(fixture.cloud.operations.isEmpty)
     }
@@ -166,7 +165,7 @@ struct PreferenceSyncServiceTests {
     }
 
     @Test
-    func accountChangeStopsUntilExplicitStartWithoutUploadingOldPreferences() async {
+    func accountChangeRecoversOnRecheckWithoutUploadingOldPreferences() async {
         let fixture = Fixture(enabled: true)
         fixture.service.start()
         fixture.cloud.operations.removeAll()
@@ -177,12 +176,12 @@ struct PreferenceSyncServiceTests {
         #expect(fixture.service.status == .accountChanged)
         #expect(fixture.statuses.last == .accountChanged)
         fixture.exerciseOutbound()
-        fixture.service.recheck()
-        fixture.service.reset()
         #expect(fixture.cloud.operations.isEmpty)
         #expect(fixture.snapshots.isEmpty)
         fixture.cloud.values["appearance"] = "Dark"
-        fixture.service.start()
+        fixture.service.recheck()
+        #expect(fixture.service.status == .running)
+        #expect(fixture.acquisitions == 2)
         #expect(fixture.snapshots.last?[.appearance] as? String == "Dark")
         #expect(!fixture.cloud.operations.contains { if case .write = $0 { return true }; return false })
     }
@@ -237,19 +236,34 @@ struct PreferenceSyncServiceTests {
     }
 
     @Test
-    func resetRemovesOnlyExistingPreferenceKeysWhileConsentStillEnabled() {
+    func resetRemovesPreferenceKeysEvenWhenTheServiceHasStopped() {
         let fixture = Fixture(enabled: true)
         fixture.service.start()
         fixture.cloud.operations.removeAll()
-        fixture.service.reset()
+        #expect(fixture.service.reset())
         #expect(fixture.consent)
         #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
         #expect(fixture.cloud.operations.last == .synchronize)
+        fixture.service.stop()
+        fixture.cloud.operations.removeAll()
+        #expect(fixture.service.reset())
+        #expect(fixture.acquisitions == 2)
+        #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
+        #expect(fixture.service.status == .stopped)
         fixture.consent = false
         fixture.service.stop()
         fixture.cloud.operations.removeAll()
         fixture.service.reset()
         #expect(fixture.cloud.operations.isEmpty)
+    }
+
+    @Test
+    func resetReportsFailedSynchronizationWithoutClaimingServerDelivery() {
+        let fixture = Fixture(enabled: true)
+        fixture.cloud.synchronizationResult = false
+        #expect(!fixture.service.reset())
+        #expect(fixture.acquisitions == 1)
+        #expect(Set(fixture.cloud.operations) == Set(Key.allCases.map { .remove($0.storageKey) } + [.synchronize]))
     }
 
     private func drainNotifications() async {
@@ -267,7 +281,7 @@ struct PreferenceSyncServiceTests {
         var snapshots: [PreferenceSyncService.Snapshot] = []
         var statuses: [PreferenceSyncService.Status] = []
         lazy var service: PreferenceSyncService = {
-            let service = PreferenceSyncService(hasConsent: { [unowned self] in consent }, makeStore: { [unowned self] in
+            let service = PreferenceSyncService(isEnabled: { [unowned self] in consent }, makeStore: { [unowned self] in
                 acquisitions += 1
                 return cloud
             }, notificationCenter: notifications)

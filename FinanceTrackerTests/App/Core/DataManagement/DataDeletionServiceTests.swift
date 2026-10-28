@@ -173,6 +173,37 @@ struct DataDeletionServiceTests {
         #expect(!fileManager.fileExists(atPath: exportURL.path))
         #expect(try Data(contentsOf: targetURL) == csv)
     }
+
+    @Test @MainActor
+    func deletionIncludesUnsavedExpense() throws {
+        let container = try SageModelContainer.make(for: .test)
+        let context = container.mainContext
+        context.insert(Expense(name: "Unsaved", amount: 5, category: .wants))
+
+        try DataDeletionService(modelContext: context).deleteExpenses(includeRecurringRules: false)
+
+        #expect(try context.fetch(FetchDescriptor<Expense>()).isEmpty)
+    }
+
+    @Test @MainActor
+    func fullResetIncludesUnsavedModels() throws {
+        let container = try SageModelContainer.make(for: .test)
+        let context = container.mainContext
+        context.insert(Expense(name: "Unsaved", amount: 5, category: .wants))
+        context.insert(ExpenseTag(name: "Unsaved tag", uiColor: .systemBlue, emoji: "💵"))
+        context.insert(RecurringExpenseRule(
+            name: "Unsaved rule", amount: 10, note: "", category: .wants,
+            frequency: .monthly, startDate: .now
+        ))
+        context.insert(ExpenseAccount(id: UUID(), name: "Unsaved account", type: .bankAccount))
+
+        try DataDeletionService(modelContext: context).deleteAllUserData(fileManager: DeletionFileManager())
+
+        #expect(try context.fetch(FetchDescriptor<Expense>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<ExpenseTag>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<RecurringExpenseRule>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<ExpenseAccount>()).isEmpty)
+    }
 }
 
 private final class DeletionFileManager: FileManager, @unchecked Sendable {

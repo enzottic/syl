@@ -30,30 +30,14 @@ public enum SageModelContainer {
     public nonisolated static let appGroupIdentifier = "group.me.enzottic.SageAppGroup"
     #if DEBUG
     public nonisolated static let supportsCloudSync = false
-    public nonisolated static let cloudKitPreferenceKey = "dev.isCloudSyncEnabled"
-    private nonisolated static let activeCloudKitPreferenceKey = "dev.activeCloudSyncEnabled"
     #else
     public nonisolated static let supportsCloudSync = true
-    public nonisolated static let cloudKitPreferenceKey = "isCloudSyncEnabled"
-    private nonisolated static let activeCloudKitPreferenceKey = "activeCloudSyncEnabled"
     #endif
 
-    // The CloudKit setting used by every process that opens the shared store.
-    public nonisolated static var isCloudKitEnabled: Bool {
-        guard supportsCloudSync else { return false }
-        let defaults = SagePreferences.defaults
-        if defaults.object(forKey: activeCloudKitPreferenceKey) != nil {
-            return defaults.bool(forKey: activeCloudKitPreferenceKey)
-        }
-        return defaults.bool(forKey: cloudKitPreferenceKey)
-    }
-
-    /// Applies the requested setting before the main app opens the store.
-    public nonisolated static func activateCloudKitPreference() {
-        guard supportsCloudSync else { return }
-        let defaults = SagePreferences.defaults
-        let requestedValue = defaults.bool(forKey: cloudKitPreferenceKey)
-        defaults.set(requestedValue, forKey: activeCloudKitPreferenceKey)
+    // The app, widgets, and App Intents use the same fixed configuration.
+    @MainActor
+    public static let shared: Result<ModelContainer, any Swift.Error> = Result {
+        try make(for: .app)
     }
 
     public static nonisolated func make(for purpose: Purpose = .app) throws -> ModelContainer {
@@ -74,12 +58,6 @@ public enum SageModelContainer {
         return container
     }
 
-    // The shared store result. Callers handle a failed store open instead of terminating.
-    @MainActor
-    public static let shared: Result<ModelContainer, any Swift.Error> = Result {
-        try make(for: .app)
-    }
-
     private static nonisolated func configuration(
         for purpose: Purpose,
         schema: Schema
@@ -96,7 +74,9 @@ public enum SageModelContainer {
         }
     }
 
-    private static nonisolated func appConfiguration(schema: Schema) throws -> ModelConfiguration {
+    private static nonisolated func appConfiguration(
+        schema: Schema
+    ) throws -> ModelConfiguration {
         guard let groupURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
             throw Error.appGroupUnavailable
@@ -114,7 +94,7 @@ public enum SageModelContainer {
         return ModelConfiguration(
             schema: schema,
             url: storeURL,
-            cloudKitDatabase: isCloudKitEnabled ? .automatic : .none
+            cloudKitDatabase: .automatic
         )
         #endif
     }

@@ -153,7 +153,7 @@ struct SettingsView: View {
                 .disabled(isChangingData)
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Delete Expenses Only removes every expense, but recurring rules stay active and can create expenses again. Delete Expenses and Recurring Rules prevents those expenses from returning. Both actions are permanent.")
+                Text("Delete expenses saved on this device and sync their deletions to iCloud when available. Recurring rules can create expenses again unless you also delete them. iCloud updates take time; records not yet downloaded may remain in iCloud. This cannot be undone.")
             }
             .alert("Delete All Data?", isPresented: $showFullResetConfirmation) {
                 Button("Delete All Data", role: .destructive) {
@@ -162,7 +162,7 @@ struct SettingsView: View {
                 .disabled(isChangingData)
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This permanently removes all expenses, recurring rules, tags, accounts, settings, and Syl's local CSV export. Copies saved to Files or shared outside Syl cannot be recalled and must be deleted separately. This cannot be undone.")
+                Text("Delete expenses, recurring rules, tags, accounts, settings, and Syl's local CSV export from this device. Syl also requests deletion of synced records and preferences in iCloud when available. iCloud updates take time; records not yet downloaded may remain. If iCloud access is disabled, cloud data may return when access is restored. Backups and other exported copies must be deleted separately. This cannot be undone.")
             }
             .safeAreaInset(edge: .bottom) {
                 if let activeDataOperation {
@@ -187,6 +187,7 @@ struct SettingsView: View {
 
         let deletionService = DataDeletionService(modelContext: modelContext)
         do {
+            var cloudPreferencesQueued = true
             switch operation {
             case .expensesOnly:
                 try deletionService.deleteExpenses(includeRecurringRules: false)
@@ -195,12 +196,21 @@ struct SettingsView: View {
                 reminders?.refresh()
             case .fullReset:
                 try deletionService.deleteAllUserData()
-                config.resetAllSettings()
+                cloudPreferencesQueued = config.resetAllSettings()
                 reminders?.refresh()
+                UserDefaults.standard.removeObject(forKey: "hasOpenedAppOnce")
+                for key in ["statsShowsNeedsLine", "statsShowsWantsLine", "statsShowsSavingsLine"] {
+                    UserDefaults.standard.removeObject(forKey: key)
+                }
             }
 
             WidgetCenter.shared.reloadAllTimelines()
-            router.showToast(SageToast(message: operation.successMessage, kind: .success))
+            publishWatchSnapshot()
+            router.showToast(SageToast(
+                message: cloudPreferencesQueued ? operation.successMessage
+                    : "Local data deleted. iCloud preference reset is unconfirmed. Try Delete All Data again when iCloud is available.",
+                kind: cloudPreferencesQueued ? .success : .error
+            ))
         } catch {
             // Only pending model changes can be rolled back, not an already-removed CSV.
             deletionService.rollback()
@@ -208,6 +218,17 @@ struct SettingsView: View {
                 SageToast(message: operation.failureMessage, kind: .error)
             )
         }
+    }
+
+    private func publishWatchSnapshot() {
+        guard !UITestConfiguration.isEnabled,
+              let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
+                container: modelContext.container,
+                categoryColors: config.categoryColors,
+                currencyCode: config.ledgerCurrencyCode,
+                monthlyBudget: Double(config.totalMonthlyIncome)
+              ) else { return }
+        WatchSnapshotSender.shared.sendUpdatedMonthlySnapshot(snapshot: snapshot)
     }
 }
 

@@ -46,31 +46,17 @@ struct ExpenseBackupSettingsSection: View {
     var body: some View {
         List {
             Section {
-                Toggle(isOn: cloudSyncBinding) {
-                    HStack {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .frame(width: 35, height: 35)
-                                .foregroundStyle(.blue)
-                            Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
-                                .frame(width: 35)
-                                .foregroundStyle(.white)
-                        }
-                        VStack(alignment: .leading) {
-                            Text("Enable iCloud Sync")
-                        }
-                    }
-                }
-                .disabled(isWorking || !config.supportsCloudSync)
+                SettingsListItem(text: "Automatic iCloud Sync", icon: "arrow.triangle.2.circlepath.icloud.fill", color: .blue)
+                    .accessibilityIdentifier("automatic-icloud-sync")
             } header: {
                 Text("iCloud Sync")
             } footer: {
                 if !config.supportsCloudSync {
                     Text("This dev build is local-only. Expenses and preferences do not sync with iCloud or your main Syl install.")
                 } else {
-                    Text("Preference sync changes take effect immediately. Fully close and reopen Syl to apply changes to expense sync. Previously queued iCloud activity may still finish; turning sync off does not delete existing iCloud data.")
+                    Text("Syl automatically syncs expenses and supported settings with your private iCloud storage when available. Manage Syl’s iCloud access in the Settings app under your Apple Account → iCloud. Turning off access there may remove iCloud-synced data from this device. Export a backup first if you want to keep a separate copy.")
                     if config.cloudSyncStatus == .accountChanged {
-                        Text("Your iCloud account changed. Preference sync is off. Fully restart Syl to stop expense sync, then review your account before enabling sync again.")
+                        Text("Your iCloud account changed. Syl will check your current account when you return to the app.")
                     } else if config.cloudSyncStatus == .quotaExceeded {
                         Text("iCloud preference storage is full. Changes are saved on this device, but new preference uploads are paused.")
                     } else if config.cloudSyncStatus == .synchronizationUnavailable {
@@ -164,26 +150,6 @@ struct ExpenseBackupSettingsSection: View {
             )
             .presentationDetents([.medium])
         }
-    }
-
-    private var cloudSyncBinding: Binding<Bool> {
-        Binding(
-            get: { config.isCloudSyncEnabled },
-            set: { enabled in
-                if config.updateCloudSyncEnabled(enabled) {
-                    appRouter.showToast(
-                        SageToast(message: "Sync preference saved. Fully close and reopen Syl to apply it to expenses.", kind: .success)
-                    )
-                } else {
-                    appRouter.showToast(
-                        SageToast(
-                            message: "Syl could not save the sync preference. Try again.",
-                            kind: .error
-                        )
-                    )
-                }
-            }
-        )
     }
 
     @ViewBuilder

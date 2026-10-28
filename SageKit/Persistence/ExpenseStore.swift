@@ -10,11 +10,16 @@ import SwiftData
 
 @MainActor @Observable
 final public class ExpenseStore {
-    public static let shared: ExpenseStore? = {
+    /// Reuse the process-local container, with a fresh context for each widget timeline.
+    public static var shared: ExpenseStore? {
         guard case let .success(container) = SageModelContainer.shared else { return nil }
-        return ExpenseStore(modelContainer: container)
-    }()
-    
+        return ExpenseStore(
+            modelContainer: container,
+            preferences: SagePreferences.defaults,
+            context: ModelContext(container)
+        )
+    }
+
     let modelContainer: ModelContainer
     var context: ModelContext
     /// Where income and allocations are read from; tests pass an isolated store.
@@ -24,9 +29,9 @@ final public class ExpenseStore {
         self.init(modelContainer: modelContainer, preferences: SagePreferences.defaults)
     }
 
-    init(modelContainer: ModelContainer, preferences: UserDefaults) {
+    init(modelContainer: ModelContainer, preferences: UserDefaults, context: ModelContext? = nil) {
         self.modelContainer = modelContainer
-        self.context = modelContainer.mainContext
+        self.context = context ?? modelContainer.mainContext
         self.preferences = preferences
     }
 
