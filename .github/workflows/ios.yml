@@ -51,7 +51,7 @@ jobs:
             -testPlan "$TEST_PLAN" \
             -destination "platform=iOS Simulator,id=$simulator_id"
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
           set -euo pipefail
           xcodebuild test-without-building \

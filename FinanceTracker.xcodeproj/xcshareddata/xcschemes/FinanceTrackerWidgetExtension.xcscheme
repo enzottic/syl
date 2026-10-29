@@ -45,17 +45,6 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "C655B3AB2EF8E4B300E1F50E"
-               BuildableName = "FinanceTrackerUITests.xctest"
-               BlueprintName = "FinanceTrackerUITests"
-               ReferencedContainer = "container:FinanceTracker.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

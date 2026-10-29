@@ -43,7 +43,6 @@ struct OnboardingView: View {
     @FocusState private var incomeFocused: Bool
     @AccessibilityFocusState private var headingFocused: Bool
 
-    private let onCompletion: (() -> Void)?
     private var currencyCode: String { selectedCurrencyCode }
 
     enum OnboardingStep: Int, CaseIterable, Hashable {
@@ -71,9 +70,8 @@ struct OnboardingView: View {
         incomeFrequency != .monthly && (monthlyIncome ?? 0) > 0
     }
 
-    init(step: OnboardingStep = .welcome, onCompletion: (() -> Void)? = nil) {
+    init(step: OnboardingStep = .welcome) {
         _currentStep = State(initialValue: step)
-        self.onCompletion = onCompletion
     }
 
     var body: some View {
@@ -163,9 +161,7 @@ struct OnboardingView: View {
             didLoadCurrency = true
             recurringRemindersEnabled = config.billRemindersEnabled
             dailyReminderEnabled = config.dailyExpenseReminderEnabled
-            if !UITestConfiguration.isEnabled {
-                selectedCurrencyCode = config.ledgerCurrencyCode
-            }
+            selectedCurrencyCode = config.ledgerCurrencyCode
         }
     }
 
@@ -606,7 +602,6 @@ struct OnboardingView: View {
 
         withAnimation(reduceMotion ? nil : .default) {
             hasOpenedAppOnce = true
-            onCompletion?()
         }
     }
 }

@@ -12,7 +12,6 @@ class AppConfiguration {
     private typealias Key = PreferenceSyncService.Key
     
     private let isPreview: Bool
-    private let isUITesting: Bool
     let supportsCloudSync: Bool
     private let defaults: UserDefaults
     private let preferenceSync: PreferenceSyncService
@@ -213,7 +212,7 @@ class AppConfiguration {
         dailyExpenseReminderEnabled = false
         dailyExpenseReminderTimeMinutes = 1200
         dashboardWidgetOrder = DashboardWidgetID.defaultOrder
-        ledgerCurrencyCode = isPreview || isUITesting ? "USD" : LedgerCurrency.suggestedCode()
+        ledgerCurrencyCode = isPreview ? "USD" : LedgerCurrency.suggestedCode()
         hasCompletedSetupOnAnotherDevice = false
         
         guard !isPreview else { return cloudPreferencesQueued }
@@ -232,9 +231,7 @@ class AppConfiguration {
     }
 
     convenience init() {
-        if UITestConfiguration.isEnabled {
-            self.init(defaults: SagePreferences.defaults, isUITesting: true)
-        } else if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+        if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             self.init(preview: ())
         } else {
             self.init(defaults: SagePreferences.defaults)
@@ -247,7 +244,6 @@ class AppConfiguration {
 
     private init(preview: Void) {
         isPreview = true
-        isUITesting = false
         supportsCloudSync = SageModelContainer.supportsCloudSync
         defaults = .standard
         preferenceSync = PreferenceSyncService(isEnabled: { false })
@@ -259,24 +255,22 @@ class AppConfiguration {
 
     init(
         defaults: UserDefaults,
-        isUITesting: Bool = false,
         supportsCloudSync: Bool = SageModelContainer.supportsCloudSync,
         makeCloudStore: (() -> any CloudPreferenceStore)? = nil,
         notificationCenter: NotificationCenter = .default
     ) {
         self.isPreview = false
-        self.isUITesting = isUITesting
         self.supportsCloudSync = supportsCloudSync
         self.defaults = defaults
         preferenceSync = PreferenceSyncService(
-            isEnabled: { supportsCloudSync && !isUITesting },
+            isEnabled: { supportsCloudSync },
             makeStore: makeCloudStore,
             notificationCenter: notificationCenter
         )
         
         // Initialize @Observable storage directly so loading never invokes persistence observers.
         _ledgerCurrencyCode = LedgerCurrency.persistedCode(defaults: defaults)
-            ?? (isUITesting ? "USD" : LedgerCurrency.suggestedCode())
+            ?? LedgerCurrency.suggestedCode()
 
         _dashboardWidgetOrder = DashboardWidgetID.resolvedOrder(
             defaults.stringArray(forKey: Keys.dashboardWidgetOrder) ?? []

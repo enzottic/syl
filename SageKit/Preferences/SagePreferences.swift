@@ -10,7 +10,7 @@ public enum SagePreferences {
 
     public static let defaults: UserDefaults = {
         let environment = ProcessInfo.processInfo.environment
-        if environment["SAGE_UI_TESTING"] == "1" || environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+        if environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             return UserDefaults(suiteName: "Sage.Isolated.\(UUID().uuidString)")!
         }
         return UserDefaults(suiteName: suiteName) ?? .standard

@@ -25,37 +25,6 @@
         "identifier" : "C62400062FFF002400000006",
         "name" : "FinanceTrackerTests"
       }
-    },
-    {
-      "selectedTests" : [
-        "ExpenseBackupUITests\/testBackupExportAndFilesCancellation()",
-        "ExpenseDetailsSheetUITests\/testCalendarKeepsFooterVisibleAndPreservesSelectedDate()",
-        "ExpensesMonthPickerUITests\/testTitlePickerFiltersExpensesAndSupportsFutureYears()",
-        "FinanceTrackerUITests\/testCompletesOnboarding()",
-        "FinanceTrackerUITests\/testDeletesExpense()",
-        "FinanceTrackerUITests\/testDuplicatesExpense()",
-        "FinanceTrackerUITests\/testEditsExpense()",
-        "FinanceTrackerUITests\/testExpenseNameSuggestionPrefillsAndAllowsAmountEditing()",
-        "FinanceTrackerUITests\/testNewExpenseTapToFocusAndRetainsMinorUnitAmount()",
-        "FinanceTrackerUITests\/testNewExpenseReturnNextOpensInlineAmountKeypad()",
-        "FinanceTrackerUITests\/testNewExpenseSupportsLongNameAtLargestAccessibilityTextSize()",
-        "FinanceTrackerUITests\/testRecurringScheduleEditRequiresConfirmationAndPersists()",
-        "FinanceTrackerUITests\/testRefundAmountPersistsAfterSavingAndReopening()",
-        "FinanceTrackerUITests\/testSearchesExpenses()",
-        "FinanceTrackerUITests\/testShowAllRestoresMonthAndClearsDetail()",
-        "NewAddExpenseFlowUITests\/testKeyboardFooterFramesAndDateRoundTripWithAnimations()",
-        "NewAddExpenseFlowUITests\/testNotesTagsAndRecurrenceSurviveEveryBackStepAndPersist()",
-        "NewAddExpenseFlowUITests\/testSwipingAwayDiscardsBlankAndPopulatedDrafts()",
-        "StatsViewUITests\/testCategoryFilterExcludesExpenseAndAllCategoriesRestoresTotal()",
-        "StatsViewUITests\/testTappingMonthlyHistorySelectsTheMonthEvenWithNoSpending()",
-        "TagEditorUITests\/testTagControlsAndSavedSelection()",
-        "TagEditorUITests\/testLongTagFitsPickerWithAccessibilityText()"
-      ],
-      "target" : {
-        "containerPath" : "container:FinanceTracker.xcodeproj",
-        "identifier" : "C655B3AB2EF8E4B300E1F50E",
-        "name" : "FinanceTrackerUITests"
-      }
     }
   ],
   "version" : 1

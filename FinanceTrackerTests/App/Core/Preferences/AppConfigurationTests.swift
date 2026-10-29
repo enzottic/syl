@@ -68,16 +68,15 @@ struct AppConfigurationTests {
     }
 
     @Test
-    func uiTestingLoadsLocalSettingsWithoutPreviewValuesOrCloudAccess() throws {
-        let fixture = try Fixture(supportsCloudSync: true)
+    func localOnlyConfigurationLoadsSettingsWithoutPreviewValuesOrCloudAccess() throws {
+        let fixture = try Fixture(supportsCloudSync: false)
         fixture.defaults.set(3200, forKey: Key.totalMonthlyIncome.storageKey)
         fixture.defaults.set("Dark", forKey: Key.appearance.storageKey)
         let config = AppConfiguration(
             defaults: fixture.defaults,
-            isUITesting: true,
-            supportsCloudSync: true,
+            supportsCloudSync: false,
             makeCloudStore: {
-                Issue.record("UI tests must never acquire an iCloud store")
+                Issue.record("Local-only configuration must never acquire an iCloud store")
                 return fixture.cloud
             }
         )
@@ -85,17 +84,17 @@ struct AppConfigurationTests {
         #expect(config.totalMonthlyIncome == 3200)
         #expect(config.selectedAppearance == .dark)
         #expect(config.smartTaggingMode == .history)
-        #expect(config.ledgerCurrencyCode == "USD")
+        #expect(config.ledgerCurrencyCode == LedgerCurrency.suggestedCode())
         #expect(config.cloudSyncStatus == .stopped)
         config.totalMonthlyIncome = 4200
         #expect(fixture.defaults.integer(forKey: Key.totalMonthlyIncome.storageKey) == 4200)
         config.recheckPreferences()
         config.ledgerCurrencyCode = "GBP"
         #expect(fixture.defaults.string(forKey: LedgerCurrency.storageKey) == "GBP")
-        let reopened = AppConfiguration(defaults: fixture.defaults, isUITesting: true)
+        let reopened = AppConfiguration(defaults: fixture.defaults, supportsCloudSync: false)
         #expect(reopened.ledgerCurrencyCode == "GBP")
         config.resetAllSettings()
-        #expect(config.ledgerCurrencyCode == "USD")
+        #expect(config.ledgerCurrencyCode == LedgerCurrency.suggestedCode())
         #expect(fixture.defaults.object(forKey: LedgerCurrency.storageKey) == nil)
         #expect(fixture.cloud.operations.isEmpty)
         #expect(config.cloudSyncStatus == .stopped)

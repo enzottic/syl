@@ -34,9 +34,7 @@ public enum LedgerCurrency {
     }
 
     public static var currentCode: String? {
-        // UI-test consumers share the isolated configuration store, never real preferences.
         if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" { return "USD" }
-        if ProcessInfo.processInfo.environment["SAGE_UI_TESTING"] == "1" { return persistedCode() ?? "USD" }
         return persistedCode() ?? suggestedCode()
     }
 

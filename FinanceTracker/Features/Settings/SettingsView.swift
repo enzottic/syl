@@ -221,13 +221,12 @@ struct SettingsView: View {
     }
 
     private func publishWatchSnapshot() {
-        guard !UITestConfiguration.isEnabled,
-              let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
-                container: modelContext.container,
-                categoryColors: config.categoryColors,
-                currencyCode: config.ledgerCurrencyCode,
-                monthlyBudget: Double(config.totalMonthlyIncome)
-              ) else { return }
+        guard let snapshot = try? WatchSnapshotBuilder.makeSnapshot(
+            container: modelContext.container,
+            categoryColors: config.categoryColors,
+            currencyCode: config.ledgerCurrencyCode,
+            monthlyBudget: Double(config.totalMonthlyIncome)
+        ) else { return }
         WatchSnapshotSender.shared.sendUpdatedMonthlySnapshot(snapshot: snapshot)
     }
 }

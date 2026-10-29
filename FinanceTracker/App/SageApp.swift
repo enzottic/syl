@@ -17,7 +17,6 @@ struct SageApp: App {
     @Environment(\.scenePhase) var scenePhase
     
     @State private var appConfiguration = AppConfiguration()
-    @State private var didCompleteUITestOnboarding = false
     
     private let containerResult: Result<ModelContainer, any Error>
     private let recurringExpenseCoordinator: RecurringExpenseCoordinator?
@@ -28,62 +27,18 @@ struct SageApp: App {
     init() {
         Self.configureNavigationBarAppearance()
 
-        if UITestConfiguration.isEnabled {
-            WhatsNewStore.markCurrentVersionSeen()
-        }
-
-        let containerResult: Result<ModelContainer, any Error>
-        if UITestConfiguration.isEnabled {
-            containerResult = Result {
-                let container = try SageModelContainer.make(for: .test)
-                if let seedName = UITestConfiguration.seedExpenseName {
-                    container.mainContext.insert(
-                        Expense(name: seedName, amount: 42.50, category: .wants, date: .now)
-                    )
-                    try container.mainContext.save()
-                }
-                if UITestConfiguration.seedsSearch {
-                    let date = Date.now
-                    for index in 0..<101 {
-                        container.mainContext.insert(Expense(
-                            name: "Search Needle \(index)", amount: 1,
-                            date: date.addingTimeInterval(Double(-index))
-                        ))
-                    }
-                    try container.mainContext.save()
-                }
-                if UITestConfiguration.seedsCalendar {
-                    let calendar = Calendar.current
-                    let today = calendar.startOfDay(for: .now)
-                    let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)!
-                    container.mainContext.insert(Expense(name: "Calendar Coffee", amount: 7.50, date: today))
-                    container.mainContext.insert(RecurringExpenseRule(
-                        name: "Calendar Subscription", amount: 15, note: "", category: .wants,
-                        frequency: .daily, startDate: tomorrow
-                    ))
-                    container.mainContext.insert(RecurringExpenseRule(
-                        name: "Expired Subscription", amount: 999, note: "", category: .wants,
-                        frequency: .daily, startDate: today, endDate: today, lastGeneratedDate: today
-                    ))
-                    try container.mainContext.save()
-                }
+        let containerResult = SageModelContainer.shared.flatMap { container in
+            Result {
+                #if DEBUG
+                let context = ModelContext(container)
+                MockDataSeeder.seed(into: context)
+                try context.save()
+                #endif
                 return container
-            }
-        } else {
-            containerResult = SageModelContainer.shared.flatMap { container in
-                Result {
-                    #if DEBUG
-                    let context = ModelContext(container)
-                    MockDataSeeder.seed(into: context)
-                    try context.save()
-                    #endif
-                    return container
-                }
             }
         }
         self.containerResult = containerResult
         if case let .success(container) = containerResult,
-           !UITestConfiguration.isEnabled,
            ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1" {
             recurringReminders = RecurringReminderCoordinator(container: container)
         } else {
@@ -142,8 +97,7 @@ struct SageApp: App {
     }
     
     private func publishMonthlySnapshot() {
-        guard !UITestConfiguration.isEnabled,
-              ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1",
+        guard ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1",
               hasOpenedAppOnce,
               case let .success(container) = containerResult else {
             return
@@ -169,15 +123,7 @@ struct SageApp: App {
     @ViewBuilder
     private var mainContent: some View {
         Group {
-            if UITestConfiguration.isEnabled {
-                if UITestConfiguration.showsOnboarding, !didCompleteUITestOnboarding {
-                    OnboardingView {
-                        didCompleteUITestOnboarding = true
-                    }
-                } else {
-                    RootTabView()
-                }
-            } else if !hasOpenedAppOnce {
+            if !hasOpenedAppOnce {
                 OnboardingView()
             } else {
                 RootTabView()
@@ -202,8 +148,7 @@ struct SageApp: App {
         .onChange(of: appConfiguration.hideBillReminderDetails) { recurringReminders?.refresh() }
         .onChange(of: appConfiguration.ledgerCurrencyCode) { recurringReminders?.refresh() }
         .onChange(of: appConfiguration.hasCompletedSetupOnAnotherDevice, initial: true) { _, completed in
-            if !UITestConfiguration.isEnabled,
-               !hasOpenedAppOnce,
+            if !hasOpenedAppOnce,
                completed {
                 WhatsNewStore.markCurrentVersionSeen()
                 hasOpenedAppOnce = true

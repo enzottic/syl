@@ -31,13 +31,6 @@
         "identifier" : "C62400062FFF002400000006",
         "name" : "FinanceTrackerTests"
       }
-    },
-    {
-      "target" : {
-        "containerPath" : "container:FinanceTracker.xcodeproj",
-        "identifier" : "C655B3AB2EF8E4B300E1F50E",
-        "name" : "FinanceTrackerUITests"
-      }
     }
   ],
   "version" : 1
