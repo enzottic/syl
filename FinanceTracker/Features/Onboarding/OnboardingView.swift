@@ -18,12 +18,12 @@ struct OnboardingView: View {
     @Environment(\.categoryColors) private var categoryColors
     @Environment(\.recurringReminders) private var reminders
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ScaledMetric(relativeTo: .largeTitle) private var incomeFontSize = 64
 
     @AppStorage("hasOpenedAppOnce") var hasOpenedAppOnce = false
 
     @State private var currentStep: OnboardingStep = .welcome
+    @State private var isMovingForward = true
     @State private var incomeText = ""
     @State private var incomeHeaderHeight: CGFloat?
     @State private var incomeFrequency: IncomeFrequency = .monthly
@@ -76,69 +76,74 @@ struct OnboardingView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Group {
-                    if currentStep == .budget {
-                        budgetPage
-                    } else {
-                        ScrollView {
-                            pageContent
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .defaultScrollAnchor(.center, for: .alignment)
-                        .scrollBounceBehavior(.basedOnSize)
-                        .id(currentStep)
+            ZStack {
+                if currentStep == .welcome {
+                    OnboardingWelcomeView {
+                        move(to: .budget)
                     }
-                }
-                .frame(maxWidth: 520, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                VStack(spacing: 0) {
-                    if currentStep != .welcome {
-                        ProgressView(value: Double(currentStep.rawValue), total: Double(OnboardingStep.allCases.count - 1))
-                            .progressViewStyle(.linear)
-                            .tint(.sage)
-                            .accessibilityLabel("Setup progress")
-                            .accessibilityValue(Text("Step \(currentStep.rawValue) of \(OnboardingStep.allCases.count - 1)"))
-                            .accessibilityIdentifier("onboarding-progress")
-                            .frame(maxWidth: 520)
-                            .padding(.horizontal, 24)
-                            .padding(.top, 16)
-                            .padding(.bottom, 8)
-                    }
-
-                    primaryAction
-                    // Keep actions outside the scroll viewport so they cannot cover the income strip.
-                    if incomeFocused {
-                        HStack {
-                            Spacer()
-                            Button("Done") { incomeFocused = false }
-                                .buttonStyle(.glass)
-                                .accessibilityIdentifier("onboarding-keyboard-done-button")
+                    .transition(pageTransition)
+                } else {
+                    VStack(spacing: 0) {
+                        ZStack {
+                            Group {
+                                if currentStep == .budget {
+                                    budgetPage
+                                } else {
+                                    ScrollView {
+                                        pageContent
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                    .defaultScrollAnchor(.center, for: .alignment)
+                                    .scrollBounceBehavior(.basedOnSize)
+                                }
+                            }
+                            .id(currentStep)
+                            .transition(pageTransition)
                         }
-                        .frame(maxWidth: 520)
+                        .frame(maxWidth: 520, alignment: .leading)
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 12)
+                        .padding(.vertical, 16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+
+                        VStack(spacing: 0) {
+                            if currentStep != .welcome {
+                                ProgressView(value: Double(currentStep.rawValue), total: Double(OnboardingStep.allCases.count - 1))
+                                    .progressViewStyle(.linear)
+                                    .tint(.sage)
+                                    .accessibilityLabel("Setup progress")
+                                    .accessibilityValue(Text("Step \(currentStep.rawValue) of \(OnboardingStep.allCases.count - 1)"))
+                                    .accessibilityIdentifier("onboarding-progress")
+                                    .frame(maxWidth: 520)
+                                    .padding(.horizontal, 24)
+                                    .padding(.top, 16)
+                                    .padding(.bottom, 8)
+                            }
+
+                            primaryAction
+                            // Keep actions outside the scroll viewport so they cannot cover the income strip.
+                            if incomeFocused {
+                                HStack {
+                                    Spacer()
+                                    Button("Done") { incomeFocused = false }
+                                        .buttonStyle(.glass)
+                                        .accessibilityIdentifier("onboarding-keyboard-done-button")
+                                }
+                                .frame(maxWidth: 520)
+                                .padding(.horizontal, 24)
+                                .padding(.bottom, 12)
+                            }
+                        }
                     }
+                    .transition(pageTransition)
                 }
             }
+            .clipped()
             .background {
-                ZStack(alignment: .topTrailing) {
-                    Color.sageBackground
-                    if !reduceTransparency {
-                        Ellipse()
-                            .fill(Color.sage.opacity(0.24))
-                            .frame(width: 360, height: 420)
-                            .blur(radius: 85)
-                            .offset(x: 120, y: -150)
-                    }
-                }
-                .ignoresSafeArea()
+                OnboardingBackground()
+                    .ignoresSafeArea()
             }
             .toolbar(.hidden, for: .navigationBar)
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: currentStep)
             .task(id: currentStep) { headingFocused = true }
             .alert("Could not finish setup", isPresented: Binding(
                 get: { completionErrorMessage != nil },
@@ -203,19 +208,12 @@ struct OnboardingView: View {
         .padding(.top, 16)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
-        .background {
-            LinearGradient(
-                colors: [Color.sageBackground.opacity(0), .sageBackground, .sageBackground],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea(edges: .bottom)
-        }
     }
 
     @ViewBuilder
     private var pageContent: some View {
         switch currentStep {
-        case .welcome: welcomePage
+        case .welcome: EmptyView() // The welcome screen has its own full-screen layout.
         case .budget: budgetPage
         case .allocation: allocationPage
         case .sync: syncPage
@@ -233,17 +231,6 @@ struct OnboardingView: View {
             .accessibilityAddTraits(.isHeader)
             .accessibilityFocused($headingFocused)
             .accessibilityIdentifier(currentStep == .welcome ? "onboarding-welcome-title" : "onboarding-step-title")
-    }
-
-    private var welcomePage: some View {
-        VStack(alignment: .leading, spacing: 28) {
-            Image("LaunchIcon")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 140, height: 140)
-                .accessibilityHidden(true)
-            heading("welcome to syl")
-        }
     }
 
     private var budgetPage: some View {
@@ -549,10 +536,22 @@ struct OnboardingView: View {
         .background(Color.cardBackground, in: .rect(cornerRadius: 24))
     }
 
+    private var pageTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(
+            insertion: .move(edge: isMovingForward ? .trailing : .leading).combined(with: .opacity),
+            removal: .move(edge: isMovingForward ? .leading : .trailing).combined(with: .opacity)
+        )
+    }
+
     private func move(to step: OnboardingStep) {
+        guard step != currentStep else { return }
         incomeFocused = false
         headingFocused = false
-        currentStep = step
+        isMovingForward = step.rawValue > currentStep.rawValue
+        withAnimation(reduceMotion ? .easeOut(duration: 0.15) : .smooth(duration: 0.35)) {
+            currentStep = step
+        }
     }
 
     private func requestNotificationPermission() {
