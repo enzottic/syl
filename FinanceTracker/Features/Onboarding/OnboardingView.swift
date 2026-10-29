@@ -98,6 +98,19 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 VStack(spacing: 0) {
+                    if currentStep != .welcome {
+                        ProgressView(value: Double(currentStep.rawValue), total: Double(OnboardingStep.allCases.count - 1))
+                            .progressViewStyle(.linear)
+                            .tint(.sage)
+                            .accessibilityLabel("Setup progress")
+                            .accessibilityValue(Text("Step \(currentStep.rawValue) of \(OnboardingStep.allCases.count - 1)"))
+                            .accessibilityIdentifier("onboarding-progress")
+                            .frame(maxWidth: 520)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 16)
+                            .padding(.bottom, 8)
+                    }
+
                     primaryAction
                     // Keep actions outside the scroll viewport so they cannot cover the income strip.
                     if incomeFocused {
@@ -177,7 +190,7 @@ struct OnboardingView: View {
                     move(to: next)
                 }
             } label: {
-                Text(requestingNotificationPermission ? "Requesting permission..." : currentStep == .welcome ? "Get Started" : currentStep == .complete ? "Start Tracking" : "Continue")
+                Text(requestingNotificationPermission ? "Requesting permission..." : currentStep == .welcome ? "Get Started" : currentStep == .complete ? "Finish" : "Continue")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .foregroundStyle(.onSage)
@@ -216,23 +229,14 @@ struct OnboardingView: View {
         }
     }
 
-    private func heading(_ title: LocalizedStringKey, subtitle: LocalizedStringKey? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(title)
-                .font(.custom("MomoTrustDisplay-Regular", size: 32, relativeTo: .largeTitle))
-                .fontDesign(nil)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityFocused($headingFocused)
-                .accessibilityIdentifier(currentStep == .welcome ? "onboarding-welcome-title" : "onboarding-step-title")
-            if let subtitle {
-                Text(subtitle)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier(currentStep == .welcome ? "onboarding-welcome-subtitle" : "onboarding-step-subtitle")
-            }
-        }
+    private func heading(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.custom("MomoTrustDisplay-Regular", size: 32, relativeTo: .largeTitle))
+            .fontDesign(nil)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityFocused($headingFocused)
+            .accessibilityIdentifier(currentStep == .welcome ? "onboarding-welcome-title" : "onboarding-step-title")
     }
 
     private var welcomePage: some View {
@@ -242,7 +246,7 @@ struct OnboardingView: View {
                 .scaledToFit()
                 .frame(width: 140, height: 140)
                 .accessibilityHidden(true)
-            heading("welcome to syl", subtitle: "A simple personal expense tracking app")
+            heading("welcome to syl")
         }
     }
 
@@ -252,7 +256,7 @@ struct OnboardingView: View {
             // card, including its reserved footer, stays above the navigation row.
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    heading("your income", subtitle: "Enter your take-home pay. We'll work out your monthly budget.")
+                    heading("your income")
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("How often are you paid?")
@@ -389,7 +393,7 @@ struct OnboardingView: View {
 
     private var allocationPage: some View {
         VStack(alignment: .leading, spacing: 28) {
-            heading("set your budget", subtitle: "Drag the dividers to adjust your budget.")
+            heading("set your budget")
 
             VStack(alignment: .leading, spacing: 24) {
                 BudgetAllocationBar(needsPercent: $needsPercent, wantsPercent: $wantsPercent)
@@ -402,7 +406,7 @@ struct OnboardingView: View {
 
     private var syncPage: some View {
         VStack(alignment: .leading, spacing: 28) {
-            heading("sync your expenses", subtitle: "Keep expenses up to date across your devices.")
+            heading("sync your expenses")
 
             HStack(spacing: 24) {
                 Image(systemName: "iphone")
@@ -432,7 +436,7 @@ struct OnboardingView: View {
 
     private var tagsPage: some View {
         VStack(alignment: .leading, spacing: 28) {
-            heading("choose your tags", subtitle: "Organize your expenses. You can add more later.")
+            heading("choose your tags")
 
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
@@ -455,7 +459,7 @@ struct OnboardingView: View {
 
     private var remindersPage: some View {
         VStack(alignment: .leading, spacing: 28) {
-            heading("enable reminders?", subtitle: "Get reminded when recurring expenses are due, and a daily reminder to add expenses from the day.")
+            heading("enable reminders?")
 
             VStack(alignment: .leading, spacing: 24) {
                 Toggle(isOn: Binding(
@@ -514,7 +518,7 @@ struct OnboardingView: View {
 
     private var completePage: some View {
         VStack(alignment: .leading, spacing: 28) {
-            heading("your budget is ready", subtitle: "Here's your monthly breakdown.")
+            heading("your budget is ready")
             budgetCard
         }
     }
