@@ -6,10 +6,12 @@
 //
 
 import Foundation
+import OSLog
 import WatchConnectivity
 import WidgetKit
 
 class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
+    private nonisolated static let logger = Logger(subsystem: "me.enzottic.FinanceTracker", category: "WatchSync")
     static let shared = WatchSnapshotReceiver()
     
     override init() {
@@ -28,10 +30,10 @@ class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
     ) {
         Task { @MainActor in
             if let error {
-                print("Watch connectivity activation failed: \(error.localizedDescription)")
+                Self.logger.error("WatchConnectivity activation failed: \(error.localizedDescription)")
             }
             if activationState == .activated {
-                print("Watch connectivity activated")
+                Self.logger.debug("WatchConnectivity activated")
                 // Restore the last delivered context even if no new transfer arrives.
                 if let data = session.receivedApplicationContext[WatchSnapshot.applicationContextKey] as? Data {
                     applySnapshot(data)
@@ -41,9 +43,9 @@ class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
     }
     
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
-        print("Watch received application context")
+        Self.logger.debug("Received application context")
         guard let data = applicationContext[WatchSnapshot.applicationContextKey] as? Data else {
-            print("Watch context is missing snapshot data")
+            Self.logger.error("Application context is missing snapshot data")
             return
         }
         Task { @MainActor in
@@ -58,9 +60,9 @@ class WatchSnapshotReceiver: NSObject, WCSessionDelegate {
             try WatchSnapshotCache.save(snapshot)
             SnapshotManager.shared.updateSnapshot(to: snapshot)
             WidgetCenter.shared.reloadTimelines(ofKind: WatchSnapshotCache.widgetKind)
-            print("Watch snapshot applied")
+            Self.logger.debug("Watch snapshot applied")
         } catch {
-            print("Decoding Watch snapshot failed: \(error.localizedDescription)")
+            Self.logger.error("Decoding Watch snapshot failed: \(error.localizedDescription)")
         }
     }
 }

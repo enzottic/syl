@@ -6,10 +6,12 @@
 //
 
 import Foundation
+import OSLog
 import SageKit
 import WatchConnectivity
 
 class WatchSnapshotSender: NSObject, WCSessionDelegate {
+    private nonisolated static let logger = Logger(subsystem: "me.enzottic.FinanceTracker", category: "WatchSync")
     static let shared = WatchSnapshotSender()
     private var pendingPayload: [String: Any]?
     
@@ -29,10 +31,10 @@ class WatchSnapshotSender: NSObject, WCSessionDelegate {
     ) {
         Task { @MainActor in
             if let error {
-                print("iPhone WatchConnectivity activation failed: \(error.localizedDescription)")
+                Self.logger.error("WatchConnectivity activation failed: \(error.localizedDescription)")
             }
             if activationState == .activated {
-                print("iPhone WatchConnectivity activated; Watch app installed: \(session.isWatchAppInstalled)")
+                Self.logger.debug("WatchConnectivity activated; Watch app installed: \(session.isWatchAppInstalled)")
                 if let pendingPayload {
                     setContext(to: pendingPayload)
                 }
@@ -54,12 +56,12 @@ class WatchSnapshotSender: NSObject, WCSessionDelegate {
             do {
                 try session.updateApplicationContext(payload)
                 pendingPayload = nil
-                print("Watch snapshot submitted for background delivery")
+                Self.logger.debug("Watch snapshot submitted for background delivery")
             } catch {
-                print("Updating Watch context failed: \(error.localizedDescription)")
+                Self.logger.error("Updating Watch context failed: \(error.localizedDescription)")
             }
         } else {
-            print("Watch snapshot pending session activation")
+            Self.logger.debug("Watch snapshot pending session activation")
         }
     }
     
@@ -69,7 +71,7 @@ class WatchSnapshotSender: NSObject, WCSessionDelegate {
             let payload: [String:Any] = [WatchSnapshot.applicationContextKey: snapshotData]
             setContext(to: payload)
         } catch {
-            print("Encoding Watch snapshot failed: \(error.localizedDescription)")
+            Self.logger.error("Encoding Watch snapshot failed: \(error.localizedDescription)")
         }
     }
 }

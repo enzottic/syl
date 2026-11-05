@@ -10,9 +10,11 @@ import SwiftData
 import AppIntents
 import SageKit
 import UserNotifications
+import OSLog
 
 @main
 struct SageApp: App {
+    private static let logger = Logger(subsystem: "me.enzottic.FinanceTracker", category: "WatchSync")
     @AppStorage("hasOpenedAppOnce") var hasOpenedAppOnce: Bool = false
     @Environment(\.scenePhase) var scenePhase
     
@@ -132,7 +134,7 @@ struct SageApp: App {
             connectivity.sendUpdatedMonthlySnapshot(snapshot: snapshot)
             
         } catch {
-            print("Could not prepare watch snapshot: \(error.localizedDescription)")
+            Self.logger.error("Could not prepare Watch snapshot: \(error.localizedDescription)")
         }
     }
 
