@@ -9,9 +9,16 @@ import SwiftData
 
 public struct GetBudgetRemainingIntent: AppIntent {
     public static var title: LocalizedStringResource = "Check Budget Remaining"
+    public static var description = IntentDescription(
+        "Tells how much of this month's budget is left, or how far over it is. For Savings, tells how far from the month's savings target. Without a category, covers the total budget."
+    )
     public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
-    @Parameter(title: "Category") public var category: ExpenseCategory?
+    @Parameter(
+        title: "Category",
+        description: "The budget to check: Needs, Wants, or Savings. Leave empty for the total budget."
+    )
+    public var category: ExpenseCategory?
 
     @Dependency
     var expenseStore: ExpenseStore
@@ -60,3 +67,8 @@ public struct GetBudgetRemainingIntent: AppIntent {
         }
     }
 }
+
+// The `@AppIntent(.tool)` macro requires the whole type to be iOS 27.3+, so the tool
+// conformance it would add is declared here instead, leaving the intent available on 27.0.
+@available(iOS 27.3, *)
+extension GetBudgetRemainingIntent: ToolIntent { }

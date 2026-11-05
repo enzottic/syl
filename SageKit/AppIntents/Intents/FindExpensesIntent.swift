@@ -65,16 +65,30 @@ public enum ExpenseTimePeriod: String, AppEnum {
     }
 }
 
+// The type keeps its original name so saved Shortcuts continue to resolve it.
 public struct FindExpensesIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Find Expenses"
+    public static var title: LocalizedStringResource = "Get Spending Total"
+    public static var description = IntentDescription(
+        "Adds up what was spent in a time period, optionally only for one tag, one category, or expenses whose name contains some text. Returns the total in the ledger's currency."
+    )
     public static var openAppWhenRun: Bool = false
     public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
-    
 
-    @Parameter(title: "Time Period", default: .thisMonth) public var timePeriod: ExpenseTimePeriod
-    @Parameter(title: "Tag") public var tag: ExpenseTagEntity?
-    @Parameter(title: "Category") public var category: ExpenseCategory?
-    @Parameter(title: "Name Contains") public var nameFilter: String?
+    @Parameter(
+        title: "Time Period",
+        description: "The calendar period to total. Weeks and months follow the device's calendar.",
+        default: .thisMonth
+    )
+    public var timePeriod: ExpenseTimePeriod
+
+    @Parameter(title: "Tag", description: "Only count expenses with this tag.")
+    public var tag: ExpenseTagEntity?
+
+    @Parameter(title: "Category", description: "Only count expenses in this category: Needs, Wants, or Savings.")
+    public var category: ExpenseCategory?
+
+    @Parameter(title: "Name Contains", description: "Only count expenses whose name contains this text, ignoring case.")
+    public var nameFilter: String?
 
     @Dependency
     var expenseStore: ExpenseStore
@@ -119,3 +133,8 @@ public struct FindExpensesIntent: AppIntent {
         return .result(value: total, dialog: "You spent \(total.currencyString) \(period).")
     }
 }
+
+// The `@AppIntent(.tool)` macro requires the whole type to be iOS 27.3+, so the tool
+// conformance it would add is declared here instead, leaving the intent available on 27.0.
+@available(iOS 27.3, *)
+extension FindExpensesIntent: ToolIntent { }

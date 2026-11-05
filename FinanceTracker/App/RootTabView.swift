@@ -11,11 +11,13 @@ import SageKit
 
 struct RootTabView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.modelContext) private var modelContext
 
     @State private var appRouter = AppRouter()
     @State private var whatsNewRelease: WhatsNewRelease?
     @State private var query: String? = nil
     @State private var reminderNavigation = ReminderNavigation.shared
+    @State private var expenseOpenRequest = ExpenseOpenRequest.shared
 
     private var isPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
@@ -100,8 +102,15 @@ struct RootTabView: View {
         }
         .onChange(of: reminderNavigation.isRequested, initial: true) { openReminderDashboardIfReady() }
         .onChange(of: reminderNavigation.isExpenseEntryRequested, initial: true) { openReminderDashboardIfReady() }
-        .onChange(of: appRouter.presentedSheet == nil) { openReminderDashboardIfReady() }
-        .onChange(of: whatsNewRelease == nil) { openReminderDashboardIfReady() }
+        .onChange(of: expenseOpenRequest.expenseID, initial: true) { openRequestedExpenseIfReady() }
+        .onChange(of: appRouter.presentedSheet == nil) {
+            openReminderDashboardIfReady()
+            openRequestedExpenseIfReady()
+        }
+        .onChange(of: whatsNewRelease == nil) {
+            openReminderDashboardIfReady()
+            openRequestedExpenseIfReady()
+        }
         .sheet(item: $whatsNewRelease) { release in
             WhatsNewSheet(release: release)
         }
@@ -116,6 +125,19 @@ struct RootTabView: View {
         reminderNavigation.isRequested = false
         appRouter.homePath.removeAll()
         appRouter.selectedTab = .home
+    }
+
+    /// Shows the expense Siri or Shortcuts asked to open, once no sheet is in the way, so an
+    /// unsaved draft is never discarded.
+    private func openRequestedExpenseIfReady() {
+        guard let id = expenseOpenRequest.expenseID,
+              appRouter.presentedSheet == nil,
+              whatsNewRelease == nil else { return }
+        expenseOpenRequest.expenseID = nil
+        let descriptor = FetchDescriptor<Expense>(predicate: #Predicate { $0.id == id })
+        guard let expense = try? modelContext.fetch(descriptor).first else { return }
+        appRouter.selectedTab = .expenses
+        appRouter.expensesPath = [.expenseDetail(expense)]
     }
 
 }

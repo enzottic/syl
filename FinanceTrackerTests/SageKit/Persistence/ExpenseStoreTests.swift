@@ -67,7 +67,7 @@ struct ExpenseStoreTests {
 
         let entity = try store.addExpenseAndSave(
             Expense(name: "Shortcut", amount: 4, category: .wants),
-            tagID: nil
+            tagIDs: []
         )
 
         let verificationContext = ModelContext(container)
@@ -94,7 +94,7 @@ struct ExpenseStoreTests {
         do {
             _ = try store.addExpenseAndSave(
                 Expense(name: "Failed shortcut", amount: 4, category: .wants),
-                tagID: tag.id
+                tagIDs: [tag.id]
             ) { context in
                 failedContext = context
                 #expect(context.hasChanges)
