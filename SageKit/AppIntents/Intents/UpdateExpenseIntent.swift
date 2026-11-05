@@ -6,6 +6,7 @@
 import Foundation
 import AppIntents
 import SwiftData
+import SwiftUI
 import WidgetKit
 
 public struct UpdateExpenseIntent: AppIntent {
@@ -59,7 +60,7 @@ public struct UpdateExpenseIntent: AppIntent {
     public init() { }
 
     @MainActor
-    public func perform() async throws -> some ReturnsValue<ExpenseEntity> & ProvidesDialog {
+    public func perform() async throws -> some ReturnsValue<ExpenseEntity> & ProvidesDialog & ShowsSnippetView {
         let currencyCode = try currencyCodeProvider()
         let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let trimmedName, trimmedName.isEmpty {
@@ -89,7 +90,8 @@ public struct UpdateExpenseIntent: AppIntent {
         WidgetCenter.shared.reloadAllTimelines()
         return .result(
             value: updated,
-            dialog: "Updated \(updated.name): \(updated.amount.currencyString(code: currencyCode)) in \(updated.category.rawValue)."
+            dialog: "Updated \(updated.name): \(updated.amount.currencyString(code: currencyCode)) in \(updated.category.rawValue).",
+            view: ExpenseCardView(expense: updated)
         )
     }
 

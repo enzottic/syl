@@ -8,6 +8,7 @@
 import Foundation
 import AppIntents
 import SwiftData
+import SwiftUI
 import WidgetKit
 
 public struct AddExpenseAppIntent: AppIntent {
@@ -81,7 +82,7 @@ public struct AddExpenseAppIntent: AppIntent {
     // MARK: Methods
 
     @MainActor
-    public func perform() async throws -> some ReturnsValue<ExpenseEntity> & ProvidesDialog {
+    public func perform() async throws -> some ReturnsValue<ExpenseEntity> & ProvidesDialog & ShowsSnippetView {
         let currencyCode = try currencyCodeProvider()
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
@@ -108,7 +109,8 @@ public struct AddExpenseAppIntent: AppIntent {
         let formattedAmount = expenseAmount.currencyString(code: currencyCode)
         return .result(
             value: entity,
-            dialog: "Added \(trimmedName) for \(formattedAmount) to \(resolvedCategory.rawValue)."
+            dialog: "Added \(trimmedName) for \(formattedAmount) to \(resolvedCategory.rawValue).",
+            view: ExpenseCardView(expense: entity)
         )
     }
 }

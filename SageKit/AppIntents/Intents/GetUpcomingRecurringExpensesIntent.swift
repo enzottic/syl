@@ -5,6 +5,7 @@
 
 import Foundation
 import AppIntents
+import SwiftUI
 
 public struct GetUpcomingRecurringExpensesIntent: AppIntent {
     public static var title: LocalizedStringResource = "Get Upcoming Recurring Expenses"
@@ -34,12 +35,14 @@ public struct GetUpcomingRecurringExpensesIntent: AppIntent {
     public init() { }
 
     @MainActor
-    public func perform() async throws -> some ReturnsValue<[UpcomingExpenseEntity]> & ProvidesDialog {
+    public func perform() async throws -> some ReturnsValue<[UpcomingExpenseEntity]> & ProvidesDialog & ShowsSnippetView {
         let currencyCode = try currencyCodeProvider()
-        let upcoming = try expenseStore.upcomingRecurringExpenses(within: min(max(days, 1), 365))
+        let window = min(max(days, 1), 365)
+        let upcoming = try expenseStore.upcomingRecurringExpenses(within: window)
         return .result(
             value: upcoming.map(UpcomingExpenseEntity.init),
-            dialog: IntentDialog(stringLiteral: Self.dialog(for: upcoming, days: days, currencyCode: currencyCode))
+            dialog: IntentDialog(stringLiteral: Self.dialog(for: upcoming, days: window, currencyCode: currencyCode)),
+            view: UpcomingExpensesSnippetView(upcoming: upcoming, days: window)
         )
     }
 

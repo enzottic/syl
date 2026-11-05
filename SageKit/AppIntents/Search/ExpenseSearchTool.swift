@@ -83,12 +83,14 @@ public struct SearchExpensesIntent: AppIntent {
     public init() { }
 
     @MainActor
-    public func perform() async throws -> some ReturnsValue<[ExpenseEntity]> & ProvidesDialog {
+        let entities = result.expenses.map(\.entity)
+    public func perform() async throws -> some ReturnsValue<[ExpenseEntity]> & ProvidesDialog & ShowsSnippetView {
         let currencyCode = try LedgerCurrency.requireCode()
         let result = try expenseStore.searchExpenses(search.criteria)
         return .result(
-            value: result.expenses.map(\.entity),
-            dialog: IntentDialog(stringLiteral: result.dialog(currencyCode: currencyCode))
+            value: entities,
+            dialog: IntentDialog(stringLiteral: result.dialog(currencyCode: currencyCode)),
+            view: ExpenseListSnippetView(expenses: entities, matchCount: result.matchCount, total: result.total)
         )
     }
 }
