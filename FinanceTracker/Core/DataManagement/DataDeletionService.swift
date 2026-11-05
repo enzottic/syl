@@ -50,6 +50,11 @@ struct DataDeletionService {
             // No local export is already the desired state, including on repeated resets.
         }
 
+        let inbox = documentsDirectory.appending(path: "Inbox", directoryHint: .isDirectory)
+        for file in (try? fileManager.contentsOfDirectory(at: inbox, includingPropertiesForKeys: nil)) ?? [] {
+            try? fileManager.removeItem(at: file)
+        }
+
         // Bulk deletion only sees persisted rows; include pending inserts first.
         if modelContext.hasChanges { try modelContext.save() }
         try modelContext.delete(model: Expense.self)

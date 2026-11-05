@@ -27,6 +27,31 @@ struct ReceiptImageImportTests {
     }
 
     @Test
+    func removesInboxCopiesButNotOtherFiles() throws {
+        let imageData = try #require(
+            UIGraphicsImageRenderer(size: CGSize(width: 2, height: 2)).image { _ in }.pngData()
+        )
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let inbox = root.appendingPathComponent("Inbox")
+        try FileManager.default.createDirectory(at: inbox, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let inboxCopy = inbox.appendingPathComponent("receipt.png")
+        let original = root.appendingPathComponent("receipt.png")
+        let invalidCopy = inbox.appendingPathComponent("broken.png")
+        try imageData.write(to: inboxCopy)
+        try imageData.write(to: original)
+        try Data("not an image".utf8).write(to: invalidCopy)
+
+        _ = try ReceiptImageImport.loadData(from: inboxCopy, inboxDirectory: inbox)
+        _ = try ReceiptImageImport.loadData(from: original, inboxDirectory: inbox)
+        _ = try? ReceiptImageImport.loadData(from: invalidCopy, inboxDirectory: inbox)
+
+        #expect(!FileManager.default.fileExists(atPath: inboxCopy.path))
+        #expect(!FileManager.default.fileExists(atPath: invalidCopy.path))
+        #expect(FileManager.default.fileExists(atPath: original.path))
+    }
+
+    @Test
     func rejectsInvalidImageData() throws {
         let fileURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)

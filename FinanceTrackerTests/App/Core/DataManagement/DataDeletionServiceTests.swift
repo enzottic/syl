@@ -66,6 +66,10 @@ struct DataDeletionServiceTests {
         try csv.write(to: exportURL)
         try csv.write(to: otherFileURL)
         try csv.write(to: externalCopyURL)
+        let inbox = fileManager.documentsDirectory.appendingPathComponent("Inbox")
+        try fileManager.createDirectory(at: inbox, withIntermediateDirectories: true)
+        let inboxReceiptURL = inbox.appendingPathComponent("receipt.jpg")
+        try csv.write(to: inboxReceiptURL)
 
         let container = try SageModelContainer.make(for: .test)
         let context = container.mainContext
@@ -92,6 +96,7 @@ struct DataDeletionServiceTests {
         try service.deleteAllUserData(fileManager: fileManager)
 
         #expect(!fileManager.fileExists(atPath: exportURL.path))
+        #expect(!fileManager.fileExists(atPath: inboxReceiptURL.path))
         #expect(try Data(contentsOf: otherFileURL) == csv)
         #expect(try Data(contentsOf: externalCopyURL) == csv)
         #expect(try context.fetch(FetchDescriptor<Expense>()).isEmpty)

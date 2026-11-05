@@ -21,7 +21,12 @@ nonisolated enum ReceiptImageImport {
         }
     }
 
-    static func loadData(from url: URL) throws -> Data {
+    /// Where iOS copies files that other apps send to Syl. Files opened in place live elsewhere.
+    static var inboxDirectory: URL {
+        URL.documentsDirectory.appending(path: "Inbox", directoryHint: .isDirectory)
+    }
+
+    static func loadData(from url: URL, inboxDirectory: URL = inboxDirectory) throws -> Data {
         guard url.isFileURL else { throw Error.unsupportedURL }
 
         let hasSecurityScopedAccess = url.startAccessingSecurityScopedResource()
@@ -29,6 +34,7 @@ nonisolated enum ReceiptImageImport {
             if hasSecurityScopedAccess {
                 url.stopAccessingSecurityScopedResource()
             }
+            removeIfInboxCopy(url, inboxDirectory: inboxDirectory)
         }
 
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
@@ -45,5 +51,15 @@ nonisolated enum ReceiptImageImport {
         }
 
         return data
+    }
+
+    /// Syl keeps the receipt's data, so the inbox copy is no longer needed. Never touches
+    /// files outside the inbox, which belong to the user.
+    private static func removeIfInboxCopy(_ url: URL, inboxDirectory: URL) {
+        let inboxPath = inboxDirectory.resolvingSymlinksInPath().path(percentEncoded: false)
+        let filePath = url.resolvingSymlinksInPath().path(percentEncoded: false)
+        let prefix = inboxPath.hasSuffix("/") ? inboxPath : inboxPath + "/"
+        guard filePath.hasPrefix(prefix) else { return }
+        try? FileManager.default.removeItem(at: url)
     }
 }
