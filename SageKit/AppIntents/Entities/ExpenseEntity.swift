@@ -113,7 +113,6 @@ public struct ExpenseEntity: IndexedEntity {
     }
 }
 
-@available(iOS 27.0, macOS 27.0, visionOS 27.0, *)
 extension ExpenseEntity.ExpenseEntityQuery: IndexedEntityQuery {
     // The system calls these when it needs Syl to rebuild index entries, such as after
     // Spotlight loses its index. Syl tracks its own changes, so both rebuild from the store.

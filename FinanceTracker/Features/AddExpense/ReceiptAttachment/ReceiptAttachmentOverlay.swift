@@ -223,16 +223,9 @@ extension View {
     /// photos or the camera. Plain glass keeps its label color over bright
     /// images (white receipts, light photos), so an accent or white label washes
     /// out; darkening the glass keeps it legible there and over the black panel.
-    @ViewBuilder
     func receiptPanelGlassButtonStyle() -> some View {
-        if #available(iOS 26.1, *) {
-            buttonStyle(.glass(.regular.tint(.black.opacity(0.4))))
-                .foregroundStyle(.primary)
-                .environment(\.colorScheme, .dark)
-        } else {
-            buttonStyle(.glass)
-                .foregroundStyle(.primary)
-                .environment(\.colorScheme, .dark)
-        }
+        buttonStyle(.glass(.regular.tint(.black.opacity(0.4))))
+            .foregroundStyle(.primary)
+            .environment(\.colorScheme, .dark)
     }
 }

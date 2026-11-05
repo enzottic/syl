@@ -6,7 +6,6 @@ import SwiftUI
 import SageKit
 import UIKit
 
-@available(iOS 26.0, *)
 @Observable
 @MainActor
 final class ExpenseReceiptImporter {

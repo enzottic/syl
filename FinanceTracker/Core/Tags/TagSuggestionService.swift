@@ -16,17 +16,15 @@ class TagSuggestionService {
 
     static var isAIAvailable: Bool {
         #if canImport(FoundationModels)
-        if #available(iOS 26, *) {
-            return SystemLanguageModel.default.isAvailable
-        }
-        #endif
+        return SystemLanguageModel.default.isAvailable
+        #else
         return false
+        #endif
     }
 
-    // MARK: - AI types (iOS 26+)
+    // MARK: - AI types
 
     #if canImport(FoundationModels)
-    @available(iOS 26, *)
     @Generable(description: "A tag suggestion for an expense")
     struct TagSuggestion {
         @Guide(description: "The name of the most appropriate tag from the provided list, exactly as written in the list")
@@ -52,13 +50,11 @@ class TagSuggestionService {
             }
         }
 
-        // AI — iOS 26+ only; runs for .ai, and as fallback for .both when history missed
+        // AI — runs for .ai, and as fallback for .both when history missed
         #if canImport(FoundationModels)
-        if #available(iOS 26, *) {
-            if smartTaggingMode == .ai || smartTaggingMode == .both {
-                if let match = await suggestTagWithAI(trimmed, tagNames) {
-                    return (match, .ai)
-                }
+        if smartTaggingMode == .ai || smartTaggingMode == .both {
+            if let match = await suggestTagWithAI(trimmed, tagNames) {
+                return (match, .ai)
             }
         }
         #endif
@@ -80,10 +76,9 @@ class TagSuggestionService {
         return tagNames.first { $0.lowercased() == historyTag.lowercased() }
     }
 
-    // MARK: - AI (iOS 26+)
+    // MARK: - AI
 
     #if canImport(FoundationModels)
-    @available(iOS 26, *)
     private func suggestTagWithAI(
         _ expenseName: String,
         _ tagNames: [String]

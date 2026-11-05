@@ -10,7 +10,6 @@ import Vision
 import FoundationModels
 import SageKit
 
-@available(iOS 26.0, *)
 class ReceiptParserService {
     init() {}
 
@@ -20,17 +19,15 @@ class ReceiptParserService {
         }
 
 #if compiler(>=6.4)
-        if #available(iOS 27.0, *) {
-            return try await parseReceiptMultimodal(image: image, tags: tags)
-        }
-#endif
-        
+        return try await parseReceiptMultimodal(image: image, tags: tags)
+#else
+        // Toolchains without image attachments read the receipt's text instead.
         let text = try await recognizeTextInImage(image: image)
         return try await extractExpenseDataFromText(receiptText: text, tags: tags)
+#endif
     }
-    
+
 #if compiler(>=6.4)
-    @available(iOS 27.0, *)
     private func parseReceiptMultimodal(image: UIImage, tags: [ExpenseTag]) async throws -> ParsedExpense {
         let session = LanguageModelSession()
         
@@ -123,7 +120,6 @@ If the text in the image does not describe an receipt, then set the isReceipt fl
     }
 }
 
-@available(iOS 26.0, *)
 enum ReceiptParserError: LocalizedError {
     case languageModelUnavailable
     case imageEncodingFailed
@@ -150,7 +146,6 @@ enum ReceiptParserError: LocalizedError {
     }
 }
 
-@available(iOS 26.0, *)
 @Generable(description: "A collection of details for an expense parsed from a receipt")
 struct ParsedExpense {
     @Guide(description: "A flag that denotes whether the supplied image/text is a receipt. If the image is not a receipt, set to false.")

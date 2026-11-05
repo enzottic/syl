@@ -606,12 +606,10 @@ struct OnboardingView: View {
     }
 }
 
-struct WelcomeViewPreviews: PreviewProvider {
-    static var previews: some View {
-        ForEach(OnboardingView.OnboardingStep.allCases, id: \.self) { step in
-            OnboardingView(step: step)
-                .environmentInjection(empty: true)
-                .previewDisplayName(String(describing: step))
-        }
-    }
-}
+#Preview("welcome") { OnboardingView(step: .welcome).environmentInjection(empty: true) }
+#Preview("budget") { OnboardingView(step: .budget).environmentInjection(empty: true) }
+#Preview("allocation") { OnboardingView(step: .allocation).environmentInjection(empty: true) }
+#Preview("sync") { OnboardingView(step: .sync).environmentInjection(empty: true) }
+#Preview("tags") { OnboardingView(step: .tags).environmentInjection(empty: true) }
+#Preview("reminders") { OnboardingView(step: .reminders).environmentInjection(empty: true) }
+#Preview("complete") { OnboardingView(step: .complete).environmentInjection(empty: true) }
