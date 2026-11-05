@@ -11,7 +11,7 @@ struct CategorySpotlightProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: CategorySpotlightAppIntent, in context: Context) async -> Timeline<CategorySpotlightEntry> {
         let entry = await loadEntry(category: configuration.category)
-        return Timeline(entries: [entry], policy: .after(entry.date.addingTimeInterval(15 * 60)))
+        return Timeline(entries: [entry], policy: WidgetRefreshPolicy.standard(after: entry.date))
     }
 
     @MainActor

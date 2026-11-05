@@ -32,6 +32,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
 	<key>UIAppFonts</key>
@@ -42,7 +44,5 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
-	<key>UIFileSharingEnabled</key>
-	<true/>
 </dict>
 </plist>

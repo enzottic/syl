@@ -53,6 +53,21 @@ struct SettingsView: View {
         @Bindable var router = router
         NavigationStack(path: $router.settingsPath) {
             List {
+                if SageModelContainer.isRunningWithoutCloudSync {
+                    Section {
+                        Label {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("iCloud Sync Is Paused")
+                                    .font(.headline)
+                                Text("Syl couldn't open your iCloud-synced data, so it's running without sync. Changes stay on this device until sync resumes. Syl tries iCloud again each time it opens.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "icloud.slash")
+                        }
+                    }
+                }
                 Section {
                     let page = SettingsPage.appearance
                     NavigationLink(value: page) {
@@ -162,7 +177,7 @@ struct SettingsView: View {
                 .disabled(isChangingData)
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Delete expenses, recurring rules, tags, accounts, settings, and Syl's local CSV export from this device. Syl also requests deletion of synced records and preferences in iCloud when available. iCloud updates take time; records not yet downloaded may remain. If iCloud access is disabled, cloud data may return when access is restored. Backups and other exported copies must be deleted separately. This cannot be undone.")
+                Text("Delete expenses, recurring rules, tags, settings, and Syl's local CSV export from this device. Syl also requests deletion of synced records and preferences in iCloud when available. iCloud updates take time; records not yet downloaded may remain. If iCloud access is disabled, cloud data may return when access is restored. Backups and other exported copies must be deleted separately. This cannot be undone.")
             }
             .safeAreaInset(edge: .bottom) {
                 if let activeDataOperation {

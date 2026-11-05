@@ -92,6 +92,7 @@ struct RecentExpensesWidget: Widget {
                     }
                 } else {
                     RecentExpensesEntryView(entry: entry)
+                        .privacySensitive()
                 }
             }
             .fontDesign(.rounded)

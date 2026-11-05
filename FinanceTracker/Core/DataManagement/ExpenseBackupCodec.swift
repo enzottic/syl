@@ -353,13 +353,14 @@ nonisolated enum ExpenseBackupCodec {
     @MainActor static func snapshot(modelContainer: ModelContainer, currency: String) throws -> ExpenseBackup {
         let context = ModelContext(modelContainer)
         context.autosaveEnabled = false
-        let expenses = try context.fetch(FetchDescriptor<Expense>())
-        let persistedTags = Dictionary(grouping: try context.fetch(FetchDescriptor<ExpenseTag>()), by: \.id)
+        // Restoring one backup on two devices before they sync leaves records that share a UUID.
+        // They are copies of the same backup record, so the backup keeps one of each.
+        var expenseIDs = Set<UUID>()
+        let expenses = try context.fetch(FetchDescriptor<Expense>()).filter { expenseIDs.insert($0.id).inserted }
         var tags: [UUID: ExpenseBackup.Tag] = [:]
         let records = try expenses.map { expense in
-            let selected = (expense.tags?.isEmpty == false ? expense.tags : expense.tag.map { [$0] }) ?? []
-            for tag in selected {
-                guard persistedTags[tag.id]?.count == 1 else { throw ExpenseBackupError.invalid("duplicate or missing persisted tag ID.") }
+            let selected = uniqueByID((expense.tags?.isEmpty == false ? expense.tags : expense.tag.map { [$0] }) ?? [])
+            for tag in selected where tags[tag.id] == nil {
                 tags[tag.id] = try .init(tag: tag)
             }
             // Preserve moved, keyless legacy occurrences using the existing backup format.
@@ -375,10 +376,10 @@ nonisolated enum ExpenseBackupCodec {
                 recurringExpenseID: expense.recurringExpenseId?.uuidString.lowercased(), recurringOccurrenceKey: occurrenceKey
             )
         }
-        let rules = try context.fetch(FetchDescriptor<RecurringExpenseRule>()).map { rule in
-            let selected = (rule.tags?.isEmpty == false ? rule.tags : rule.tag.map { [$0] }) ?? []
-            for tag in selected {
-                guard persistedTags[tag.id]?.count == 1 else { throw ExpenseBackupError.invalid("duplicate or missing persisted tag ID.") }
+        var ruleIDs = Set<UUID>()
+        let rules = try context.fetch(FetchDescriptor<RecurringExpenseRule>()).filter { ruleIDs.insert($0.id).inserted }.map { rule in
+            let selected = uniqueByID((rule.tags?.isEmpty == false ? rule.tags : rule.tag.map { [$0] }) ?? [])
+            for tag in selected where tags[tag.id] == nil {
                 tags[tag.id] = try .init(tag: tag)
             }
             return ExpenseBackup.Rule(
@@ -394,5 +395,10 @@ nonisolated enum ExpenseBackupCodec {
         let backup = ExpenseBackup(currency: currency, tags: Array(tags.values), expenses: records, recurringRules: rules)
         try validate(backup)
         return backup
+    }
+
+    private static func uniqueByID(_ tags: [ExpenseTag]) -> [ExpenseTag] {
+        var seen = Set<UUID>()
+        return tags.filter { seen.insert($0.id).inserted }
     }
 }

@@ -56,7 +56,7 @@ struct AddExpenseIntentTests {
         intent.currencyCodeProvider = { "USD" }
         intent.name = "Coffee"
         intent.amount = IntentCurrencyAmount(amount: 4, currencyCode: "USD")
-        intent.tag = tag.entity
+        intent.tags = [tag.entity]
         intent.category = .wants
 
         _ = try await intent.perform()

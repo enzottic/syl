@@ -49,7 +49,7 @@ struct DailyChartProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<DailyChartEntry>) -> Void) {
         Task { @MainActor in
             let entry = context.isPreview ? .preview : loadEntry()
-            completion(Timeline(entries: [entry], policy: .after(entry.date.addingTimeInterval(15 * 60))))
+            completion(Timeline(entries: [entry], policy: WidgetRefreshPolicy.standard(after: entry.date)))
         }
     }
 
@@ -149,6 +149,7 @@ struct DailyChartWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DailyChartProvider()) { entry in
             DailyChartEntryView(entry: entry)
+                .privacySensitive()
                 .containerBackground(.sageBackground, for: .widget)
         }
         .configurationDisplayName("Daily Spending")

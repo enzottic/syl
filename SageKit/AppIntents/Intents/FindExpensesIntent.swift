@@ -6,6 +6,7 @@
 import Foundation
 import AppIntents
 import SwiftData
+import SwiftUI
 
 public enum ExpenseTimePeriod: String, AppEnum {
     case today
@@ -65,16 +66,30 @@ public enum ExpenseTimePeriod: String, AppEnum {
     }
 }
 
+// The type keeps its original name so saved Shortcuts continue to resolve it.
 public struct FindExpensesIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Find Expenses"
+    public static var title: LocalizedStringResource = "Get Spending Total"
+    public static var description = IntentDescription(
+        "Adds up what was spent in a time period, optionally only for one tag, one category, or expenses whose name contains some text. Returns the total in the ledger's currency."
+    )
     public static var openAppWhenRun: Bool = false
     public static var authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
-    
 
-    @Parameter(title: "Time Period", default: .thisMonth) public var timePeriod: ExpenseTimePeriod
-    @Parameter(title: "Tag") public var tag: ExpenseTagEntity?
-    @Parameter(title: "Category") public var category: ExpenseCategory?
-    @Parameter(title: "Name Contains") public var nameFilter: String?
+    @Parameter(
+        title: "Time Period",
+        description: "The calendar period to total. Weeks and months follow the device's calendar.",
+        default: .thisMonth
+    )
+    public var timePeriod: ExpenseTimePeriod
+
+    @Parameter(title: "Tag", description: "Only count expenses with this tag.")
+    public var tag: ExpenseTagEntity?
+
+    @Parameter(title: "Category", description: "Only count expenses in this category: Needs, Wants, or Savings.")
+    public var category: ExpenseCategory?
+
+    @Parameter(title: "Name Contains", description: "Only count expenses whose name contains this text, ignoring case.")
+    public var nameFilter: String?
 
     @Dependency
     var expenseStore: ExpenseStore
@@ -90,9 +105,9 @@ public struct FindExpensesIntent: AppIntent {
     public init() { }
     
     @MainActor
-    public func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<Double> {
+    public func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<Double> & ShowsSnippetView {
         let (start, end) = timePeriod.dateRange
-        var expenses = expenseStore.fetchExpenses(from: start, to: end)
+        var expenses = try expenseStore.fetchExpenses(from: start, to: end)
 
         if let tag {
             expenses = expenses.filter { ($0.tags ?? []).contains { $0.id == tag.id } }
@@ -106,16 +121,33 @@ public struct FindExpensesIntent: AppIntent {
 
         let total = expenses.total
         let period = timePeriod.dialogDescription
-
+        let dialog: String
         if let tag, let category {
-            return .result(value: total, dialog: "You spent \(total.currencyString) on \(tag.name.lowercased()) in \(category.rawValue.lowercased()) \(period).")
+            dialog = "You spent \(total.currencyString) on \(tag.name.lowercased()) in \(category.rawValue.lowercased()) \(period)."
         } else if let tag {
-            return .result(value: total, dialog: "You spent \(total.currencyString) on \(tag.name.lowercased()) \(period).")
+            dialog = "You spent \(total.currencyString) on \(tag.name.lowercased()) \(period)."
         } else if let category {
-            return .result(value: total, dialog: "You spent \(total.currencyString) on \(category.rawValue.lowercased()) \(period).")
+            dialog = "You spent \(total.currencyString) on \(category.rawValue.lowercased()) \(period)."
         } else if let nameFilter, !nameFilter.isEmpty {
-            return .result(value: total, dialog: "You spent \(total.currencyString) on \"\(nameFilter)\" \(period).")
+            dialog = "You spent \(total.currencyString) on \"\(nameFilter)\" \(period)."
+        } else {
+            dialog = "You spent \(total.currencyString) \(period)."
         }
-        return .result(value: total, dialog: "You spent \(total.currencyString) \(period).")
+        let filters = [tag?.name, category?.rawValue, nameFilter.flatMap { $0.isEmpty ? nil : "\u{201C}\($0)\u{201D}" }]
+        return .result(
+            value: total,
+            dialog: IntentDialog(stringLiteral: dialog),
+            view: AmountSummarySnippetView(
+                title: "Spent \(period)",
+                amount: total,
+                detail: SpendingSummary.detail(count: expenses.count, filters: filters)
+            )
+        )
     }
 }
+
+// Released Xcode lacks the 27.3 SDK, and the `@AppIntent(.tool)` macro would make the whole type 27.3+.
+#if canImport(AppIntents, _version: 301.2)
+@available(iOS 27.3, *)
+extension FindExpensesIntent: ToolIntent { }
+#endif

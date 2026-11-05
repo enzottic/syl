@@ -17,7 +17,7 @@ struct EntityQueryTests {
         store.context.insert(coffee)
         store.context.insert(cafe)
         try store.save()
-        var query = ExpenseTagEntityQuery()
+        let query = ExpenseTagEntityQuery()
         query.expenseStore = store
 
         #expect(try await query.entities(matching: " coff ").map(\.id) == [coffee.id])
@@ -34,7 +34,7 @@ struct EntityQueryTests {
         store.context.insert(coffee)
         store.context.insert(ExpenseTag(name: "Travel", uiColor: .blue, emoji: "✈️"))
         try store.save()
-        var query = ExpenseTagEntityQuery()
+        let query = ExpenseTagEntityQuery()
         query.expenseStore = store
 
         #expect(try await query.entities(for: [coffee.id, UUID()]).map(\.id) == [coffee.id])
@@ -52,7 +52,7 @@ struct EntityQueryTests {
         store.context.insert(newer)
         store.context.insert(Expense(name: "Rent", amount: 1_200))
         try store.save()
-        var query = ExpenseEntity.ExpenseEntityQuery()
+        let query = ExpenseEntity.ExpenseEntityQuery()
         query.expenseStore = store
 
         #expect(try await query.entities(matching: "coffee").map(\.id) == [newer.id, older.id])

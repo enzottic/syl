@@ -6,7 +6,9 @@
 //
 
 import Foundation
+import OSLog
 import SwiftData
+import Synchronization
 
 public enum SageModelContainer {
     public enum Purpose: Sendable {
@@ -18,11 +20,15 @@ public enum SageModelContainer {
 
     public enum Error: LocalizedError, Equatable {
         case appGroupUnavailable
+        /// Opening without iCloud sync was already tried and also failed.
+        case unavailableWithoutCloudSync(NSError)
 
         public var errorDescription: String? {
             switch self {
             case .appGroupUnavailable:
                 return "The shared app storage is unavailable."
+            case let .unavailableWithoutCloudSync(error):
+                return error.localizedDescription
             }
         }
     }
@@ -44,18 +50,51 @@ public enum SageModelContainer {
         UIColorValueTransformer.register()
 
         let schema = Schema(versionedSchema: SageSchemaV9.self)
-        let config = try configuration(for: purpose, schema: schema)
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: SageSchemaMigrationPlan.self,
-            configurations: [config]
-        )
+        let container: ModelContainer
+        do {
+            container = try openContainer(schema: schema, configuration: configuration(for: purpose, schema: schema))
+            if case .app = purpose, supportsCloudSync {
+                isCloudSyncPaused = false
+            }
+        } catch where purpose == .app && supportsCloudSync && isCloudSyncPaused {
+            do {
+                container = try openContainer(schema: schema, configuration: appConfiguration(schema: schema, cloudKit: false))
+                openedWithoutCloudSync.withLock { $0 = true }
+            } catch {
+                throw Error.unavailableWithoutCloudSync(error as NSError)
+            }
+        }
 
         if case .app = purpose {
-            try backfillMultiTags(container)
+            do {
+                try backfillMultiTags(container)
+            } catch {
+                logger.error("Legacy tag backfill failed: \(error.localizedDescription, privacy: .public)")
+            }
         }
 
         return container
+    }
+
+    /// Set from the recovery screen when the iCloud-backed store can't open, so Syl opens the same
+    /// store without sync. Every launch still tries iCloud first and clears this once that works.
+    public nonisolated static var isCloudSyncPaused: Bool {
+        get { UserDefaults(suiteName: appGroupIdentifier)?.bool(forKey: cloudSyncPausedKey) ?? false }
+        set { UserDefaults(suiteName: appGroupIdentifier)?.set(newValue, forKey: cloudSyncPausedKey) }
+    }
+
+    /// Whether this process opened the store without sync. Another process (a widget) can clear
+    /// `isCloudSyncPaused` while this one keeps running without sync.
+    public nonisolated static var isRunningWithoutCloudSync: Bool {
+        openedWithoutCloudSync.withLock { $0 }
+    }
+
+    private nonisolated static let openedWithoutCloudSync = Mutex(false)
+    private nonisolated static let cloudSyncPausedKey = "cloudSyncPausedAfterStoreFailure"
+    private nonisolated static let logger = Logger(subsystem: "me.enzottic.FinanceTracker", category: "Persistence")
+
+    private static nonisolated func openContainer(schema: Schema, configuration: ModelConfiguration) throws -> ModelContainer {
+        try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [configuration])
     }
 
     private static nonisolated func configuration(
@@ -75,7 +114,8 @@ public enum SageModelContainer {
     }
 
     private static nonisolated func appConfiguration(
-        schema: Schema
+        schema: Schema,
+        cloudKit: Bool = true
     ) throws -> ModelConfiguration {
         guard let groupURL = FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
@@ -94,7 +134,7 @@ public enum SageModelContainer {
         return ModelConfiguration(
             schema: schema,
             url: storeURL,
-            cloudKitDatabase: .automatic
+            cloudKitDatabase: cloudKit ? .automatic : .none
         )
         #endif
     }

@@ -12,8 +12,7 @@ public struct ExpenseTagEntity: IndexedEntity {
     public static var typeDisplayRepresentation: TypeDisplayRepresentation = "Tag"
     public static var defaultQuery = ExpenseTagEntityQuery()
 
-    /// Tags reveal what someone spends on, so they get the same protection as expenses.
-    /// The system enforces this requirement from iOS 27.3.
+    /// Enforced by the system from iOS 27.3.
     public static var authenticationPolicy: IntentAuthenticationPolicy { .requiresAuthentication }
 
     public let id: UUID
@@ -30,6 +29,15 @@ public struct ExpenseTagEntity: IndexedEntity {
         return DisplayRepresentation(title: "\(emoji) \(name)")
     }
 
+    var glyph: TagGlyph {
+        symbolName.map(TagGlyph.symbol) ?? .emoji(emoji)
+    }
+
+    /// The tag as plain text. A symbol can't be written into text, so a symbol tag is just its name.
+    var plainLabel: String {
+        symbolName == nil ? "\(emoji) \(name)" : name
+    }
+
     init(id: UUID, name: String, emoji: String, symbolName: String?) {
         // Plain stored properties first: assigning a @Property goes through `self`.
         self.id = id
@@ -41,7 +49,7 @@ public struct ExpenseTagEntity: IndexedEntity {
 
 public extension ExpenseTag {
     var entity: ExpenseTagEntity {
-        ExpenseTagEntity(id: self.id, name: self.name, emoji: self.emoji, symbolName: self.symbolName)
+        ExpenseTagEntity(id: self.id, name: self.name, emoji: self.emoji, symbolName: self.glyph.symbolValue)
     }
 }
 
@@ -54,10 +62,10 @@ public struct ExpenseTagEntityQuery: EntityStringQuery {
         let descriptor = FetchDescriptor<ExpenseTag>(
             predicate: #Predicate { identifiers.contains($0.id) }
         )
+        try expenseStore.requireAvailable()
         return try expenseStore.context.fetch(descriptor).map(\.entity)
     }
 
-    /// Lets Siri resolve a spoken tag such as "coffee" or "☕" to the user's tag.
     public func entities(matching string: String) async throws -> [ExpenseTagEntity] {
         let query = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }
@@ -65,10 +73,12 @@ public struct ExpenseTagEntityQuery: EntityStringQuery {
             predicate: #Predicate { $0.name.localizedStandardContains(query) || $0.emoji == query },
             sortBy: [SortDescriptor(\.name)]
         )
+        try expenseStore.requireAvailable()
         return try expenseStore.context.fetch(descriptor).map(\.entity)
     }
 
     public func suggestedEntities() async throws -> [ExpenseTagEntity] {
+        try expenseStore.requireAvailable()
         let all = try expenseStore.context.fetch(FetchDescriptor<ExpenseTag>(sortBy: [SortDescriptor(\.name)]))
         return all.map(\.entity)
     }

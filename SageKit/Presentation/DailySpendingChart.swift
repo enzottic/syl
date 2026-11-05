@@ -29,16 +29,20 @@ public struct DailySpendingChart: View {
     /// Pass every budget that can be shown and toggle `isVisible`, so switching between them
     /// cross-fades rather than inserting and removing lines.
     public struct Budget: Identifiable {
+        public enum Kind: Sendable { case budget, income }
+
         public let id: String
         public let amount: Double
         public let color: Color
         public let isVisible: Bool
+        public let kind: Kind
 
-        public init(id: String, amount: Double, color: Color, isVisible: Bool) {
+        public init(id: String, amount: Double, color: Color, isVisible: Bool, kind: Kind = .budget) {
             self.id = id
             self.amount = amount
             self.color = color
             self.isVisible = isVisible
+            self.kind = kind
         }
     }
 
@@ -73,12 +77,14 @@ public struct DailySpendingChart: View {
                     .opacity(budget.isVisible ? 1 : 0)
                     .annotation(position: .top, alignment: .leading, spacing: 2,
                                 overflowResolution: .init(x: .fit(to: .plot), y: .fit(to: .plot))) {
-                        Text("Budget \(currencyLabel(budget.amount, rounded: true))")
+                        Text(budget.kind == .income
+                             ? "Income \(currencyLabel(budget.amount, rounded: true))"
+                             : "Budget \(currencyLabel(budget.amount, rounded: true))")
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(.secondary)
                             .opacity(budget.isVisible ? 1 : 0)
                     }
-                    .accessibilityLabel("Budget")
+                    .accessibilityLabel(budget.kind == .income ? "Income" : "Budget")
                     .accessibilityValue(currencyLabel(budget.amount))
                     .accessibilityHidden(!budget.isVisible)
             }

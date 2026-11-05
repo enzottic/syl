@@ -1,6 +1,6 @@
 # Syl Privacy Policy
 
-Last updated: October 28, 2026
+Last updated: November 5, 2026
 
 Syl stores your financial data on your devices and automatically syncs it with
 your private iCloud storage when available. Your expenses are never sent to the developer. Syl does not
@@ -17,6 +17,20 @@ Receipt scanning uses Apple's on-device text recognition and Apple Intelligence
 features. Receipt images and recognized text are not uploaded to the developer
 or an external receipt-processing service. Information you save from a receipt
 is treated like any other expense.
+
+Smart Tagging suggests a tag for a new expense by reading its name with Apple's
+on-device language model. Suggestions are generated on your device, and the
+expense name isn't sent to the developer or another service. You can choose how
+Smart Tagging works, or turn it off, in Syl's tag settings.
+
+## Siri, Shortcuts, and Spotlight
+
+Syl makes your expenses and tags available to Siri, Shortcuts, and Spotlight on
+your device, so you can search for expenses, add them by voice, or ask about your
+budget. Apple stores this search index on your device and handles requests under
+its own [privacy policy](https://www.apple.com/legal/privacy/). Syl updates the
+index when you edit or delete expenses, and removes entries when you delete data.
+Actions that show or change financial data require your device to be unlocked.
 
 ## iCloud Sync
 
@@ -90,10 +104,13 @@ access to historical analytics for six months. See
 [Cloudflare's documentation](https://developers.cloudflare.com/web-analytics/faq/).
 These website metrics do not include your Syl expense records.
 
-The page also loads fonts from Adobe, which involves requests to Adobe's servers.
-See [Adobe's privacy policy](https://www.adobe.com/privacy/policy.html) for its
+The page also loads fonts from Adobe Fonts and Google Fonts, which involves
+requests to Adobe's and Google's servers. These requests can include your IP
+address and browser details. See
+[Adobe's privacy policy](https://www.adobe.com/privacy/policy.html) and
+[Google's privacy policy](https://policies.google.com/privacy) for their
 data-handling practices.
 
 ## Contact
 
-For privacy questions or requests, send an email to [contact@getsyl.app](mailto:contact@getsyl.app)
+For privacy questions or requests, send an email to [contact@getsyl.app](mailto:contact@getsyl.app).

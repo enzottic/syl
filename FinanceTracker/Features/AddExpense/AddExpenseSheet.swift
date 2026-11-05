@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import SwiftData
 import SageKit
@@ -200,18 +201,16 @@ struct AddExpenseSheet: View {
     private func suggestTag() {
         guard draft.tags.isEmpty else { return }
         let name = draft.name
-        let tags = allTags.filter { !$0.isHiddenFromExpenseEntry }
-        let history = (try? ExpenseSuggestionHistory.newestTaggedMatch(for: name, in: modelContext)).map { [$0] } ?? []
+        let tags = allTags
         suggestionTask?.cancel()
         suggestionTask = Task {
             let suggestion = await TagSuggestionService().suggestTag(
-                for: name, existingExpenses: history, tagNames: tags.map(\.name),
-                smartTaggingMode: config.smartTaggingMode)
+                forExpenseNamed: name, tags: tags, in: modelContext, mode: config.smartTaggingMode)
             guard !Task.isCancelled, draft.name == name, draft.tags.isEmpty,
                   currentStep.rawValue < AddExpenseStep.details.rawValue,
-                  let suggestion, let tag = tags.first(where: { $0.name == suggestion.tagName }) else { return }
-            draft.tags = [tag]
-            aiSuggestedTagIDs = suggestion.source == .ai ? [tag.id] : []
+                  let suggestion else { return }
+            draft.tags = [suggestion.tag]
+            aiSuggestedTagIDs = suggestion.source == .ai ? [suggestion.tag.id] : []
         }
     }
 
@@ -253,9 +252,10 @@ struct AddExpenseSheet: View {
     private func saveExpense() {
         guard !isSaving else { return }
         do {
-            try draft.validate(currencyCode: config.ledgerCurrencyCode)
+            let amount = try draft.validate(currencyCode: config.ledgerCurrencyCode)
             isSaving = true
             try ExpenseEntrySaver(modelContainer: modelContext.container).save(draft, currencyCode: config.ledgerCurrencyCode)
+            donateAddExpense(amount: amount)
             WidgetCenter.shared.reloadAllTimelines()
             dismiss()
             appRouter.showToast(SageToast(message: "Expense saved", kind: .success))
@@ -264,6 +264,13 @@ struct AddExpenseSheet: View {
             presentError(error is ExpenseEntryDraft.ValidationError ? error.localizedDescription :
                 "Syl could not save this expense. Check available storage and try again.")
         }
+    }
+
+    /// Recurring expenses aren't donated: the Add Expense intent can't describe them.
+    private func donateAddExpense(amount: Double) {
+        guard !draft.isRecurring else { return }
+        let intent = AddExpenseAppIntent(donating: draft, amount: amount, currencyCode: config.ledgerCurrencyCode)
+        Task { _ = try? await IntentDonationManager.shared.donate(intent: intent) }
     }
 
     private func applyReceipt(_ parsed: ParsedExpense) {

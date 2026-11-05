@@ -24,6 +24,21 @@ final public class ExpenseStore {
     var context: ModelContext
     /// Where income and allocations are read from; tests pass an isolated store.
     let preferences: UserDefaults
+    /// Set when the real store couldn't open; reads and writes then throw instead of using empty data.
+    private(set) var isUnavailable = false
+
+    /// Registered for App Intents when the store can't open, so Siri reports an error
+    /// instead of crashing on an unresolved dependency.
+    public static func unavailable() throws -> ExpenseStore {
+        let store = ExpenseStore(modelContainer: try SageModelContainer.make(for: .previewEmpty),
+                                 preferences: SagePreferences.defaults)
+        store.isUnavailable = true
+        return store
+    }
+
+    func requireAvailable() throws {
+        if isUnavailable { throw StoreError.unavailable }
+    }
 
     public convenience init(modelContainer: ModelContainer) {
         self.init(modelContainer: modelContainer, preferences: SagePreferences.defaults)
@@ -43,34 +58,117 @@ final public class ExpenseStore {
 
     func addExpenseAndSave(
         _ expense: Expense,
-        tagID: UUID?,
+        tagIDs: [UUID],
         save: (ModelContext) throws -> Void = { try $0.save() }
     ) throws -> ExpenseEntity {
-        // Shortcut writes must not save or roll back pending edits in the app's context.
+        try isolatedWrite(save: save) { writeContext in
+            expense.tags = try Self.tags(withIDs: tagIDs, in: writeContext)
+            writeContext.insert(expense)
+            return expense.entity
+        }
+    }
+
+    func updateExpenseAndSave(
+        id: UUID,
+        save: (ModelContext) throws -> Void = { try $0.save() },
+        change: (Expense, ModelContext) throws -> Void
+    ) throws -> ExpenseEntity {
+        try isolatedWrite(save: save) { writeContext in
+            let expense = try Self.expense(withID: id, in: writeContext)
+            try change(expense, writeContext)
+            return expense.entity
+        }
+    }
+
+    /// Order isn't kept: the tags relationship is unordered.
+    static func tags(withIDs ids: [UUID], in context: ModelContext) throws -> [ExpenseTag] {
+        guard !ids.isEmpty else { return [] }
+        let tags = try context.fetch(FetchDescriptor<ExpenseTag>(
+            predicate: #Predicate { ids.contains($0.id) }
+        ))
+        var seen = Set<UUID>()
+        return ids.compactMap { id in
+            guard seen.insert(id).inserted else { return nil }
+            return tags.first { $0.id == id }
+        }
+    }
+
+    public enum StoreError: LocalizedError, Equatable {
+        case unavailable
+
+        public var errorDescription: String? {
+            switch self {
+            case .unavailable: "Syl can't open your data right now. Open Syl to see what happened."
+            }
+        }
+    }
+
+    public enum WriteError: LocalizedError, Equatable {
+        case expenseNotFound
+
+        public var errorDescription: String? {
+            switch self {
+            case .expenseNotFound: "That expense no longer exists in Syl."
+            }
+        }
+    }
+
+    /// Siri and Shortcuts writes must not save or roll back pending edits in the app's context.
+    private func isolatedWrite<Result>(
+        save: (ModelContext) throws -> Void,
+        _ body: (ModelContext) throws -> Result
+    ) throws -> Result {
+        try requireAvailable()
         let writeContext = ModelContext(modelContainer)
         writeContext.autosaveEnabled = false
         do {
-            if let tagID {
-                let descriptor = FetchDescriptor<ExpenseTag>(
-                    predicate: #Predicate { $0.id == tagID }
-                )
-                if let tag = try writeContext.fetch(descriptor).first {
-                    expense.tags = [tag]
-                }
-            }
-            writeContext.insert(expense)
+            let result = try body(writeContext)
             try save(writeContext)
-            return expense.entity
+            return result
         } catch {
             writeContext.rollback()
             throw error
         }
     }
 
+    private static func expense(withID id: UUID, in context: ModelContext) throws -> Expense {
+        let matches = try context.fetch(FetchDescriptor<Expense>(predicate: #Predicate { $0.id == id }))
+        guard let expense = matches.first else { throw WriteError.expenseNotFound }
+        return expense
+    }
+
+    /// The newest same-name expense's category, otherwise the one most used with `tagID`.
+    public func inferredCategory(forName name: String, tagID: UUID?) throws -> ExpenseCategory? {
+        try requireAvailable()
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            var descriptor = FetchDescriptor<Expense>(
+                predicate: #Predicate { $0.name.localizedStandardContains(trimmed) },
+                sortBy: [SortDescriptor(\.date, order: .reverse)]
+            )
+            descriptor.fetchLimit = 50
+            if let match = try context.fetch(descriptor).first(where: {
+                $0.name.compare(trimmed, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
+            }) {
+                return match.category
+            }
+        }
+
+        guard let tagID,
+              let tag = try context.fetch(FetchDescriptor<ExpenseTag>(predicate: #Predicate { $0.id == tagID })).first
+        else { return nil }
+        let counts = Dictionary(grouping: tag.taggedExpenses ?? [], by: \.category).mapValues(\.count)
+        // Ties go to the earlier category, keeping the result stable.
+        return ExpenseCategory.allCases
+            .filter { counts[$0] != nil }
+            .max { counts[$0]! < counts[$1]! }
+    }
+
     // MARK: - Read
 
     /// Returns all expenses for a given month, if provided. If not, fetches all expenses
     public func fetchExpenses(for month: Date? = nil) throws -> [Expense] {
+        try requireAvailable()
         let descriptor: FetchDescriptor<Expense>
         if let month {
             descriptor = ExpenseFetchDescriptors.month(month)
@@ -83,6 +181,7 @@ final public class ExpenseStore {
 
     /// Returns all expenses that match the identifiers
     public func fetchExpenses(with ids: [UUID]) throws -> [Expense] {
+        try requireAvailable()
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { ids.contains($0.id) }
         )
@@ -90,6 +189,7 @@ final public class ExpenseStore {
     }
 
     public func fetchRecentExpenses(limit: Int = 10) throws -> [Expense] {
+        try requireAvailable()
         var descriptor = FetchDescriptor<Expense>(
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
@@ -98,9 +198,9 @@ final public class ExpenseStore {
         return try context.fetch(descriptor)
     }
 
-    public func fetchExpenses(from startDate: Date, to endDate: Date) -> [Expense] {
-        let fetchDescriptor = ExpenseFetchDescriptors.range(start: startDate, end: endDate)
-        return (try? context.fetch(fetchDescriptor)) ?? []
+    public func fetchExpenses(from startDate: Date, to endDate: Date) throws -> [Expense] {
+        try requireAvailable()
+        return try context.fetch(ExpenseFetchDescriptors.range(start: startDate, end: endDate))
     }
 
     public func monthlyTotal(for month: Date = .now) throws -> Double {
@@ -184,9 +284,17 @@ final public class ExpenseStore {
         context.delete(expense)
     }
 
+    /// Keeps a recurring expense's rule; deleting the rule is a separate, in-app decision.
+    func deleteExpenseAndSave(id: UUID, save: (ModelContext) throws -> Void = { try $0.save() }) throws {
+        try isolatedWrite(save: save) { writeContext in
+            writeContext.delete(try Self.expense(withID: id, in: writeContext))
+        }
+    }
+
     // MARK: - Save
 
     public func save() throws {
+        try requireAvailable()
         try context.save()
     }
 }

@@ -23,37 +23,14 @@ struct WhatsNewFeature: Identifiable, Hashable {
 /// The highlights for a single marketing version, looked up by that version string.
 struct WhatsNewRelease: Identifiable, Hashable {
     let version: String
+    var intro: String? = nil
     let features: [WhatsNewFeature]
 
     var id: String { version }
 }
 
 enum WhatsNewCatalog {
-    static let releases: [WhatsNewRelease] = [
-        WhatsNewRelease(
-            version: "0.9.1",
-            features: [
-                WhatsNewFeature(
-                    icon: "square.grid.2x2.fill",
-                    title: "Redesigned Home Screen",
-                    description: "Redesigned the main home screen and category detail screens.",
-                    tint: .need
-                ),
-                WhatsNewFeature(
-                    icon: "tag.fill",
-                    title: "Multiple Tags per Expense",
-                    description: "An expense is no longer limited to a single tag.",
-                    tint: .sage
-                ),
-                WhatsNewFeature(
-                    icon: "paintpalette.fill",
-                    title: "Icons for Your Tags",
-                    description: "Tag glyphs can now be an icon, picked from a searchable icon set.",
-                    tint: .want
-                )
-            ]
-        )
-    ]
+    static let releases: [WhatsNewRelease] = []
 
     static func release(for version: String) -> WhatsNewRelease? {
         releases.first { $0.version == version }

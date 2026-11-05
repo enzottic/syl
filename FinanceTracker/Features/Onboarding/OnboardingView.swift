@@ -578,7 +578,10 @@ struct OnboardingView: View {
     private func completeOnboarding() {
         guard (monthlyIncome ?? 0) > 0 else { return }
         do {
-            for tag in tagTemplates where selectedTagNames.contains(tag.name) {
+            // Tags from another device may have synced in already.
+            let existingNames = Set(try modelContext.fetch(FetchDescriptor<ExpenseTag>()).map { $0.name.lowercased() })
+            for tag in tagTemplates where selectedTagNames.contains(tag.name)
+                && !existingNames.contains(tag.name.lowercased()) {
                 modelContext.insert(tag)
             }
             try modelContext.save()

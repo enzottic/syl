@@ -6,24 +6,18 @@
 import Foundation
 import AppIntents
 import CoreSpotlight
+import CoreTransferable
 import SwiftData
 
 public struct ExpenseEntity: IndexedEntity {
-    // MARK: Static
-
     public static let defaultQuery = ExpenseEntityQuery()
 
     public static var typeDisplayRepresentation: TypeDisplayRepresentation = "Expense"
 
-    /// Spending is personal financial information, so Siri and Shortcuts must authenticate
-    /// before presenting an expense. The system enforces this requirement from iOS 27.3.
+    /// Enforced by the system from iOS 27.3.
     public static var authenticationPolicy: IntentAuthenticationPolicy { .requiresAuthentication }
 
-    // MARK: Properties
-
-    // These titles are the vocabulary Siri uses to match requests to expense properties.
-    // Descriptions, per-property authentication, and internal visibility require the whole
-    // entity to be iOS 27.3+, which waits on raising the deployment target.
+    // Property descriptions need the whole entity to be iOS 27.3+, so they wait on the deployment target.
     public let id: UUID
     @Property(title: "Name") var name: String
     @Property(title: "Amount") var amount: Double
@@ -41,13 +35,11 @@ public struct ExpenseEntity: IndexedEntity {
     }
 
     private var subtitle: String {
-        guard !tags.isEmpty else { return "\(amount.currencyString) · \(category)" }
-        let tagsText = tags.map { "\($0.emoji) \($0.name)" }.joined(separator: ", ")
-        return "\(amount.currencyString) · \(category) · \(tagsText)"
+        let parts = [amount.currencyString, date.formatted(date: .abbreviated, time: .omitted), category.rawValue]
+            + (tags.isEmpty ? [] : [tags.map(\.plainLabel).joined(separator: ", ")])
+        return parts.joined(separator: " · ")
     }
 
-    /// Spotlight attributes beyond the display representation, so semantic search and Siri
-    /// can match an expense by its note, tags, category, and when it happened.
     public var attributeSet: CSSearchableItemAttributeSet {
         let attributes = defaultAttributeSet
         attributes.contentDescription = [subtitle, note]
@@ -84,16 +76,15 @@ public struct ExpenseEntity: IndexedEntity {
         @Dependency
         var expenseStore: ExpenseStore
 
-        /// The system uses this only when an expense is missing from the Spotlight index.
         public func allEntities() async throws -> [ExpenseEntity] {
             try expenseStore.fetchExpenses().map(\.entity)
         }
 
-        /// Matches names, notes, and tag names, newest first, like in-app search.
         public func entities(matching string: String) async throws -> [ExpenseEntity] {
             let query = string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !query.isEmpty else { return [] }
             let descriptor = ExpenseFetchDescriptors.search(query, visibleLimit: Self.matchLimit)
+            try expenseStore.requireAvailable()
             return try expenseStore.context.fetch(descriptor)
                 .prefix(Self.matchLimit)
                 .map(\.entity)
@@ -114,8 +105,6 @@ public struct ExpenseEntity: IndexedEntity {
 }
 
 extension ExpenseEntity.ExpenseEntityQuery: IndexedEntityQuery {
-    // The system calls these when it needs Syl to rebuild index entries, such as after
-    // Spotlight loses its index. Syl tracks its own changes, so both rebuild from the store.
     public func reindexEntities(
         for identifiers: [ExpenseEntity.ID],
         indexDescription: CSSearchableIndexDescription
@@ -125,6 +114,21 @@ extension ExpenseEntity.ExpenseEntityQuery: IndexedEntityQuery {
 
     public func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
         try await ExpenseSpotlightIndexer.shared?.rebuild()
+    }
+}
+
+extension ExpenseEntity: Transferable {
+    public static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: \.shareText)
+    }
+
+    var shareText: String {
+        var parts = [name, amount.currencyString, category.rawValue, date.formatted(date: .abbreviated, time: .omitted)]
+        if !tags.isEmpty {
+            parts.append(tags.map(\.plainLabel).joined(separator: ", "))
+        }
+        let line = parts.joined(separator: " · ")
+        return note.isEmpty ? line : "\(line)\n\(note)"
     }
 }
 

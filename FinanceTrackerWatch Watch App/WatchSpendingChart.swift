@@ -14,6 +14,7 @@ struct WatchSpendingChart: View {
                 Text("\(days.reduce(0) { $0 + $1.amount }.formatted(.currency(code: snapshot.currencyCode))) total")
                     .font(.callout).fontWeight(.semibold)
                     .monospacedDigit().minimumScaleFactor(0.65).lineLimit(1)
+                    .privacySensitive()
                 if let first = days.first, let last = days.last {
                     Text("\(dateLabel(first.date)) - \(dateLabel(last.date))")
                         .font(.caption2).foregroundStyle(.secondary)

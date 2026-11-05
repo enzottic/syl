@@ -57,7 +57,7 @@ public struct SageShortcutsProvider: AppShortcutsProvider {
                 "Get my expense total for \(\.$category) in ${applicationName}",
                 "Get my expense total for \(\.$tag) in ${applicationName}",
             ],
-            shortTitle: "Find Expenses",
+            shortTitle: "Spending Total",
             systemImageName: "magnifyingglass"
         ),
     ]

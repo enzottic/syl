@@ -51,16 +51,20 @@ struct SylOverviewTab: View {
                     .font(layout.amountFont)
                     .monospacedDigit().minimumScaleFactor(0.65).lineLimit(1)
                     .frame(maxHeight: .infinity, alignment: .leading)
+                    .privacySensitive()
                 if snapshot.monthlyBudget > 0 {
                     Text("Spent of \(snapshot.monthlyBudget.formatted(.currency(code: snapshot.currencyCode)))")
                         .foregroundStyle(.secondary)
+                        .privacySensitive()
                     WatchBudgetBar(total: snapshot.totalSpent, budget: snapshot.monthlyBudget, categories: snapshot.categories)
+                        .privacySensitive()
                 } else {
                     Text("Total spent").foregroundStyle(.secondary)
                 }
                 
                 WatchBudgetRemaining(spent: snapshot.totalSpent, budget: snapshot.monthlyBudget, currencyCode: snapshot.currencyCode)
                     .fontWeight(.semibold)
+                    .privacySensitive()
                 
                 WatchSnapshotFreshness(snapshot: snapshot)
                     .fixedSize(horizontal: false, vertical: true)
@@ -93,16 +97,20 @@ struct CategoryTabView: View {
                     .font(layout.amountFont)
                     .monospacedDigit().minimumScaleFactor(0.65).lineLimit(1)
                     .frame(maxHeight: .infinity, alignment: .leading)
+                    .privacySensitive()
                 if category.monthlyBudget > 0 {
                     Text("\(isSavings ? "Saved of" : "Spent of") \(category.monthlyBudget.formatted(.currency(code: snapshot.currencyCode)))")
                         .foregroundStyle(.secondary)
+                        .privacySensitive()
                     WatchBudgetBar(total: category.totalSpent, budget: category.monthlyBudget, categories: [category])
+                        .privacySensitive()
                 } else {
                     Text(isSavings ? "set aside" : "spent").foregroundStyle(.secondary)
                 }
                 WatchBudgetRemaining(spent: category.totalSpent, budget: category.monthlyBudget,
                                      currencyCode: snapshot.currencyCode, isSavings: isSavings)
                     .fontWeight(.semibold)
+                    .privacySensitive()
                 WatchSnapshotFreshness(snapshot: snapshot)
                     .fixedSize(horizontal: false, vertical: true)
             }
