@@ -13,7 +13,6 @@ struct DashboardView: View {
     @Environment(AppConfiguration.self) var config
     
     @State private var selectedMonth: Date
-    @State private var showingWidgetOrderSheet = false
 
     init() {
         _selectedMonth = State(initialValue: .now)
@@ -56,16 +55,6 @@ struct DashboardView: View {
             .background(.sageBackground)
             .gradientBackground()
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button("Reorder Widgets", systemImage: "arrow.up.arrow.down") {
-                            showingWidgetOrderSheet = true
-                        }
-                    } label: {
-                        Label("Dashboard Options", systemImage: "ellipsis")
-                    }
-                    .accessibilityIdentifier("dashboard-options")
-                }
                 SageToolbar(
                     onPrevious: {
                         selectedMonth = Calendar.current.date(byAdding: .month, value: -1, to: selectedMonth) ?? selectedMonth
@@ -76,9 +65,6 @@ struct DashboardView: View {
                     onAdd: { appRouter.presentSheet(.addExpense(nil)) },
                     isNextDisabled: isCurrentMonth
                 )
-            }
-            .sheet(isPresented: $showingWidgetOrderSheet) {
-                DashboardWidgetOrderSheet()
             }
             .detailRouteDestinations()
         }

@@ -69,6 +69,7 @@ private struct ColorPalette: Identifiable {
 
 struct AppearanceSettingsSection: View {
     @Environment(AppConfiguration.self) private var config
+    @State private var showingWidgetOrderSheet = false
 
     func appearanceFill(_ appearance: AppConfiguration.Appearance) -> UIColor {
         switch appearance {
@@ -188,6 +189,15 @@ struct AppearanceSettingsSection: View {
             } header: {
                 Text("Category Colors")
             }
+
+            Section {
+                Button("Reorder Widgets", systemImage: "arrow.up.arrow.down") {
+                    showingWidgetOrderSheet = true
+                }
+            }
+        }
+        .sheet(isPresented: $showingWidgetOrderSheet) {
+            DashboardWidgetOrderSheet()
         }
         .settingsBackground()
         .navigationTitle("Appearance")
