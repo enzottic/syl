@@ -107,7 +107,7 @@ public struct FindExpensesIntent: AppIntent {
     @MainActor
     public func perform() async throws -> some IntentResult & ProvidesDialog & ReturnsValue<Double> & ShowsSnippetView {
         let (start, end) = timePeriod.dateRange
-        var expenses = expenseStore.fetchExpenses(from: start, to: end)
+        var expenses = try expenseStore.fetchExpenses(from: start, to: end)
 
         if let tag {
             expenses = expenses.filter { ($0.tags ?? []).contains { $0.id == tag.id } }

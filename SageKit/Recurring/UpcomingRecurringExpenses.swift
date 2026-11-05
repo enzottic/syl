@@ -21,6 +21,7 @@ extension ExpenseStore {
         calendar: Calendar = .current,
         limit: Int = 50
     ) throws -> [UpcomingRecurringExpense] {
+        try requireAvailable()
         let today = calendar.startOfDay(for: now)
         guard days >= 0, let end = calendar.date(byAdding: .day, value: days, to: now) else { return [] }
 

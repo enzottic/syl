@@ -16,9 +16,11 @@ struct WhatsNewSheet: View {
             ScrollView {
                 VStack(spacing: 36) {
                     header
-                    
-                    Text("Thank you for being a Syl beta tester! These are just a few of the many improvments that have been made this update. Please continue to leave feedback via the e-mail link in the Settings tab.")
-                        .font(.subheadline)
+
+                    if let intro = release.intro {
+                        Text(intro)
+                            .font(.subheadline)
+                    }
 
                     VStack(alignment: .leading, spacing: 24) {
                         ForEach(release.features) { feature in
@@ -46,7 +48,7 @@ struct WhatsNewSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(.sage)
-                    .cornerRadius(15)
+                    .clipShape(.rect(cornerRadius: 15))
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 32)
@@ -57,7 +59,7 @@ struct WhatsNewSheet: View {
     private var header: some View {
         VStack(spacing: 12) {
             Text("What's New")
-                .font(.system(size: 32, weight: .bold))
+                .font(.largeTitle.bold())
                 .multilineTextAlignment(.center)
 
             Text("Version \(release.version)")
@@ -70,6 +72,13 @@ struct WhatsNewSheet: View {
 #Preview {
     Color.clear
         .sheet(isPresented: .constant(true)) {
-            WhatsNewSheet(release: WhatsNewCatalog.releases[0])
+            WhatsNewSheet(release: WhatsNewRelease(
+                version: "1.1",
+                intro: "A few highlights from this update.",
+                features: [
+                    WhatsNewFeature(icon: "tag.fill", title: "Multiple Tags per Expense",
+                                    description: "An expense is no longer limited to a single tag.")
+                ]
+            ))
         }
 }

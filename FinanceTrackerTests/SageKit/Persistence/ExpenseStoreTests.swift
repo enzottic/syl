@@ -182,4 +182,15 @@ struct ExpenseStoreTests {
 
         #expect(try store.fetchExpenses().isEmpty)
     }
+
+    @Test @MainActor
+    func unavailableStoreThrowsInsteadOfUsingEmptyData() throws {
+        let store = try ExpenseStore.unavailable()
+
+        #expect(throws: ExpenseStore.StoreError.unavailable) { try store.fetchExpenses() }
+        #expect(throws: ExpenseStore.StoreError.unavailable) { try store.monthlyTotal() }
+        #expect(throws: ExpenseStore.StoreError.unavailable) {
+            try store.addExpenseAndSave(Expense(name: "Coffee", amount: 4), tagIDs: [])
+        }
+    }
 }

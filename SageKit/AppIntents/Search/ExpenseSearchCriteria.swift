@@ -119,6 +119,7 @@ public struct ExpenseSearchResult {
 
 extension ExpenseStore {
     public func searchExpenses(_ criteria: ExpenseSearchCriteria, calendar: Calendar = .current) throws -> ExpenseSearchResult {
+        try requireAvailable()
         let (start, end) = criteria.dateInterval(calendar: calendar)
         let descriptor: FetchDescriptor<Expense> = switch (start, end) {
         case let (start?, end?): ExpenseFetchDescriptors.range(start: start, end: end)

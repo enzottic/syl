@@ -24,6 +24,21 @@ final public class ExpenseStore {
     var context: ModelContext
     /// Where income and allocations are read from; tests pass an isolated store.
     let preferences: UserDefaults
+    /// Set when the real store couldn't open; reads and writes then throw instead of using empty data.
+    private(set) var isUnavailable = false
+
+    /// Registered for App Intents when the store can't open, so Siri reports an error
+    /// instead of crashing on an unresolved dependency.
+    public static func unavailable() throws -> ExpenseStore {
+        let store = ExpenseStore(modelContainer: try SageModelContainer.make(for: .previewEmpty),
+                                 preferences: SagePreferences.defaults)
+        store.isUnavailable = true
+        return store
+    }
+
+    func requireAvailable() throws {
+        if isUnavailable { throw StoreError.unavailable }
+    }
 
     public convenience init(modelContainer: ModelContainer) {
         self.init(modelContainer: modelContainer, preferences: SagePreferences.defaults)
@@ -78,6 +93,16 @@ final public class ExpenseStore {
         }
     }
 
+    public enum StoreError: LocalizedError, Equatable {
+        case unavailable
+
+        public var errorDescription: String? {
+            switch self {
+            case .unavailable: "Syl can't open your data right now. Open Syl to see what happened."
+            }
+        }
+    }
+
     public enum WriteError: LocalizedError, Equatable {
         case expenseNotFound
 
@@ -93,6 +118,7 @@ final public class ExpenseStore {
         save: (ModelContext) throws -> Void,
         _ body: (ModelContext) throws -> Result
     ) throws -> Result {
+        try requireAvailable()
         let writeContext = ModelContext(modelContainer)
         writeContext.autosaveEnabled = false
         do {
@@ -113,6 +139,7 @@ final public class ExpenseStore {
 
     /// The newest same-name expense's category, otherwise the one most used with `tagID`.
     public func inferredCategory(forName name: String, tagID: UUID?) throws -> ExpenseCategory? {
+        try requireAvailable()
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
             var descriptor = FetchDescriptor<Expense>(
@@ -141,6 +168,7 @@ final public class ExpenseStore {
 
     /// Returns all expenses for a given month, if provided. If not, fetches all expenses
     public func fetchExpenses(for month: Date? = nil) throws -> [Expense] {
+        try requireAvailable()
         let descriptor: FetchDescriptor<Expense>
         if let month {
             descriptor = ExpenseFetchDescriptors.month(month)
@@ -153,6 +181,7 @@ final public class ExpenseStore {
 
     /// Returns all expenses that match the identifiers
     public func fetchExpenses(with ids: [UUID]) throws -> [Expense] {
+        try requireAvailable()
         let descriptor = FetchDescriptor<Expense>(
             predicate: #Predicate { ids.contains($0.id) }
         )
@@ -160,6 +189,7 @@ final public class ExpenseStore {
     }
 
     public func fetchRecentExpenses(limit: Int = 10) throws -> [Expense] {
+        try requireAvailable()
         var descriptor = FetchDescriptor<Expense>(
             sortBy: [SortDescriptor(\.date, order: .reverse)]
         )
@@ -168,9 +198,9 @@ final public class ExpenseStore {
         return try context.fetch(descriptor)
     }
 
-    public func fetchExpenses(from startDate: Date, to endDate: Date) -> [Expense] {
-        let fetchDescriptor = ExpenseFetchDescriptors.range(start: startDate, end: endDate)
-        return (try? context.fetch(fetchDescriptor)) ?? []
+    public func fetchExpenses(from startDate: Date, to endDate: Date) throws -> [Expense] {
+        try requireAvailable()
+        return try context.fetch(ExpenseFetchDescriptors.range(start: startDate, end: endDate))
     }
 
     public func monthlyTotal(for month: Date = .now) throws -> Double {
@@ -264,6 +294,7 @@ final public class ExpenseStore {
     // MARK: - Save
 
     public func save() throws {
+        try requireAvailable()
         try context.save()
     }
 }

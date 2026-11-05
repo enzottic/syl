@@ -83,6 +83,7 @@ public struct AddExpenseAppIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some ReturnsValue<ExpenseEntity> & ProvidesDialog & ShowsSnippetView {
+        try expenseStore.requireAvailable()
         let currencyCode = try currencyCodeProvider()
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {

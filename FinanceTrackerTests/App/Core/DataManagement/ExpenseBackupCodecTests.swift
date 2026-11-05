@@ -198,4 +198,27 @@ struct ExpenseBackupCodecTests {
         #expect(first.name == "Pending")
         #expect(ui.hasChanges)
     }
+
+    @Test @MainActor
+    func snapshotKeepsOneCopyOfRecordsThatShareAUUID() throws {
+        let container = try SageModelContainer.make(for: .test)
+        let context = container.mainContext
+        let tagID = UUID()
+        let expenseID = UUID()
+        let tag = ExpenseTag(id: tagID, name: "Groceries", uiColor: .green, emoji: "")
+        let tagCopy = ExpenseTag(id: tagID, name: "Groceries", uiColor: .green, emoji: "")
+        let expense = Expense(name: "Market", amount: 12, tags: [tag, tagCopy])
+        let expenseCopy = Expense(name: "Market", amount: 12, tags: [tagCopy])
+        expense.id = expenseID
+        expenseCopy.id = expenseID
+        context.insert(expense)
+        context.insert(expenseCopy)
+        try context.save()
+
+        let backup = try ExpenseBackupCodec.snapshot(modelContainer: container, currency: "USD")
+
+        #expect(backup.expenses.map(\.id) == [expenseID.uuidString.lowercased()])
+        #expect(backup.expenses.first?.tagIDs == [tagID.uuidString.lowercased()])
+        #expect(backup.tags.map(\.id) == [tagID.uuidString.lowercased()])
+    }
 }

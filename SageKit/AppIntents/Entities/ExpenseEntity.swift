@@ -84,6 +84,7 @@ public struct ExpenseEntity: IndexedEntity {
             let query = string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !query.isEmpty else { return [] }
             let descriptor = ExpenseFetchDescriptors.search(query, visibleLimit: Self.matchLimit)
+            try expenseStore.requireAvailable()
             return try expenseStore.context.fetch(descriptor)
                 .prefix(Self.matchLimit)
                 .map(\.entity)

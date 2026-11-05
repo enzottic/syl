@@ -51,10 +51,15 @@ struct StatsView: View {
     /// A bounce-free spring: starts promptly and settles with a long, soft deceleration.
     private var filterAnimation: Animation? { reduceMotion ? nil : .smooth(duration: 0.45) }
 
-    /// Every category budget, visible only for the filtered category. They are always passed
-    /// so switching categories cross-fades between budget lines. Skipped when no income is set.
+    /// The income line, shown when no category is filtered, and every category budget, shown only
+    /// for the filtered category. All are always passed so filter changes cross-fade between them.
     private var chartBudgets: [DailySpendingChart.Budget] {
-        ExpenseCategory.allCases.compactMap { category in
+        let income = config.totalMonthlyIncome
+        let incomeLine: [DailySpendingChart.Budget] = income > 0
+            ? [.init(id: "Income", amount: Double(income), color: .secondary,
+                     isVisible: selectedCategory == nil, kind: .income)]
+            : []
+        return incomeLine + ExpenseCategory.allCases.compactMap { category in
             let amount: Double = switch category {
             case .needs: config.needsBudget
             case .wants: config.wantsBudget
@@ -65,6 +70,14 @@ struct StatsView: View {
             return .init(id: category.rawValue, amount: amount, color: category.color(in: categoryColors),
                          isVisible: category == selectedCategory)
         }
+    }
+
+    /// Fits income, budgets, and every line, including hidden ones, so the scale doesn't jump
+    /// when filters change and overspending stays visible above the income line.
+    private func chartCeiling(lines: [SpendingChartSeries], average: [SpendingMonthSummary.Point]) -> Double {
+        let lineTotals = lines.flatMap(\.points).map(\.total) + average.map(\.total)
+        let highest = (lineTotals + chartBudgets.map(\.amount)).max() ?? 0
+        return highest > 0 ? highest * 1.05 : 1
     }
 
     private func tagFilteredExpenses(from expenses: [Expense]) -> [Expense] {
@@ -233,7 +246,7 @@ struct StatsView: View {
                                daysInMonth: daysInMonth, currencyCode: config.ledgerCurrencyCode,
                                selectedDay: selectedDay,
                                budgets: chartBudgets)
-                .chartYScale(domain: 0...Double(max(config.totalMonthlyIncome, 1)))
+                .chartYScale(domain: 0...chartCeiling(lines: chartSeries, average: summary.averageDays))
                 .chartPlotStyle { plot in plot.clipped() }
                 // Month changes morph every line to new data; filter changes mostly fade lines
                 // in and out, and get a slightly longer settle so the fade eases to rest.

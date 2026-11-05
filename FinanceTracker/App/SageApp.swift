@@ -49,9 +49,14 @@ struct SageApp: App {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
 
         // Make ExpenseStore resolvable via @Dependency in App Intents.
-        if case let .success(container) = containerResult {
+        switch containerResult {
+        case let .success(container):
             let expenseStore = ExpenseStore(modelContainer: container)
             AppDependencyManager.shared.add(dependency: expenseStore)
+        case .failure:
+            if let unavailableStore = try? ExpenseStore.unavailable() {
+                AppDependencyManager.shared.add(dependency: unavailableStore)
+            }
         }
 
         // Unit tests are hosted in the app and shouldn't index the simulator's real store.
@@ -66,7 +71,7 @@ struct SageApp: App {
         if case let .success(container) = containerResult {
             recurringExpenseCoordinator = RecurringExpenseCoordinator(
                 modelContainer: container,
-                cloudKitEnabled: SageModelContainer.supportsCloudSync
+                cloudKitEnabled: SageModelContainer.supportsCloudSync && !SageModelContainer.isRunningWithoutCloudSync
             )
         } else {
             recurringExpenseCoordinator = nil
@@ -182,12 +187,67 @@ struct SageApp: App {
 private struct DataStoreRecoveryView: View {
     let error: any Swift.Error
 
+    @Environment(\.openURL) private var openURL
+    @State private var hasPausedCloudSync = false
+
+    private var fallbackAlsoFailed: Bool {
+        if case .unavailableWithoutCloudSync = error as? SageModelContainer.Error { return true }
+        return false
+    }
+
+    private var canPauseCloudSync: Bool { SageModelContainer.supportsCloudSync && !fallbackAlsoFailed }
+
+    private var errorCode: String {
+        var error = error as NSError
+        if case let .unavailableWithoutCloudSync(underlying) = self.error as? SageModelContainer.Error {
+            error = underlying
+        }
+        return "\(error.domain) \(error.code)"
+    }
+
+    private var supportURL: URL? {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "contact@getsyl.app"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "Syl can't open its data"),
+            URLQueryItem(name: "body", value: "\n\n\n--- Please do not remove the info below ---\nSyl \(version) · iOS \(UIDevice.current.systemVersion) · \(errorCode)")
+        ]
+        return components.url
+    }
+
     var body: some View {
-        ContentUnavailableView(
-            "Your data could not open",
-            systemImage: "externaldrive.badge.exclamationmark",
-            description: Text("Syl could not access its shared storage. Check available device storage, then close and reopen the app. \(error.localizedDescription)")
-        )
+        ContentUnavailableView {
+            Label("Your data could not open", systemImage: "externaldrive.badge.exclamationmark")
+        } description: {
+            VStack(spacing: 12) {
+                if hasPausedCloudSync {
+                    Text("Close Syl from the App Switcher and open it again. Syl will open your data without iCloud sync, and try iCloud again each time it opens.")
+                } else if fallbackAlsoFailed {
+                    Text("Syl couldn't open your data, even without iCloud sync. Contact support so we can help you get it back.")
+                } else {
+                    Text("Check that your device has free storage, then close Syl and open it again.")
+                }
+                Text("Don't delete Syl. Deleting the app removes data that hasn't synced to iCloud.")
+                    .fontWeight(.semibold)
+                Text("Error: \(errorCode)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        } actions: {
+            if canPauseCloudSync && !hasPausedCloudSync {
+                Button("Open Without iCloud Sync") {
+                    SageModelContainer.isCloudSyncPaused = true
+                    hasPausedCloudSync = true
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            if let supportURL {
+                Button("Contact Support") { openURL(supportURL) }
+            }
+        }
     }
 }
 

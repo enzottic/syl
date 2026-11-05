@@ -62,6 +62,7 @@ public struct ExpenseTagEntityQuery: EntityStringQuery {
         let descriptor = FetchDescriptor<ExpenseTag>(
             predicate: #Predicate { identifiers.contains($0.id) }
         )
+        try expenseStore.requireAvailable()
         return try expenseStore.context.fetch(descriptor).map(\.entity)
     }
 
@@ -72,10 +73,12 @@ public struct ExpenseTagEntityQuery: EntityStringQuery {
             predicate: #Predicate { $0.name.localizedStandardContains(query) || $0.emoji == query },
             sortBy: [SortDescriptor(\.name)]
         )
+        try expenseStore.requireAvailable()
         return try expenseStore.context.fetch(descriptor).map(\.entity)
     }
 
     public func suggestedEntities() async throws -> [ExpenseTagEntity] {
+        try expenseStore.requireAvailable()
         let all = try expenseStore.context.fetch(FetchDescriptor<ExpenseTag>(sortBy: [SortDescriptor(\.name)]))
         return all.map(\.entity)
     }
