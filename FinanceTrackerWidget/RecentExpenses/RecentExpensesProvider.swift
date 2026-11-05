@@ -12,7 +12,7 @@ struct RecentExpensesProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<RecentExpensesEntry>) -> Void) {
         Task {
             let entry = await loadEntry()
-            completion(Timeline(entries: [entry], policy: .after(entry.date.addingTimeInterval(15 * 60))))
+            completion(Timeline(entries: [entry], policy: WidgetRefreshPolicy.standard(after: entry.date)))
         }
     }
 
