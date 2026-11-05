@@ -8,18 +8,11 @@ import CoreSpotlight
 import Foundation
 import SwiftData
 
-/// Keeps expense and tag entities in Spotlight's semantic index, which is how Siri finds them.
-///
-/// Changes are read from SwiftData persistent history rather than hooked at each save site,
-/// so CloudKit imports, bulk deletes, and writes from other processes are all caught.
-/// History tombstones don't carry expense UUIDs, so the indexer keeps a ledger of indexed
-/// IDs and removes whatever is no longer in the store when history reports a deletion.
-///
-/// Reading history and building entities happens on `ExpenseIndexPlanner`, off the main
-/// actor; this type only schedules passes and hands the resulting plan to Spotlight.
+/// Reads SwiftData persistent history instead of hooking save sites, so CloudKit imports,
+/// bulk deletes, and other processes' writes are caught. Tombstones carry no expense UUIDs,
+/// so deletions are found by comparing a ledger of indexed IDs with the store.
 @MainActor
 public final class ExpenseSpotlightIndexer {
-    /// The app's indexer. Nil when the shared store is unavailable.
     public static let shared: ExpenseSpotlightIndexer? = {
         guard case let .success(container) = SageModelContainer.shared,
               let stateURL = defaultStateURL else { return nil }
@@ -45,11 +38,6 @@ public final class ExpenseSpotlightIndexer {
         self.stateURL = stateURL
     }
 
-    // MARK: - Scheduling
-
-    /// Brings the index up to date now, then after every local save.
-    /// Call once at launch; call `scheduleUpdate()` again when the app becomes active
-    /// to pick up CloudKit imports and writes from extensions.
     public func start() {
         guard saveObserver == nil else { return }
         saveObserver = NotificationCenter.default.addObserver(
@@ -60,8 +48,7 @@ public final class ExpenseSpotlightIndexer {
         scheduleUpdate()
     }
 
-    /// Coalesces bursts of saves into one pass over history. Does nothing before `start()`,
-    /// so contexts that never start the indexer, such as previews, don't touch the index.
+    /// Does nothing before `start()`, so previews and tests never touch the index.
     public func scheduleUpdate(after delay: Duration = .zero) {
         guard saveObserver != nil else { return }
         let previous = pending
@@ -81,20 +68,14 @@ public final class ExpenseSpotlightIndexer {
         }
     }
 
-    // MARK: - Indexing
-
-    /// Applies every history transaction since the last pass, or rebuilds when there's
-    /// no usable state (first run, a new index version, or a token the store rejects).
     func update() async throws {
         try await apply(planner.updatePlan(from: loadState()))
     }
 
-    /// Replaces every expense and tag entry with the store's current contents.
     public func rebuild() async throws {
         try await apply(planner.rebuildPlan())
     }
 
-    /// Re-indexes specific expenses on the system's request, dropping ones that no longer exist.
     public func reindexExpenses(withIDs ids: [UUID]) async throws {
         try await apply(planner.reindexPlan(for: ids, state: loadState()))
     }
@@ -119,9 +100,7 @@ public final class ExpenseSpotlightIndexer {
         }
     }
 
-    // MARK: - State
-
-    /// Per-app, not in the shared app group: each app bundle has its own Spotlight index.
+    /// Not in the app group: each app bundle has its own Spotlight index.
     private static var defaultStateURL: URL? {
         try? FileManager.default
             .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -138,30 +117,25 @@ public final class ExpenseSpotlightIndexer {
     }
 }
 
-/// What the indexer has already told Spotlight.
 struct ExpenseIndexState: Codable, Equatable, Sendable {
-    /// Bump when the indexed shape of an entity changes, to rebuild every entry once.
+    /// Bump to rebuild every entry once after an entity's indexed shape changes.
     static let currentVersion = 1
 
     var version: Int
     var token: DefaultHistoryToken?
-    /// Every expense ID currently in the index, used to find deletions.
     var expenseIDs: Set<UUID>
 }
 
-/// The Spotlight changes one pass needs, applied in this order.
 struct ExpenseIndexPlan: Sendable {
     var deletesAllExpenses = false
     var expenseIDsToDelete: [UUID] = []
     var expensesToIndex: [ExpenseEntity] = []
-    /// The complete tag set to replace the indexed tags with; nil leaves them alone.
+    /// Nil leaves the indexed tags alone.
     var tags: [ExpenseTagEntity]?
-    /// The state to save once the plan is applied; nil keeps the saved state.
     var state: ExpenseIndexState?
 }
 
-/// Reads history and the store off the main actor and decides what Spotlight needs.
-/// Each pass uses a fresh context, so it never works from objects cached by an earlier pass.
+/// A fresh context per pass, so no pass works from objects cached by an earlier one.
 actor ExpenseIndexPlanner {
     private let modelContainer: ModelContainer
 
@@ -286,12 +260,10 @@ actor ExpenseIndexPlanner {
     }
 }
 
-/// What a run of history transactions means for the index.
 struct HistoryScan {
     private(set) var changedExpenses = Set<PersistentIdentifier>()
     private(set) var expensesDeleted = false
     private(set) var tagsChanged = false
-    /// Tags whose name or mark changed, so their expenses' entries are out of date.
     private(set) var renamedTags = Set<PersistentIdentifier>()
 
     static let expenseEntity = Schema.entityName(for: Expense.self)
@@ -312,8 +284,7 @@ struct HistoryScan {
             case (Self.tagEntity, .insert), (Self.tagEntity, .delete):
                 tagsChanged = true
             case let (Self.tagEntity, .update(update)):
-                // Tagging an expense updates the tag's inverse relationship; only the
-                // attributes an entry displays make the tag's index entries stale.
+                // Tagging an expense also updates the tag's inverse relationship, which isn't indexed.
                 guard let tagUpdate = update as? any HistoryUpdate<ExpenseTag>,
                       tagUpdate.updatedAttributes.contains(where: { Self.displayedTagAttributes.contains($0) })
                 else { continue }
@@ -326,7 +297,6 @@ struct HistoryScan {
     }
 }
 
-/// The index operations the indexer needs; tests substitute a recorder.
 @MainActor
 protocol SpotlightEntityIndexing {
     func indexExpenses(_ expenses: [ExpenseEntity]) async throws
@@ -338,7 +308,6 @@ protocol SpotlightEntityIndexing {
 
 @MainActor
 struct CoreSpotlightEntityIndex: SpotlightEntityIndexing {
-    /// Spending data stays unreadable while the device is locked.
     private let index = CSSearchableIndex(name: "SageEntities", protectionClass: .complete)
 
     func indexExpenses(_ expenses: [ExpenseEntity]) async throws {

@@ -7,7 +7,6 @@ import AppIntents
 import Foundation
 import SwiftData
 
-/// How a search orders its results.
 public enum ExpenseSearchOrder: String, AppEnum, Sendable {
     case newest, oldest, largest, smallest
 
@@ -20,20 +19,15 @@ public enum ExpenseSearchOrder: String, AppEnum, Sendable {
     ]
 }
 
-/// The filters behind Siri's expense search, kept free of Siri AI types so the matching
-/// logic builds with every SDK and can be tested on any simulator.
+/// Free of Siri AI types, so it builds with every SDK and runs in tests on any simulator.
 public struct ExpenseSearchCriteria: Equatable, Sendable {
     public static let defaultLimit = 25
     public static let maximumLimit = 100
 
-    /// The first day to include, from its start.
     public var startDate: Date?
-    /// The last day to include, through its end.
     public var endDate: Date?
-    /// Matched against the name, note, and tag names, ignoring case and diacritics.
     public var text: String?
     public var category: ExpenseCategory?
-    /// An expense matches when any of its tags matches any of these names.
     public var tagNames: [String]
     public var minimumAmount: Double?
     public var maximumAmount: Double?
@@ -62,8 +56,7 @@ public struct ExpenseSearchCriteria: Equatable, Sendable {
         self.limit = min(max(limit ?? Self.defaultLimit, 1), Self.maximumLimit)
     }
 
-    /// The half-open range of whole days to fetch, or nil for all time. A reversed range
-    /// is swapped, since a person saying "from March to January" still means those months.
+    /// A reversed range is swapped: "from March to January" still means those months.
     func dateInterval(calendar: Calendar = .current) -> (start: Date?, end: Date?) {
         var start = startDate
         var end = endDate
@@ -108,13 +101,11 @@ public struct ExpenseSearchCriteria: Equatable, Sendable {
     }
 }
 
-/// A search's matches: the expenses to show, plus the count and total of every match.
 public struct ExpenseSearchResult {
     public let expenses: [Expense]
     public let matchCount: Int
     public let total: Double
 
-    /// What Siri says about the result.
     public func dialog(currencyCode: String) -> String {
         guard matchCount > 0 else { return "No expenses match that." }
         let totalText = total.currencyString(code: currencyCode)
@@ -127,7 +118,6 @@ public struct ExpenseSearchResult {
 }
 
 extension ExpenseStore {
-    /// Expenses matching `criteria`, ordered and limited, with the count and total of all matches.
     public func searchExpenses(_ criteria: ExpenseSearchCriteria, calendar: Calendar = .current) throws -> ExpenseSearchResult {
         let (start, end) = criteria.dateInterval(calendar: calendar)
         let descriptor: FetchDescriptor<Expense> = switch (start, end) {

@@ -24,7 +24,6 @@ private func makeUpdateIntent(_ store: ExpenseStore, for expense: Expense) -> Up
     return intent
 }
 
-/// Reads through a fresh context, so the result reflects what the isolated write saved.
 @MainActor
 private func persisted(_ id: UUID, in container: ModelContainer) throws -> Expense? {
     try ModelContext(container).fetch(FetchDescriptor<Expense>(predicate: #Predicate { $0.id == id })).first

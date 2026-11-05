@@ -54,8 +54,7 @@ struct SageApp: App {
             AppDependencyManager.shared.add(dependency: expenseStore)
         }
 
-        // Siri finds expenses and tags through Spotlight's semantic index. Skipped for previews
-        // and when the app hosts unit tests, which shouldn't index the simulator's real store.
+        // Unit tests are hosted in the app and shouldn't index the simulator's real store.
         let environment = ProcessInfo.processInfo.environment
         if case .success = containerResult,
            environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1",
@@ -102,7 +101,6 @@ struct SageApp: App {
             guard phase == .active || phase == .background else { return }
             if phase == .active {
                 appConfiguration.recheckPreferences()
-                // Catch up on CloudKit imports and writes made by extensions while inactive.
                 ExpenseSpotlightIndexer.shared?.scheduleUpdate()
             }
             publishMonthlySnapshot()

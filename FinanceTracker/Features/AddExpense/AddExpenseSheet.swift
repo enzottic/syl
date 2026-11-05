@@ -268,8 +268,7 @@ struct AddExpenseSheet: View {
         }
     }
 
-    /// Tells the system how this expense was added, so Siri learns from how Syl is used.
-    /// A recurring expense isn't a one-off Add Expense, so it isn't donated.
+    /// Recurring expenses aren't donated: the Add Expense intent can't describe them.
     private func donateAddExpense(amount: Double) {
         guard !draft.isRecurring else { return }
         let intent = AddExpenseAppIntent(donating: draft, amount: amount, currencyCode: config.ledgerCurrencyCode)

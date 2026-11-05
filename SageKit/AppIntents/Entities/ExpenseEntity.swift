@@ -10,21 +10,14 @@ import CoreTransferable
 import SwiftData
 
 public struct ExpenseEntity: IndexedEntity {
-    // MARK: Static
-
     public static let defaultQuery = ExpenseEntityQuery()
 
     public static var typeDisplayRepresentation: TypeDisplayRepresentation = "Expense"
 
-    /// Spending is personal financial information, so Siri and Shortcuts must authenticate
-    /// before presenting an expense. The system enforces this requirement from iOS 27.3.
+    /// Enforced by the system from iOS 27.3.
     public static var authenticationPolicy: IntentAuthenticationPolicy { .requiresAuthentication }
 
-    // MARK: Properties
-
-    // These titles are the vocabulary Siri uses to match requests to expense properties.
-    // Descriptions, per-property authentication, and internal visibility require the whole
-    // entity to be iOS 27.3+, which waits on raising the deployment target.
+    // Property descriptions need the whole entity to be iOS 27.3+, so they wait on the deployment target.
     public let id: UUID
     @Property(title: "Name") var name: String
     @Property(title: "Amount") var amount: Double
@@ -47,8 +40,6 @@ public struct ExpenseEntity: IndexedEntity {
         return "\(amount.currencyString) · \(category) · \(tagsText)"
     }
 
-    /// Spotlight attributes beyond the display representation, so semantic search and Siri
-    /// can match an expense by its note, tags, category, and when it happened.
     public var attributeSet: CSSearchableItemAttributeSet {
         let attributes = defaultAttributeSet
         attributes.contentDescription = [subtitle, note]
@@ -85,12 +76,10 @@ public struct ExpenseEntity: IndexedEntity {
         @Dependency
         var expenseStore: ExpenseStore
 
-        /// The system uses this only when an expense is missing from the Spotlight index.
         public func allEntities() async throws -> [ExpenseEntity] {
             try expenseStore.fetchExpenses().map(\.entity)
         }
 
-        /// Matches names, notes, and tag names, newest first, like in-app search.
         public func entities(matching string: String) async throws -> [ExpenseEntity] {
             let query = string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !query.isEmpty else { return [] }
@@ -115,8 +104,6 @@ public struct ExpenseEntity: IndexedEntity {
 }
 
 extension ExpenseEntity.ExpenseEntityQuery: IndexedEntityQuery {
-    // The system calls these when it needs Syl to rebuild index entries, such as after
-    // Spotlight loses its index. Syl tracks its own changes, so both rebuild from the store.
     public func reindexEntities(
         for identifiers: [ExpenseEntity.ID],
         indexDescription: CSSearchableIndexDescription
@@ -129,14 +116,11 @@ extension ExpenseEntity.ExpenseEntityQuery: IndexedEntityQuery {
     }
 }
 
-/// Lets Siri hand an expense to another app, such as sending it in Messages or Mail.
 extension ExpenseEntity: Transferable {
     public static var transferRepresentation: some TransferRepresentation {
         ProxyRepresentation(exporting: \.shareText)
     }
 
-    /// One line per expense, readable on its own: "Latte · $5.25 · Wants · Nov 3, 2026 · ☕ Coffee".
-    /// A note follows on its own line.
     var shareText: String {
         var parts = [name, amount.currencyString, category.rawValue, date.formatted(date: .abbreviated, time: .omitted)]
         if !tags.isEmpty {

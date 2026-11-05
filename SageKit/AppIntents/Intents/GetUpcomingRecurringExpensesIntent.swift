@@ -63,7 +63,6 @@ public struct GetUpcomingRecurringExpensesIntent: AppIntent {
 extension GetUpcomingRecurringExpensesIntent: ToolIntent { }
 #endif
 
-/// A future occurrence of a recurring expense, as Siri and Shortcuts see it.
 public struct UpcomingExpenseEntity: TransientAppEntity {
     public static var typeDisplayRepresentation: TypeDisplayRepresentation = "Upcoming Expense"
 

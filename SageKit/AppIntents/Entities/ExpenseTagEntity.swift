@@ -12,8 +12,7 @@ public struct ExpenseTagEntity: IndexedEntity {
     public static var typeDisplayRepresentation: TypeDisplayRepresentation = "Tag"
     public static var defaultQuery = ExpenseTagEntityQuery()
 
-    /// Tags reveal what someone spends on, so they get the same protection as expenses.
-    /// The system enforces this requirement from iOS 27.3.
+    /// Enforced by the system from iOS 27.3.
     public static var authenticationPolicy: IntentAuthenticationPolicy { .requiresAuthentication }
 
     public let id: UUID
@@ -57,7 +56,6 @@ public struct ExpenseTagEntityQuery: EntityStringQuery {
         return try expenseStore.context.fetch(descriptor).map(\.entity)
     }
 
-    /// Lets Siri resolve a spoken tag such as "coffee" or "☕" to the user's tag.
     public func entities(matching string: String) async throws -> [ExpenseTagEntity] {
         let query = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return [] }

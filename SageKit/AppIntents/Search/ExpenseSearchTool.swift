@@ -2,17 +2,14 @@
 //  ExpenseSearchTool.swift
 //  SageKit
 //
-//  Siri AI's expense search and expense cards. These types exist only in the iOS 27.3+ SDK,
-//  so they're compiled out of released-Xcode builds, which App Store uploads require.
-//
+
+// Siri AI–only types: compiled out of released-Xcode builds, which App Store uploads require.
 
 #if canImport(AppIntents, _version: 301.2)
 import AppIntents
 import Foundation
 import SwiftUI
 
-/// A search Siri fills in directly from what the person asked, such as
-/// "dining expenses over $20 last month, largest first".
 @available(iOS 27.3, *)
 @AppEntity(.generable)
 public struct ExpenseSearch: TransientAppEntity {
@@ -83,10 +80,10 @@ public struct SearchExpensesIntent: AppIntent {
     public init() { }
 
     @MainActor
-        let entities = result.expenses.map(\.entity)
     public func perform() async throws -> some ReturnsValue<[ExpenseEntity]> & ProvidesDialog & ShowsSnippetView {
         let currencyCode = try LedgerCurrency.requireCode()
         let result = try expenseStore.searchExpenses(search.criteria)
+        let entities = result.expenses.map(\.entity)
         return .result(
             value: entities,
             dialog: IntentDialog(stringLiteral: result.dialog(currencyCode: currencyCode)),

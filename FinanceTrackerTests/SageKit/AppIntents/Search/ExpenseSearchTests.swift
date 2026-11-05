@@ -199,7 +199,6 @@ struct ExpenseShareTextTests {
         #expect(lines[0].hasPrefix("Latte · "))
         #expect(lines[0].contains("· Wants · "))
         #expect(lines[0].contains("☕ Coffee"))
-        // A symbol-marked tag has no emoji to show in plain text.
         #expect(lines[0].contains("Work") && !lines[0].contains("💼"))
         #expect(lines[1] == "With Sam")
         #expect(Expense(name: "Rent", amount: 900).entity.shareText.contains("\n") == false)

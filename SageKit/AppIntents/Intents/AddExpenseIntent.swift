@@ -64,12 +64,11 @@ public struct AddExpenseAppIntent: AppIntent {
 
     public init() { }
 
-    /// An intent describing an expense someone just added in the app, for donation.
     @MainActor
     public init(donating draft: ExpenseEntryDraft, amount: Double, currencyCode: String) {
         self.init()
         self.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Via the shortest decimal text, so 4.1 donates as 4.1 rather than Double's 4.0999….
+        // Decimal(Double) would turn 4.1 into 4.0999….
         let decimal = Decimal(string: String(amount), locale: Locale(identifier: "en_US_POSIX")) ?? Decimal(amount)
         self.amount = IntentCurrencyAmount(amount: decimal, currencyCode: currencyCode)
         self.category = draft.category
@@ -78,8 +77,6 @@ public struct AddExpenseAppIntent: AppIntent {
         let trimmedNote = draft.note.trimmingCharacters(in: .whitespacesAndNewlines)
         self.note = trimmedNote.isEmpty ? nil : trimmedNote
     }
-
-    // MARK: Methods
 
     @MainActor
     public func perform() async throws -> some ReturnsValue<ExpenseEntity> & ProvidesDialog & ShowsSnippetView {
@@ -115,14 +112,10 @@ public struct AddExpenseAppIntent: AppIntent {
     }
 }
 
-/// Converts an amount from Siri or Shortcuts to the ledger's stored value.
 enum IntentAmount {
-    /// The numeric amount in the ledger's currency, regardless of the spoken currency; no
-    /// conversion is performed. Nil when the amount isn't a valid expense amount, including
-    /// when it has more fractional digits than the ledger's currency allows.
+    /// The number in the ledger's currency; the spoken currency is never converted.
     static func ledgerValue(of amount: IntentCurrencyAmount, currencyCode: String) -> Double? {
-        // Validate the original decimal before converting to the model's Double storage,
-        // so the conversion can't hide extra fractional digits.
+        // Checked before converting to Double, which could hide extra fractional digits.
         var decimalAmount = amount.amount
         guard !decimalAmount.isNaN else { return nil }
         var roundedAmount = Decimal.zero
@@ -134,8 +127,7 @@ enum IntentAmount {
     }
 }
 
-// Siri AI tool, built only with the iOS 27.3+ SDK so released Xcode can still archive Syl.
-// Declared here because the `@AppIntent(.tool)` macro needs the whole type to be 27.3+.
+// Released Xcode lacks the 27.3 SDK, and the `@AppIntent(.tool)` macro would make the whole type 27.3+.
 #if canImport(AppIntents, _version: 301.2)
 @available(iOS 27.3, *)
 extension AddExpenseAppIntent: ToolIntent { }

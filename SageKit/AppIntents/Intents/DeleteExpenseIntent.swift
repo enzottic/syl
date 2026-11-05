@@ -38,7 +38,7 @@ public struct DeleteExpenseIntent: AppIntent {
         return .result(dialog: "Deleted \(expense.name).")
     }
 
-    /// The deletion after the person confirms; separate so tests can skip the system prompt.
+    /// Separate from `perform()` so tests can skip the system prompt.
     @MainActor
     func deleteConfirmed() throws {
         try expenseStore.deleteExpenseAndSave(id: expense.id)
@@ -46,8 +46,7 @@ public struct DeleteExpenseIntent: AppIntent {
     }
 }
 
-// Siri AI tool, built only with the iOS 27.3+ SDK so released Xcode can still archive Syl.
-// Declared here because the `@AppIntent(.tool)` macro needs the whole type to be 27.3+.
+// Released Xcode lacks the 27.3 SDK, and the `@AppIntent(.tool)` macro would make the whole type 27.3+.
 #if canImport(AppIntents, _version: 301.2)
 @available(iOS 27.3, *)
 extension DeleteExpenseIntent: ToolIntent { }

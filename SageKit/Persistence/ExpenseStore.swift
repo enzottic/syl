@@ -53,10 +53,6 @@ final public class ExpenseStore {
         }
     }
 
-    // MARK: - Update
-
-    /// Changes one expense in an isolated context and returns its updated entity.
-    /// `change` receives the expense and the write context, for looking up related models.
     func updateExpenseAndSave(
         id: UUID,
         save: (ModelContext) throws -> Void = { try $0.save() },
@@ -69,8 +65,7 @@ final public class ExpenseStore {
         }
     }
 
-    /// Resolves tag IDs to tags in `context`, skipping duplicates and missing tags.
-    /// The relationship these are assigned to is unordered, so order isn't kept.
+    /// Order isn't kept: the tags relationship is unordered.
     static func tags(withIDs ids: [UUID], in context: ModelContext) throws -> [ExpenseTag] {
         guard !ids.isEmpty else { return [] }
         let tags = try context.fetch(FetchDescriptor<ExpenseTag>(
@@ -83,8 +78,6 @@ final public class ExpenseStore {
         }
     }
 
-    // MARK: - Isolated writes
-
     public enum WriteError: LocalizedError, Equatable {
         case expenseNotFound
 
@@ -95,8 +88,7 @@ final public class ExpenseStore {
         }
     }
 
-    /// Runs a write in its own context. Siri and Shortcuts writes must not save or roll back
-    /// pending edits in the app's context. The save closure is a test seam.
+    /// Siri and Shortcuts writes must not save or roll back pending edits in the app's context.
     private func isolatedWrite<Result>(
         save: (ModelContext) throws -> Void,
         _ body: (ModelContext) throws -> Result
@@ -119,10 +111,7 @@ final public class ExpenseStore {
         return expense
     }
 
-    // MARK: - Category inference
-
-    /// The category Syl would expect for a new expense: the newest expense with the same name,
-    /// otherwise the category most used with `tagID`. Nil when there's nothing to go on.
+    /// The newest same-name expense's category, otherwise the one most used with `tagID`.
     public func inferredCategory(forName name: String, tagID: UUID?) throws -> ExpenseCategory? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
@@ -142,7 +131,7 @@ final public class ExpenseStore {
               let tag = try context.fetch(FetchDescriptor<ExpenseTag>(predicate: #Predicate { $0.id == tagID })).first
         else { return nil }
         let counts = Dictionary(grouping: tag.taggedExpenses ?? [], by: \.category).mapValues(\.count)
-        // Ties go to the earlier category in Needs, Wants, Savings order, so the result is stable.
+        // Ties go to the earlier category, keeping the result stable.
         return ExpenseCategory.allCases
             .filter { counts[$0] != nil }
             .max { counts[$0]! < counts[$1]! }
@@ -265,8 +254,7 @@ final public class ExpenseStore {
         context.delete(expense)
     }
 
-    /// Deletes one expense in an isolated context. A recurring expense's rule is kept, so
-    /// future occurrences still arrive; deleting the rule is a separate, in-app decision.
+    /// Keeps a recurring expense's rule; deleting the rule is a separate, in-app decision.
     func deleteExpenseAndSave(id: UUID, save: (ModelContext) throws -> Void = { try $0.save() }) throws {
         try isolatedWrite(save: save) { writeContext in
             writeContext.delete(try Self.expense(withID: id, in: writeContext))

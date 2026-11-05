@@ -6,7 +6,6 @@
 import Foundation
 import SwiftData
 
-/// One future occurrence of a recurring expense.
 public struct UpcomingRecurringExpense: Equatable, Sendable {
     public let ruleID: UUID
     public let name: String
@@ -16,8 +15,6 @@ public struct UpcomingRecurringExpense: Equatable, Sendable {
 }
 
 extension ExpenseStore {
-    /// Every occurrence due from the start of today through `days` days from `now`, soonest
-    /// first, following each rule's own schedule. Capped at `limit` occurrences overall.
     public func upcomingRecurringExpenses(
         within days: Int,
         from now: Date = .now,
@@ -31,7 +28,6 @@ extension ExpenseStore {
         for rule in try context.fetch(FetchDescriptor<RecurringExpenseRule>()) {
             let schedule = RecurringExpenseSchedule(rule: rule, legacyCalendar: calendar)
             var next = rule.nextOccurrence(after: now, calendar: calendar)
-            // Bounded by `limit`, so a daily rule over a long window can't run away.
             var steps = 0
             while let date = next, date <= end, steps < limit {
                 if date >= today {

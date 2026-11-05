@@ -5,8 +5,7 @@
 
 import SwiftUI
 
-/// The card Siri shows for an expense. The system renders it ahead of time into a static
-/// archive, so it holds only text and images prepared from the entity.
+/// Siri renders this ahead of time into a static archive, so it holds only prepared text and images.
 struct ExpenseCardView: View {
     let expense: ExpenseEntity
     let categoryColor: Color
@@ -69,7 +68,6 @@ struct ExpenseCardView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The first tag's mark in the category's color, or a plain dot for an untagged expense.
     @ViewBuilder
     private var mark: some View {
         ZStack {

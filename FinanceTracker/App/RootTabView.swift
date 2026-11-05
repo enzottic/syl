@@ -127,8 +127,7 @@ struct RootTabView: View {
         appRouter.selectedTab = .home
     }
 
-    /// Shows the expense Siri or Shortcuts asked to open, once no sheet is in the way, so an
-    /// unsaved draft is never discarded.
+    /// Waits for any open sheet, so an unsaved draft is never discarded.
     private func openRequestedExpenseIfReady() {
         guard let id = expenseOpenRequest.expenseID,
               appRouter.presentedSheet == nil,

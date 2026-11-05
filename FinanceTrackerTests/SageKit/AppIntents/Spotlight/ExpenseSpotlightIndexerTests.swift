@@ -199,7 +199,6 @@ struct ExpenseSpotlightIndexerTests {
         try await harness.indexer.update()
         harness.index.reset()
 
-        // Updates the tag's inverse relationship, which isn't shown in its entry.
         let expense = Expense(name: "Latte", amount: 5, tags: [tag])
         harness.context.insert(expense)
         try harness.context.save()
