@@ -268,7 +268,8 @@ struct OnboardingView: View {
     }
 
     private var incomeCard: some View {
-        VStack(spacing: -24) {
+        let showMonthlyStrip = showsMonthlyEquivalent || reduceMotion
+        return VStack(spacing: -24) {
             VStack(spacing: 12) {
                 ViewThatFits(in: .horizontal) {
                     HStack {
@@ -335,7 +336,7 @@ struct OnboardingView: View {
             .padding(.horizontal, 12)
             // Reserve the strip's space so entering the first digit cannot move the card.
             .visualEffect { content, geometry in
-                content.offset(y: showsMonthlyEquivalent || reduceMotion ? 0 : -geometry.size.height)
+                content.offset(y: showMonthlyStrip ? 0 : -geometry.size.height)
             }
             .opacity(showsMonthlyEquivalent ? 1 : 0)
             .accessibilityElement(children: .contain)

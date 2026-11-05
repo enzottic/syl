@@ -487,7 +487,7 @@ final class ExpenseEntrySheetViewController: UIViewController {
             // the completion of an interrupted detent animation, so only the
             // latest generation may block the staged reveal.
             activeResizes = [generation]
-            let finish = { [weak self] in
+            let finish: @MainActor @Sendable () -> Void = { [weak self] in
                 guard let self, self.activeResizes.remove(generation) != nil else { return }
                 self.scheduleStagedReveal()
             }
