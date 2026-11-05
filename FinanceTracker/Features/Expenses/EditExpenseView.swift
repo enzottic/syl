@@ -61,11 +61,14 @@ struct EditExpenseView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle("Edit Expense")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
+        // The system back button and swipe-back stay available until there's something to discard.
+        .navigationBarBackButtonHidden(hasChanges)
         .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back") { requestDismissal { dismiss() } }
-                    .accessibilityIdentifier("back-expense-button")
+            if hasChanges {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Back") { requestDismissal { dismiss() } }
+                        .accessibilityIdentifier("back-expense-button")
+                }
             }
             ToolbarItem(placement: .confirmationAction) {
                 if isSaving {
