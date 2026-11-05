@@ -7,6 +7,8 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
+import SageKit
 
 @main
 struct SageWidgetBundle: WidgetBundle {
@@ -15,5 +17,11 @@ struct SageWidgetBundle: WidgetBundle {
         RecentExpensesWidget()
         CategorySpotlightWidget()
         MonthlySummaryWidget()
+    }
+}
+
+struct WidgetAppIntentsPackage: AppIntentsPackage {
+    static var includedPackages: [any AppIntentsPackage.Type] {
+        [SageKitPackage.self]
     }
 }
