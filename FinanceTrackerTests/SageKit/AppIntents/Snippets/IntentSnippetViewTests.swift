@@ -97,3 +97,30 @@ struct IntentSnippetViewTests {
         #expect(emojiTag.entity.plainLabel == "☕ Coffee")
     }
 }
+
+@Suite("Shared expense row")
+struct ExpenseRowViewTests {
+    @Test @MainActor
+    func siriRowUsesTheFirstTagsMarkAndCountsTheRest() {
+        let coffee = ExpenseTag(name: "Coffee", uiColor: .brown, emoji: "☕")
+        let work = ExpenseTag(name: "Work", uiColor: .gray, emoji: "💼", symbolName: "briefcase")
+        let expense = Expense(name: "Latte", amount: 5.25, category: .wants, tags: [work, coffee]).entity
+
+        let row = ExpenseRowView(expense, colors: .default)
+
+        #expect(row.name == "Latte")
+        #expect(row.glyph == expense.tags.first?.glyph)
+        #expect(row.extraTagCount == 1)
+        #expect(row.isRecurring == false)
+        #expect(ExpenseRowView(Expense(name: "Rent", amount: 900).entity, colors: .default).glyph == nil)
+    }
+
+    @Test
+    func tagEntityGlyphMatchesTheAppsRule() {
+        let symbolTag = ExpenseTag(name: "Dining", uiColor: .orange, emoji: "🍽️", symbolName: "fork.knife")
+        let unknownSymbol = ExpenseTag(name: "Travel", uiColor: .blue, emoji: "✈️", symbolName: "not.a.real.symbol")
+
+        #expect(symbolTag.entity.glyph == symbolTag.glyph)
+        #expect(unknownSymbol.entity.glyph == unknownSymbol.glyph)
+    }
+}

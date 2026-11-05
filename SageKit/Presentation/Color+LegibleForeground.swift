@@ -1,6 +1,6 @@
 import SwiftUI
 
-extension Color {
+public extension Color {
     /// Chooses the higher-contrast foreground for an opaque badge fill.
     func legibleForeground(in environment: EnvironmentValues) -> Color {
         let resolved = resolve(in: environment)

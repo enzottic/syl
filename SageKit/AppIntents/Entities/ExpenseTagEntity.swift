@@ -29,6 +29,10 @@ public struct ExpenseTagEntity: IndexedEntity {
         return DisplayRepresentation(title: "\(emoji) \(name)")
     }
 
+    var glyph: TagGlyph {
+        symbolName.map(TagGlyph.symbol) ?? .emoji(emoji)
+    }
+
     /// The tag as plain text. A symbol can't be written into text, so a symbol tag is just its name.
     var plainLabel: String {
         symbolName == nil ? "\(emoji) \(name)" : name

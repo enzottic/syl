@@ -39,13 +39,7 @@ struct ExpenseListSnippetView: View {
             )
             ForEach(expenses.prefix(Self.visibleRowLimit), id: \.id) { expense in
                 Divider()
-                SnippetRow(
-                    mark: expense.tags.first.map(SnippetMark.tag) ?? .dot,
-                    color: colors.color(for: expense.category),
-                    title: expense.name,
-                    detail: "\(expense.date.formatted(date: .abbreviated, time: .omitted)) · \(expense.category.rawValue)",
-                    amount: expense.amount
-                )
+                ExpenseRowView(expense, colors: colors)
             }
             if hiddenCount > 0 {
                 Text("and \(hiddenCount) more")
@@ -82,12 +76,13 @@ struct UpcomingExpensesSnippetView: View {
             )
             ForEach(Array(upcoming.prefix(ExpenseListSnippetView.visibleRowLimit).enumerated()), id: \.offset) { _, item in
                 Divider()
-                SnippetRow(
-                    mark: .symbol("repeat"),
-                    color: colors.color(for: item.category),
-                    title: item.name,
-                    detail: item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
-                    amount: item.amount
+                ExpenseRowView(
+                    name: item.name,
+                    amount: item.amount.currencyString,
+                    date: item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
+                    categoryColor: colors.color(for: item.category),
+                    glyph: nil,
+                    isRecurring: true
                 )
             }
             let hidden = upcoming.count - ExpenseListSnippetView.visibleRowLimit
@@ -163,54 +158,6 @@ private struct SnippetHeader: View {
                 .font(.headline)
                 .monospacedDigit()
         }
-    }
-}
-
-enum SnippetMark {
-    case tag(ExpenseTagEntity)
-    case symbol(String)
-    case dot
-}
-
-private struct SnippetRow: View {
-    let mark: SnippetMark
-    let color: Color
-    let title: String
-    let detail: String
-    let amount: Double
-
-    var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle().fill(color.opacity(0.2))
-                switch mark {
-                case .tag(let tag):
-                    if let symbol = tag.symbolName { Image(systemName: symbol) } else { Text(tag.emoji) }
-                case .symbol(let name):
-                    Image(systemName: name).foregroundStyle(color)
-                case .dot:
-                    Circle().fill(color).frame(width: 8, height: 8)
-                }
-            }
-            .font(.subheadline)
-            .frame(width: 28, height: 28)
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 8)
-            Text(amount.currencyString)
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(amount < 0 ? Color.green : Color.primary)
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 

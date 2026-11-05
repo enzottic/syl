@@ -41,7 +41,7 @@ struct AddExpenseToolTests {
         store.context.insert(coffee)
         store.context.insert(work)
         try store.save()
-        var intent = makeAddIntent(store)
+        let intent = makeAddIntent(store)
         intent.category = .wants
         intent.tags = [work.entity, coffee.entity]
         intent.note = "  Client meeting  "
@@ -80,7 +80,7 @@ struct AddExpenseToolTests {
         store.addExpense(Expense(name: "Bakery", amount: 8, category: .needs, tags: [groceries]))
         store.addExpense(Expense(name: "Snacks", amount: 5, category: .wants, tags: [groceries]))
         try store.save()
-        var intent = makeAddIntent(store, name: "Corner shop")
+        let intent = makeAddIntent(store, name: "Corner shop")
         intent.tags = [groceries.entity]
 
         _ = try await intent.perform()
@@ -106,7 +106,7 @@ struct AddExpenseToolTests {
         let store = ExpenseStore(modelContainer: container)
         store.addExpense(Expense(name: "Coffee", amount: 4, category: .wants))
         try store.save()
-        var intent = makeAddIntent(store)
+        let intent = makeAddIntent(store)
         intent.category = .needs
 
         _ = try await intent.perform()
@@ -223,7 +223,7 @@ struct UpdateExpenseToolTests {
         let expense = Expense(name: "Latte", amount: 5, category: .wants, date: date, note: "Morning")
         store.addExpense(expense)
         try store.save()
-        var intent = makeUpdateIntent(store, for: expense)
+        let intent = makeUpdateIntent(store, for: expense)
         intent.amount = IntentCurrencyAmount(amount: 14, currencyCode: "USD")
 
         _ = try await intent.perform()
@@ -247,7 +247,7 @@ struct UpdateExpenseToolTests {
         let expense = Expense(name: "Latte", amount: 5, tags: [old], note: "Morning")
         store.addExpense(expense)
         try store.save()
-        var intent = makeUpdateIntent(store, for: expense)
+        let intent = makeUpdateIntent(store, for: expense)
         intent.tags = [new.entity]
         intent.note = ""
 
@@ -265,7 +265,7 @@ struct UpdateExpenseToolTests {
         let expense = Expense(name: "Latte", amount: 5)
         store.addExpense(expense)
         try store.save()
-        var intent = makeUpdateIntent(store, for: expense)
+        let intent = makeUpdateIntent(store, for: expense)
         intent.name = "Flat white"
         intent.amount = IntentCurrencyAmount(amount: Decimal(string: "4.005")!, currencyCode: "USD")
 
@@ -294,7 +294,7 @@ struct UpdateExpenseToolTests {
         let container = try SageModelContainer.make(for: .test)
         let store = ExpenseStore(modelContainer: container)
         let expense = Expense(name: "Latte", amount: 5)
-        var intent = makeUpdateIntent(store, for: expense)
+        let intent = makeUpdateIntent(store, for: expense)
         intent.name = "Flat white"
 
         await #expect(throws: ExpenseStore.WriteError.expenseNotFound) { try await intent.perform() }
@@ -317,7 +317,7 @@ struct DeleteAndOpenExpenseToolTests {
         store.addExpense(expense)
         store.addExpense(other)
         try store.save()
-        var intent = DeleteExpenseIntent()
+        let intent = DeleteExpenseIntent()
         intent.expenseStore = store
         intent.expense = expense.entity
 
@@ -333,7 +333,7 @@ struct DeleteAndOpenExpenseToolTests {
         let expense = Expense(name: "Latte", amount: 5)
         ExpenseOpenRequest.shared.expenseID = nil
         defer { ExpenseOpenRequest.shared.expenseID = nil }
-        var intent = OpenExpenseIntent()
+        let intent = OpenExpenseIntent()
         intent.target = expense.entity
 
         _ = try await intent.perform()
