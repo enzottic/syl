@@ -6,6 +6,7 @@
 import Foundation
 import AppIntents
 import CoreSpotlight
+import CoreTransferable
 import SwiftData
 
 public struct ExpenseEntity: IndexedEntity {
@@ -125,6 +126,24 @@ extension ExpenseEntity.ExpenseEntityQuery: IndexedEntityQuery {
 
     public func reindexAllEntities(indexDescription: CSSearchableIndexDescription) async throws {
         try await ExpenseSpotlightIndexer.shared?.rebuild()
+    }
+}
+
+/// Lets Siri hand an expense to another app, such as sending it in Messages or Mail.
+extension ExpenseEntity: Transferable {
+    public static var transferRepresentation: some TransferRepresentation {
+        ProxyRepresentation(exporting: \.shareText)
+    }
+
+    /// One line per expense, readable on its own: "Latte · $5.25 · Wants · Nov 3, 2026 · ☕ Coffee".
+    /// A note follows on its own line.
+    var shareText: String {
+        var parts = [name, amount.currencyString, category.rawValue, date.formatted(date: .abbreviated, time: .omitted)]
+        if !tags.isEmpty {
+            parts.append(tags.map { $0.symbolName == nil ? "\($0.emoji) \($0.name)" : $0.name }.joined(separator: ", "))
+        }
+        let line = parts.joined(separator: " · ")
+        return note.isEmpty ? line : "\(line)\n\(note)"
     }
 }
 
