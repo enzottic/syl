@@ -132,7 +132,9 @@ enum IntentAmount {
     }
 }
 
-// The `@AppIntent(.tool)` macro requires the whole type to be iOS 27.3+, so the tool
-// conformance it would add is declared here instead, leaving the intent available on 27.0.
+// Siri AI tool, built only with the iOS 27.3+ SDK so released Xcode can still archive Syl.
+// Declared here because the `@AppIntent(.tool)` macro needs the whole type to be 27.3+.
+#if canImport(AppIntents, _version: 301.2)
 @available(iOS 27.3, *)
 extension AddExpenseAppIntent: ToolIntent { }
+#endif

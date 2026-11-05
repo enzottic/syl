@@ -46,5 +46,9 @@ public struct DeleteExpenseIntent: AppIntent {
     }
 }
 
+// Siri AI tool, built only with the iOS 27.3+ SDK so released Xcode can still archive Syl.
+// Declared here because the `@AppIntent(.tool)` macro needs the whole type to be 27.3+.
+#if canImport(AppIntents, _version: 301.2)
 @available(iOS 27.3, *)
 extension DeleteExpenseIntent: ToolIntent { }
+#endif
