@@ -149,6 +149,7 @@ struct DailyChartWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DailyChartProvider()) { entry in
             DailyChartEntryView(entry: entry)
+                .privacySensitive()
                 .containerBackground(.sageBackground, for: .widget)
         }
         .configurationDisplayName("Daily Spending")

@@ -248,6 +248,7 @@ struct MonthlySummaryWidget: Widget {
                     }
                 } else {
                     MonthlySummaryEntryView(entry: entry)
+                        .privacySensitive()
                 }
             }
             .fontDesign(.rounded)

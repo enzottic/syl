@@ -88,6 +88,7 @@ struct CategorySpotlightWidget: Widget {
                     }
                 } else {
                     CategorySpotlightEntryView(entry: entry)
+                        .privacySensitive()
                 }
             }
             .fontDesign(.rounded)
