@@ -175,8 +175,9 @@ struct SageApp: App {
     private static func configureNavigationBarAppearance() {
         let appearance = UINavigationBarAppearance()
         
+        let largeTitleFont = UIFont(name: "MomoTrustDisplay-Regular", size: 34) ?? .systemFont(ofSize: 34, weight: .bold)
         appearance.largeTitleTextAttributes = [
-            .font: UIFont(name: "MomoTrustDisplay-Regular", size: 34) ?? UIFont.systemFont(ofSize: 34)
+            .font: UIFontMetrics(forTextStyle: .largeTitle).scaledFont(for: largeTitleFont)
         ]
         
         UINavigationBar.appearance().standardAppearance = appearance
