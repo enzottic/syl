@@ -1,20 +1,22 @@
 //
 //  TagSuggestionService.swift
-//  FinanceTracker
+//  SageKit
 //
 //  Created by enzo ! on 5/16/26.
 //
 
 import Foundation
+import SwiftData
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
 
-class TagSuggestionService {
+public final class TagSuggestionService {
+    public init() {}
 
     // MARK: - AI availability
 
-    static var isAIAvailable: Bool {
+    public static var isAIAvailable: Bool {
         #if canImport(FoundationModels)
         return SystemLanguageModel.default.isAvailable
         #else
@@ -34,11 +36,11 @@ class TagSuggestionService {
 
     // MARK: - Public interface
 
-    func suggestTag(
+    public func suggestTag(
         for expenseName: String,
         existingExpenses: [(name: String, tagName: String?)],
         tagNames: [String],
-        smartTaggingMode: AppConfiguration.SmartTaggingMode
+        smartTaggingMode: SmartTaggingMode
     ) async -> (tagName: String, source: SuggestionSource)? {
         let trimmed = expenseName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !tagNames.isEmpty else { return nil }
@@ -108,7 +110,25 @@ class TagSuggestionService {
     #endif
 }
 
-enum SuggestionSource {
+extension TagSuggestionService {
+    /// Shared by the add sheet and Siri. Hidden tags are never suggested.
+    @MainActor
+    public func suggestTag(
+        forExpenseNamed name: String,
+        tags: [ExpenseTag],
+        in context: ModelContext,
+        mode: SmartTaggingMode
+    ) async -> (tag: ExpenseTag, source: SuggestionSource)? {
+        let eligible = tags.filter { !$0.isHiddenFromExpenseEntry }
+        let history = (try? ExpenseSuggestionHistory.newestTaggedMatch(for: name, in: context)).map { [$0] } ?? []
+        guard let suggestion = await suggestTag(
+                for: name, existingExpenses: history, tagNames: eligible.map(\.name), smartTaggingMode: mode),
+              let tag = eligible.first(where: { $0.name == suggestion.tagName }) else { return nil }
+        return (tag, suggestion.source)
+    }
+}
+
+public enum SuggestionSource: Sendable {
     case history
     case ai
 }

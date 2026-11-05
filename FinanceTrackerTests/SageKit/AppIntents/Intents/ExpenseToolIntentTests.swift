@@ -12,6 +12,7 @@ private func makeAddIntent(_ store: ExpenseStore, name: String = "Coffee", amoun
     intent.currencyCodeProvider = { "USD" }
     intent.name = name
     intent.amount = IntentCurrencyAmount(amount: amount, currencyCode: "USD")
+    intent.smartTaggingModeProvider = { .none }
     return intent
 }
 
@@ -111,6 +112,83 @@ struct AddExpenseToolTests {
         _ = try await intent.perform()
 
         #expect(try store.fetchExpenses().filter { $0.category == .needs }.count == 1)
+    }
+
+    @Test @MainActor
+    func suggestsTheTagFromHistoryWhenSmartTaggingAllowsIt() async throws {
+        let container = try SageModelContainer.make(for: .test)
+        let store = ExpenseStore(modelContainer: container)
+        let coffee = ExpenseTag(name: "Coffee", uiColor: .brown, emoji: "☕")
+        store.context.insert(coffee)
+        store.addExpense(Expense(name: "Latte", amount: 5, category: .wants, date: .now.addingTimeInterval(-86_400), tags: [coffee]))
+        try store.save()
+        var intent = makeAddIntent(store, name: "latte")
+        intent.smartTaggingModeProvider = { .history }
+
+        _ = try await intent.perform()
+
+        let added = try #require(store.fetchRecentExpenses(limit: 1).first)
+        #expect(added.tags?.map(\.id) == [coffee.id])
+        #expect(added.category == .wants)
+    }
+
+    @Test @MainActor
+    func suggestsNothingWhenSmartTaggingIsOff() async throws {
+        let container = try SageModelContainer.make(for: .test)
+        let store = ExpenseStore(modelContainer: container)
+        let coffee = ExpenseTag(name: "Coffee", uiColor: .brown, emoji: "☕")
+        store.context.insert(coffee)
+        store.addExpense(Expense(name: "Latte", amount: 5, category: .wants, date: .now.addingTimeInterval(-86_400), tags: [coffee]))
+        try store.save()
+
+        _ = try await makeAddIntent(store, name: "Latte").perform()
+
+        #expect(try store.fetchRecentExpenses(limit: 1).first?.tags?.isEmpty == true)
+    }
+
+    @Test @MainActor
+    func neverSuggestsAHiddenTag() async throws {
+        let container = try SageModelContainer.make(for: .test)
+        let store = ExpenseStore(modelContainer: container)
+        let hidden = ExpenseTag(name: "Old Coffee", uiColor: .brown, emoji: "☕")
+        hidden.isHiddenFromExpenseEntry = true
+        store.context.insert(hidden)
+        store.addExpense(Expense(name: "Latte", amount: 5, category: .wants, date: .now.addingTimeInterval(-86_400), tags: [hidden]))
+        try store.save()
+        var intent = makeAddIntent(store, name: "Latte")
+        intent.smartTaggingModeProvider = { .history }
+
+        _ = try await intent.perform()
+
+        #expect(try store.fetchRecentExpenses(limit: 1).first?.tags?.isEmpty == true)
+    }
+
+    @Test @MainActor
+    func keepsGivenTagsInsteadOfSuggesting() async throws {
+        let container = try SageModelContainer.make(for: .test)
+        let store = ExpenseStore(modelContainer: container)
+        let coffee = ExpenseTag(name: "Coffee", uiColor: .brown, emoji: "☕")
+        let work = ExpenseTag(name: "Work", uiColor: .gray, emoji: "💼")
+        store.context.insert(coffee)
+        store.context.insert(work)
+        store.addExpense(Expense(name: "Latte", amount: 5, category: .wants, date: .now.addingTimeInterval(-86_400), tags: [coffee]))
+        try store.save()
+        var intent = makeAddIntent(store, name: "Latte")
+        intent.smartTaggingModeProvider = { .history }
+        intent.tags = [work.entity]
+
+        _ = try await intent.perform()
+
+        #expect(try store.fetchRecentExpenses(limit: 1).first?.tags?.map(\.id) == [work.id])
+    }
+
+    @Test
+    func smartTaggingModeIsReadFromTheAppsSettingsKey() {
+        #expect(SmartTaggingMode.storageKey == PreferenceSyncService.Key.smartTaggingMode.storageKey)
+        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        #expect(SmartTaggingMode.stored(in: defaults) == nil)
+        defaults.set(SmartTaggingMode.both.rawValue, forKey: SmartTaggingMode.storageKey)
+        #expect(SmartTaggingMode.stored(in: defaults) == .both)
     }
 
     @Test @MainActor

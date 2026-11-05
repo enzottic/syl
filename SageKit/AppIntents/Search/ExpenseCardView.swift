@@ -64,7 +64,7 @@ struct ExpenseCardView: View {
                     .lineLimit(2)
             }
         }
-        .padding()
+        .snippetCard()
         .accessibilityElement(children: .combine)
     }
 

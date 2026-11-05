@@ -35,9 +35,9 @@ public struct ExpenseEntity: IndexedEntity {
     }
 
     private var subtitle: String {
-        guard !tags.isEmpty else { return "\(amount.currencyString) · \(category)" }
-        let tagsText = tags.map { "\($0.emoji) \($0.name)" }.joined(separator: ", ")
-        return "\(amount.currencyString) · \(category) · \(tagsText)"
+        let parts = [amount.currencyString, date.formatted(date: .abbreviated, time: .omitted), category.rawValue]
+            + (tags.isEmpty ? [] : [tags.map(\.plainLabel).joined(separator: ", ")])
+        return parts.joined(separator: " · ")
     }
 
     public var attributeSet: CSSearchableItemAttributeSet {
@@ -124,7 +124,7 @@ extension ExpenseEntity: Transferable {
     var shareText: String {
         var parts = [name, amount.currencyString, category.rawValue, date.formatted(date: .abbreviated, time: .omitted)]
         if !tags.isEmpty {
-            parts.append(tags.map { $0.symbolName == nil ? "\($0.emoji) \($0.name)" : $0.name }.joined(separator: ", "))
+            parts.append(tags.map(\.plainLabel).joined(separator: ", "))
         }
         let line = parts.joined(separator: " · ")
         return note.isEmpty ? line : "\(line)\n\(note)"

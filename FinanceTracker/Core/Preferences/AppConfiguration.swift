@@ -295,7 +295,7 @@ class AppConfiguration {
             _savingsPercent = savings
         }
         
-        if let raw = defaults.string(forKey: Key.smartTaggingMode.storageKey), let mode = SmartTaggingMode(rawValue: raw) {
+        if let mode = SmartTaggingMode.stored(in: defaults) {
             _smartTaggingMode = mode
         }
         
@@ -476,10 +476,5 @@ extension AppConfiguration {
         }
     }
 
-    enum SmartTaggingMode: String, CaseIterable {
-        case history = "History"
-        case ai = "AI"
-        case both = "History + AI"
-        case none = "None"
-    }
+    typealias SmartTaggingMode = SageKit.SmartTaggingMode
 }

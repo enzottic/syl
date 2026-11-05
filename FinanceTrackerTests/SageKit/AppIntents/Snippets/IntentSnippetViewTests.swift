@@ -62,9 +62,7 @@ struct IntentSnippetViewTests {
             AnyView(ExpenseCardView(expense: tagged, colors: colors)),
             AnyView(ExpenseCardView(expense: refund, colors: colors)),
             AnyView(ExpenseListSnippetView(expenses: [tagged, refund], matchCount: 12, total: 99, colors: colors)),
-            AnyView(ExpenseListSnippetView(expenses: [], matchCount: 0, total: 0, colors: colors)),
             AnyView(UpcomingExpensesSnippetView(upcoming: upcoming, days: 30, colors: colors)),
-            AnyView(UpcomingExpensesSnippetView(upcoming: [], days: 1, colors: colors)),
             AnyView(AmountSummarySnippetView(title: "Spent this month", amount: 320, detail: "4 expenses", progress: 1.2)),
         ]
         for view in views {
@@ -72,5 +70,30 @@ struct IntentSnippetViewTests {
             let image = try #require(renderer.uiImage)
             #expect(image.size.height > 20)
         }
+    }
+
+    @Test @MainActor
+    func emptyResultsDrawNoCard() {
+        let views: [AnyView] = [
+            AnyView(ExpenseListSnippetView(expenses: [], matchCount: 0, total: 0, colors: colors)),
+            AnyView(UpcomingExpensesSnippetView(upcoming: [], days: 7, colors: colors)),
+        ]
+        for view in views {
+            let size = ImageRenderer(content: view).uiImage?.size ?? .zero
+            #expect(size.height == 0)
+        }
+    }
+
+    @Test
+    func tagMarksFollowTheAppsGlyphRule() {
+        let symbolTag = ExpenseTag(name: "Dining", uiColor: .orange, emoji: "🍽️", symbolName: "fork.knife")
+        let unknownSymbol = ExpenseTag(name: "Travel", uiColor: .blue, emoji: "✈️", symbolName: "not.a.real.symbol")
+        let emojiTag = ExpenseTag(name: "Coffee", uiColor: .brown, emoji: "☕")
+
+        #expect(symbolTag.entity.symbolName == "fork.knife")
+        #expect(symbolTag.entity.plainLabel == "Dining")
+        #expect(unknownSymbol.entity.symbolName == nil)
+        #expect(unknownSymbol.entity.plainLabel == "✈️ Travel")
+        #expect(emojiTag.entity.plainLabel == "☕ Coffee")
     }
 }

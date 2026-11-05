@@ -52,6 +52,9 @@ public struct AddExpenseAppIntent: AppIntent {
 
     // Tests supply their in-memory ledger's currency without touching shared preferences.
     var currencyCodeProvider: @Sendable () throws -> String = { try LedgerCurrency.requireCode() }
+    var smartTaggingModeProvider: @Sendable () -> SmartTaggingMode = {
+        SmartTaggingMode.stored(in: SagePreferences.defaults) ?? .history
+    }
 
     public static var parameterSummary: some ParameterSummary {
         Summary("Add \(\.$name) for \(\.$amount)") {
@@ -88,7 +91,18 @@ public struct AddExpenseAppIntent: AppIntent {
         guard let expenseAmount = IntentAmount.ledgerValue(of: amount, currencyCode: currencyCode) else {
             throw $amount.needsValueError("\(MonetaryAmount.validationMessage(currencyCode: currencyCode))")
         }
-        let tagIDs = (tags ?? []).map(\.id)
+        var tagIDs = (tags ?? []).map(\.id)
+        var wasTagSuggested = false
+        if tagIDs.isEmpty {
+            let context = expenseStore.context
+            let allTags = try context.fetch(FetchDescriptor<ExpenseTag>())
+            if let suggestion = await TagSuggestionService().suggestTag(
+                forExpenseNamed: trimmedName, tags: allTags, in: context, mode: smartTaggingModeProvider()
+            ) {
+                tagIDs = [suggestion.tag.id]
+                wasTagSuggested = true
+            }
+        }
         guard let resolvedCategory = try category
                 ?? expenseStore.inferredCategory(forName: trimmedName, tagID: tagIDs.first) else {
             throw $category.needsValueError("Which category: Needs, Wants, or Savings?")
@@ -104,9 +118,10 @@ public struct AddExpenseAppIntent: AppIntent {
         let entity = try expenseStore.addExpenseAndSave(expense, tagIDs: tagIDs)
         WidgetCenter.shared.reloadAllTimelines()
         let formattedAmount = expenseAmount.currencyString(code: currencyCode)
+        let suggestedTagNote = wasTagSuggested ? entity.tags.first.map { ", tagged \($0.name)" } ?? "" : ""
         return .result(
             value: entity,
-            dialog: "Added \(trimmedName) for \(formattedAmount) to \(resolvedCategory.rawValue).",
+            dialog: "Added \(trimmedName) for \(formattedAmount) to \(resolvedCategory.rawValue)\(suggestedTagNote).",
             view: ExpenseCardView(expense: entity)
         )
     }

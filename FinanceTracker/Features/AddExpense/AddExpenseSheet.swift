@@ -201,18 +201,16 @@ struct AddExpenseSheet: View {
     private func suggestTag() {
         guard draft.tags.isEmpty else { return }
         let name = draft.name
-        let tags = allTags.filter { !$0.isHiddenFromExpenseEntry }
-        let history = (try? ExpenseSuggestionHistory.newestTaggedMatch(for: name, in: modelContext)).map { [$0] } ?? []
+        let tags = allTags
         suggestionTask?.cancel()
         suggestionTask = Task {
             let suggestion = await TagSuggestionService().suggestTag(
-                for: name, existingExpenses: history, tagNames: tags.map(\.name),
-                smartTaggingMode: config.smartTaggingMode)
+                forExpenseNamed: name, tags: tags, in: modelContext, mode: config.smartTaggingMode)
             guard !Task.isCancelled, draft.name == name, draft.tags.isEmpty,
                   currentStep.rawValue < AddExpenseStep.details.rawValue,
-                  let suggestion, let tag = tags.first(where: { $0.name == suggestion.tagName }) else { return }
-            draft.tags = [tag]
-            aiSuggestedTagIDs = suggestion.source == .ai ? [tag.id] : []
+                  let suggestion else { return }
+            draft.tags = [suggestion.tag]
+            aiSuggestedTagIDs = suggestion.source == .ai ? [suggestion.tag.id] : []
         }
     }
 

@@ -29,6 +29,11 @@ public struct ExpenseTagEntity: IndexedEntity {
         return DisplayRepresentation(title: "\(emoji) \(name)")
     }
 
+    /// The tag as plain text. A symbol can't be written into text, so a symbol tag is just its name.
+    var plainLabel: String {
+        symbolName == nil ? "\(emoji) \(name)" : name
+    }
+
     init(id: UUID, name: String, emoji: String, symbolName: String?) {
         // Plain stored properties first: assigning a @Property goes through `self`.
         self.id = id
@@ -40,7 +45,7 @@ public struct ExpenseTagEntity: IndexedEntity {
 
 public extension ExpenseTag {
     var entity: ExpenseTagEntity {
-        ExpenseTagEntity(id: self.id, name: self.name, emoji: self.emoji, symbolName: self.symbolName)
+        ExpenseTagEntity(id: self.id, name: self.name, emoji: self.emoji, symbolName: self.glyph.symbolValue)
     }
 }
 

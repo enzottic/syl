@@ -26,6 +26,12 @@ struct ExpenseListSnippetView: View {
     var hiddenCount: Int { matchCount - min(expenses.count, Self.visibleRowLimit) }
 
     var body: some View {
+        if matchCount > 0 {
+            list
+        }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 10) {
             SnippetHeader(
                 title: matchCount == 1 ? "1 expense" : "\(matchCount) expenses",
@@ -47,7 +53,7 @@ struct ExpenseListSnippetView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding()
+        .snippetCard()
     }
 }
 
@@ -63,16 +69,17 @@ struct UpcomingExpensesSnippetView: View {
     }
 
     var body: some View {
+        if !upcoming.isEmpty {
+            list
+        }
+    }
+
+    private var list: some View {
         VStack(alignment: .leading, spacing: 10) {
             SnippetHeader(
                 title: days == 1 ? "Due in the next day" : "Due in the next \(days) days",
                 amount: upcoming.reduce(0) { $0 + $1.amount }
             )
-            if upcoming.isEmpty {
-                Text("Nothing recurring is due.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
             ForEach(Array(upcoming.prefix(ExpenseListSnippetView.visibleRowLimit).enumerated()), id: \.offset) { _, item in
                 Divider()
                 SnippetRow(
@@ -90,7 +97,7 @@ struct UpcomingExpensesSnippetView: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding()
+        .snippetCard()
     }
 }
 
@@ -130,7 +137,16 @@ struct AmountSummarySnippetView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
+        .snippetCard()
+    }
+}
+
+extension View {
+    /// Siri can show a snippet rendered in light appearance on its dark background, which hides
+    /// default-colored text, so cards bring a background that matches their own text colors.
+    func snippetCard() -> some View {
+        padding()
+            .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: 20, style: .continuous))
     }
 }
 
