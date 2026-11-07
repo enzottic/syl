@@ -35,6 +35,7 @@ struct AddExpenseSheet: View {
     @State private var recentSuggestions: [Expense] = []
     @State private var aiSuggestedTagIDs: Set<UUID> = []
     @State private var hasStartedInitialImport = false
+    @State private var showDiscardConfirmation = false
     @FocusState private var isNameFocused: Bool
     @FocusState private var isNoteFocused: Bool
     private let initialReceiptData: Data?
@@ -48,7 +49,20 @@ struct AddExpenseSheet: View {
         ExpenseEntrySheetLayout(animation: pageAnimation, step: currentStep.rawValue,
                                 overlayActive: attachment.isPresented,
                                 expandsForOverlay: attachment.mode.isExpanded) {
-            EmptyView()
+            HStack {
+                Button(action: requestDismissal) {
+                    Image(systemName: "xmark")
+                        .font(.headline)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .keyboardShortcut(.cancelAction)
+                .accessibilityLabel("Cancel")
+                .accessibilityIdentifier("cancel-expense-button")
+                .disabled(isSaving)
+                Spacer()
+            }
         } content: {
             VStack(spacing: 20) {
                 pageContent
@@ -86,7 +100,15 @@ struct AddExpenseSheet: View {
                 onAllPhotos: { showPhotoLibrary = true }
             )
         }
-        .interactiveDismissDisabled(attachment.isPresented)
+        .interactiveDismissDisabled(attachment.isPresented || draft.hasChanges)
+        .confirmationDialog("Discard expense?", isPresented: $showDiscardConfirmation, titleVisibility: .visible) {
+            Button("Discard Expense", role: .destructive) { dismiss() }
+                .accessibilityIdentifier("discard-expense-button")
+            Button("Keep Editing", role: .cancel) {}
+                .accessibilityIdentifier("keep-editing-expense-button")
+        } message: {
+            Text("The details you've entered will be lost.")
+        }
         .alert("Expense", isPresented: $showError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -240,6 +262,11 @@ struct AddExpenseSheet: View {
         } else {
             saveExpense()
         }
+    }
+
+    private func requestDismissal() {
+        clearFocus()
+        if draft.hasChanges { showDiscardConfirmation = true } else { dismiss() }
     }
 
     private func previousStep() {
