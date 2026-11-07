@@ -41,7 +41,7 @@ private struct Harness {
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         // Persistent history needs an on-disk store.
-        let schema = Schema(versionedSchema: SageSchemaV9.self)
+        let schema = Schema(versionedSchema: SageSchemaV10.self)
         container = try ModelContainer(
             for: schema,
             configurations: [ModelConfiguration(

@@ -222,3 +222,21 @@ struct ExpenseBackupCodecTests {
         #expect(backup.tags.map(\.id) == [tagID.uuidString.lowercased()])
     }
 }
+
+extension ExpenseBackupCodecTests {
+    @Test
+    func editTimestampRoundTripsAndIsOmittedWhenAbsent() throws {
+        let edited = ExpenseBackup.Record(id: UUID().uuidString, name: "Rent", dateSecondsSince2001: 123, amount: "900",
+                                          category: "Needs", note: "", tagIDs: [], userEditedAtSecondsSince2001: 456.5)
+        let unedited = ExpenseBackup.Record(id: UUID().uuidString, name: "Rent", dateSecondsSince2001: 123, amount: "900",
+                                            category: "Needs", note: "", tagIDs: [])
+        let data = try ExpenseBackupCodec.encode(.init(currency: "USD", tags: [], expenses: [edited, unedited]))
+        let decoded = try ExpenseBackupCodec.decode(data)
+
+        let byID = Dictionary(uniqueKeysWithValues: decoded.expenses.map { ($0.id, $0) })
+        #expect(byID[edited.id.lowercased()]?.userEditedAt == Date(timeIntervalSinceReferenceDate: 456.5))
+        #expect(byID[unedited.id.lowercased()]?.userEditedAt == nil)
+        let json = try #require(String(data: data, encoding: .utf8))
+        #expect(json.components(separatedBy: "userEditedAtSecondsSince2001").count == 2)
+    }
+}

@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 public class SageSchemaMigrationPlan: SchemaMigrationPlan {
-    public static var schemas: [any VersionedSchema.Type] = [SageSchemaV1.self, SageSchemaV2.self, SageSchemaV3.self, SageSchemaV4.self, SageSchemaV5.self, SageSchemaV6.self, SageSchemaV7.self, SageSchemaV8.self, SageSchemaV9.self]
+    public static var schemas: [any VersionedSchema.Type] = [SageSchemaV1.self, SageSchemaV2.self, SageSchemaV3.self, SageSchemaV4.self, SageSchemaV5.self, SageSchemaV6.self, SageSchemaV7.self, SageSchemaV8.self, SageSchemaV9.self, SageSchemaV10.self]
 
     public static var stages: [MigrationStage] = [
         MigrationStage.lightweight(fromVersion: SageSchemaV1.self, toVersion: SageSchemaV2.self),
@@ -21,6 +21,7 @@ public class SageSchemaMigrationPlan: SchemaMigrationPlan {
             try context.save()
         },
         MigrationStage.lightweight(fromVersion: SageSchemaV7.self, toVersion: SageSchemaV8.self),
-        MigrationStage.lightweight(fromVersion: SageSchemaV8.self, toVersion: SageSchemaV9.self)
+        MigrationStage.lightweight(fromVersion: SageSchemaV8.self, toVersion: SageSchemaV9.self),
+        MigrationStage.lightweight(fromVersion: SageSchemaV9.self, toVersion: SageSchemaV10.self)
     ]
 }

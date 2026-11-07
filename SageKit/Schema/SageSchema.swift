@@ -10,8 +10,8 @@ import SwiftUI
 
 // The current schema version. Point these at the newest SageSchemaV* when adding one,
 // and append it to SageSchemaMigrationPlan.
-public typealias Expense = SageSchemaV9.Expense
-public typealias ExpenseTag = SageSchemaV9.ExpenseTag
-public typealias RecurringExpenseRule = SageSchemaV9.RecurringExpenseRule
-public typealias RecurrenceFrequency = SageSchemaV9.RecurrenceFrequency
-public typealias ExpenseAccount = SageSchemaV9.ExpenseAccount
+public typealias Expense = SageSchemaV10.Expense
+public typealias ExpenseTag = SageSchemaV10.ExpenseTag
+public typealias RecurringExpenseRule = SageSchemaV10.RecurringExpenseRule
+public typealias RecurrenceFrequency = SageSchemaV10.RecurrenceFrequency
+public typealias ExpenseAccount = SageSchemaV10.ExpenseAccount

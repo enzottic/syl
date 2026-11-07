@@ -162,9 +162,11 @@ nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
         var tagIDs: [String]
         var recurringExpenseID: String?
         var recurringOccurrenceKey: String?
+        var userEditedAtSecondsSince2001: Double?
 
         init(id: String, name: String, dateSecondsSince2001: Double, amount: String, category: String,
-                    note: String, tagIDs: [String], recurringExpenseID: String? = nil, recurringOccurrenceKey: String? = nil) {
+                    note: String, tagIDs: [String], recurringExpenseID: String? = nil, recurringOccurrenceKey: String? = nil,
+                    userEditedAtSecondsSince2001: Double? = nil) {
             self.id = id
             self.name = name
             self.dateSecondsSince2001 = dateSecondsSince2001
@@ -174,10 +176,12 @@ nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             self.tagIDs = tagIDs
             self.recurringExpenseID = recurringExpenseID
             self.recurringOccurrenceKey = recurringOccurrenceKey
+            self.userEditedAtSecondsSince2001 = userEditedAtSecondsSince2001
         }
 
         private enum CodingKeys: String, CodingKey {
             case id, name, dateSecondsSince2001, amount, category, note, tagIDs, recurringExpenseID, recurringOccurrenceKey
+            case userEditedAtSecondsSince2001
         }
 
         init(from decoder: Decoder) throws {
@@ -192,6 +196,7 @@ nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             // decode(Optional.self), rather than decodeIfPresent, requires the nullable keys.
             recurringExpenseID = try values.decode(String?.self, forKey: .recurringExpenseID)
             recurringOccurrenceKey = try values.decode(String?.self, forKey: .recurringOccurrenceKey)
+            userEditedAtSecondsSince2001 = try values.decodeIfPresent(Double.self, forKey: .userEditedAtSecondsSince2001)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -205,9 +210,11 @@ nonisolated struct ExpenseBackup: Codable, Equatable, Sendable {
             try values.encode(tagIDs, forKey: .tagIDs)
             try values.encode(recurringExpenseID, forKey: .recurringExpenseID)
             try values.encode(recurringOccurrenceKey, forKey: .recurringOccurrenceKey)
+            try values.encodeIfPresent(userEditedAtSecondsSince2001, forKey: .userEditedAtSecondsSince2001)
         }
 
         var date: Date { Date(timeIntervalSinceReferenceDate: dateSecondsSince2001) }
+        var userEditedAt: Date? { userEditedAtSecondsSince2001.map(Date.init(timeIntervalSinceReferenceDate:)) }
 
         var effectiveOccurrenceKey: String? {
             guard let rawRule = recurringExpenseID, let rule = UUID(uuidString: rawRule) else { return nil }
@@ -373,7 +380,8 @@ nonisolated enum ExpenseBackupCodec {
                 id: expense.id.uuidString.lowercased(), name: expense.name,
                 dateSecondsSince2001: expense.date.timeIntervalSinceReferenceDate, amount: String(expense.amount),
                 category: expense.category.rawValue, note: expense.note, tagIDs: selected.map { $0.id.uuidString.lowercased() },
-                recurringExpenseID: expense.recurringExpenseId?.uuidString.lowercased(), recurringOccurrenceKey: occurrenceKey
+                recurringExpenseID: expense.recurringExpenseId?.uuidString.lowercased(), recurringOccurrenceKey: occurrenceKey,
+                userEditedAtSecondsSince2001: expense.userEditedAt?.timeIntervalSinceReferenceDate
             )
         }
         var ruleIDs = Set<UUID>()

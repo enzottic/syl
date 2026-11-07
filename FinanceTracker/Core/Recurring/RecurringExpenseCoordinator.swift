@@ -121,6 +121,9 @@ final class RecurringExpenseCoordinator {
             if result.generatedCount > 0 || result.repair.removedCount > 0 {
                 WidgetCenter.shared.reloadAllTimelines()
             }
+            if result.repair.conflictCount > 0 {
+                Self.logger.notice("Kept the latest edit for \(result.repair.conflictCount) conflicting recurring expenses.")
+            }
             
             // Also handles rules becoming due while the app stays in the foreground.
             let now = Date.now

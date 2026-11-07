@@ -13,7 +13,7 @@ struct SchemaMigrationTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appending(path: "Indexes.sqlite")
-        let schema = Schema(versionedSchema: SageSchemaV9.self)
+        let schema = Schema(versionedSchema: SageSchemaV10.self)
         let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
             ModelConfiguration(schema: schema, url: url, cloudKitDatabase: .none)
         ])
@@ -33,7 +33,7 @@ struct SchemaMigrationTests {
 
         try createV1Store(at: storeURL)
 
-        let schema = Schema(versionedSchema: SageSchemaV9.self)
+        let schema = Schema(versionedSchema: SageSchemaV10.self)
         let configuration = ModelConfiguration(
             "Migration",
             schema: schema,
@@ -79,7 +79,7 @@ struct SchemaMigrationTests {
 
         // Reopen both the migrated legacy rule and its explicitly converted schedule.
         for opening in 0..<3 {
-            let schema = Schema(versionedSchema: SageSchemaV9.self)
+            let schema = Schema(versionedSchema: SageSchemaV10.self)
             let configuration = ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
             let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [configuration])
             let rule = try #require(container.mainContext.fetch(FetchDescriptor<RecurringExpenseRule>()).first)
@@ -136,7 +136,7 @@ struct SchemaMigrationTests {
             try container.mainContext.save()
         }
         for opening in 0..<2 {
-            let schema = Schema(versionedSchema: SageSchemaV9.self)
+            let schema = Schema(versionedSchema: SageSchemaV10.self)
             let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
                 ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
             ])
@@ -195,7 +195,7 @@ struct SchemaMigrationTests {
             try expectExpenseDateIndexes(at: url, hasDateIndex: false)
         }
         for _ in 0..<2 {
-            let schema = Schema(versionedSchema: SageSchemaV9.self)
+            let schema = Schema(versionedSchema: SageSchemaV10.self)
             let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
                 ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
             ])
@@ -258,7 +258,7 @@ struct SchemaMigrationTests {
 
         for opening in 0..<2 {
             try autoreleasepool {
-                let schema = Schema(versionedSchema: SageSchemaV9.self)
+                let schema = Schema(versionedSchema: SageSchemaV10.self)
                 let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
                     ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
                 ])
@@ -359,5 +359,37 @@ struct SchemaMigrationTests {
         context.insert(tag)
         context.insert(SageSchemaV1.RecurringExpenseRule(name: "Legacy Rule", amount: 900, note: "", category: .needs, tag: tag, frequency: .monthly, startDate: Date(timeIntervalSince1970: 1_769_860_800)))
         try context.save()
+    }
+}
+
+extension SchemaMigrationTests {
+    @Test @MainActor
+    func v9StoreMigratesWithNoEditTimestamps() throws {
+        UIColorValueTransformer.register()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "SageV9Migration-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appending(path: "Migration.sqlite")
+        let expenseID = UUID()
+
+        try autoreleasepool {
+            let schema = Schema(versionedSchema: SageSchemaV9.self)
+            let container = try ModelContainer(for: schema, configurations: [
+                ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
+            ])
+            let expense = SageSchemaV9.Expense(name: "Rent", amount: 900, category: .needs)
+            expense.id = expenseID
+            container.mainContext.insert(expense)
+            try container.mainContext.save()
+        }
+
+        let schema = Schema(versionedSchema: SageSchemaV10.self)
+        let container = try ModelContainer(for: schema, migrationPlan: SageSchemaMigrationPlan.self, configurations: [
+            ModelConfiguration("Migration", schema: schema, url: url, cloudKitDatabase: .none)
+        ])
+        let expense = try #require(container.mainContext.fetch(FetchDescriptor<Expense>()).first)
+        #expect(expense.id == expenseID && expense.name == "Rent" && expense.amount == 900)
+        #expect(expense.userEditedAt == nil)
+        try expectExpenseDateIndexes(at: url)
     }
 }
