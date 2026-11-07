@@ -76,6 +76,7 @@ final public class ExpenseStore {
         try isolatedWrite(save: save) { writeContext in
             let expense = try Self.expense(withID: id, in: writeContext)
             try change(expense, writeContext)
+            expense.markUserEdited()
             return expense.entity
         }
     }

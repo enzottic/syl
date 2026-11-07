@@ -26,7 +26,7 @@ struct ExpenseStoreTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let storeURL = directory.appendingPathComponent("Sage.sqlite")
-        let schema = Schema(versionedSchema: SageSchemaV9.self)
+        let schema = Schema(versionedSchema: SageSchemaV10.self)
 
         func openContainer() throws -> ModelContainer {
             try ModelContainer(
@@ -192,5 +192,23 @@ struct ExpenseStoreTests {
         #expect(throws: ExpenseStore.StoreError.unavailable) {
             try store.addExpenseAndSave(Expense(name: "Coffee", amount: 4), tagIDs: [])
         }
+    }
+}
+
+extension ExpenseStoreTests {
+    @Test @MainActor
+    func updateMarksTheExpenseAsUserEditedButAddDoesNot() throws {
+        let container = try SageModelContainer.make(for: .test)
+        let store = ExpenseStore(modelContainer: container)
+        let added = try store.addExpenseAndSave(Expense(name: "Coffee", amount: 4, category: .wants), tagIDs: [])
+        let fetchAdded = { try ModelContext(container).fetch(FetchDescriptor<Expense>()).first }
+        #expect(try fetchAdded()?.userEditedAt == nil)
+
+        let before = Date.now
+        _ = try store.updateExpenseAndSave(id: added.id) { expense, _ in expense.amount = 5 }
+
+        let updated = try #require(try fetchAdded())
+        #expect(updated.amount == 5)
+        #expect(try #require(updated.userEditedAt) >= before)
     }
 }

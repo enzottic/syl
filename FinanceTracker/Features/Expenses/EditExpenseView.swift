@@ -187,6 +187,8 @@ struct EditExpenseView: View {
         expense.category = workingExpense.category
         expense.tags = workingExpense.tags
         expense.note = workingExpense.note
+        expense.markUserEdited()
+        
         if let rule = ruleToUpdate {
             rule.name = trimmedName
             rule.amount = amount

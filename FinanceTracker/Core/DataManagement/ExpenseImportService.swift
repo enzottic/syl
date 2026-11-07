@@ -247,6 +247,7 @@ struct ExpenseImportService {
                                       recurringExpenseId: row.recurringExpenseID.flatMap(UUID.init(uuidString:)),
                                       recurringOccurrenceKey: row.recurringOccurrenceKey)
                     expense.id = UUID(uuidString: row.id)!
+                    expense.userEditedAt = row.userEditedAt
                 case .csv(let rows):
                     let row = rows[index]
                     expense = Expense(name: row.name, amount: row.amount, category: ExpenseCategory(rawValue: row.category)!,
