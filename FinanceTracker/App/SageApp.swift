@@ -10,20 +10,18 @@ import SwiftData
 import AppIntents
 import SageKit
 import UserNotifications
-import OSLog
 
 @main
 struct SageApp: App {
-    private static let logger = Logger(subsystem: "me.enzottic.FinanceTracker", category: "WatchSync")
     @AppStorage("hasOpenedAppOnce") var hasOpenedAppOnce: Bool = false
     @Environment(\.scenePhase) var scenePhase
     
-    @State private var appConfiguration = AppConfiguration()
+    @State private var appConfiguration: AppConfiguration
     
     private let containerResult: Result<ModelContainer, any Error>
     private let recurringExpenseCoordinator: RecurringExpenseCoordinator?
     private let recurringReminders: RecurringReminderCoordinator?
-    private let connectivity = WatchSnapshotSender.shared
+    private let watchSnapshotPublisher: WatchSnapshotPublisher?
     
     @MainActor
     init() {
@@ -40,12 +38,17 @@ struct SageApp: App {
             }
         }
         self.containerResult = containerResult
+        let appConfiguration = AppConfiguration()
+        _appConfiguration = State(initialValue: appConfiguration)
         if case let .success(container) = containerResult,
            ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1" {
             recurringReminders = RecurringReminderCoordinator(container: container)
+            watchSnapshotPublisher = WatchSnapshotPublisher(container: container, configuration: appConfiguration)
         } else {
             recurringReminders = nil
+            watchSnapshotPublisher = nil
         }
+        watchSnapshotPublisher?.start()
 
         // Present notifications that fire while the app is foreground
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
@@ -110,34 +113,10 @@ struct SageApp: App {
                 appConfiguration.recheckPreferences()
                 ExpenseSpotlightIndexer.shared?.scheduleUpdate()
             }
-            publishMonthlySnapshot()
+            watchSnapshotPublisher?.publish()
         }
     }
     
-    private func publishMonthlySnapshot() {
-        guard ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] != "1",
-              hasOpenedAppOnce,
-              case let .success(container) = containerResult else {
-            return
-        }
-        
-        do {
-            guard let snapshot = try WatchSnapshotBuilder.makeSnapshot(
-                container: container,
-                categoryColors: appConfiguration.categoryColors,
-                currencyCode: appConfiguration.ledgerCurrencyCode,
-                monthlyBudget: Double(appConfiguration.totalMonthlyIncome)
-            ) else {
-                return
-            }
-            
-            connectivity.sendUpdatedMonthlySnapshot(snapshot: snapshot)
-            
-        } catch {
-            Self.logger.error("Could not prepare Watch snapshot: \(error.localizedDescription)")
-        }
-    }
-
     @ViewBuilder
     private var mainContent: some View {
         Group {
