@@ -36,6 +36,16 @@ struct WatchSnapshotTests {
     }
 
     @Test
+    func monthProgressSpansReportingMonthOnly() throws {
+        let snapshot = WatchSnapshot.preview
+        let midpoint = snapshot.monthStart.addingTimeInterval(snapshot.monthEnd.timeIntervalSince(snapshot.monthStart) / 2)
+        #expect(snapshot.monthProgress(at: snapshot.monthStart) == 0)
+        #expect(try abs(#require(snapshot.monthProgress(at: midpoint)) - 0.5) < 0.0001)
+        #expect(snapshot.monthProgress(at: snapshot.monthEnd) == nil)
+        #expect(snapshot.monthProgress(at: snapshot.monthStart.addingTimeInterval(-1)) == nil)
+    }
+
+    @Test
     func staleAtDayOldAndMonthRollover() {
         let snapshot = WatchSnapshot.preview
         #expect(!snapshot.isStale(at: snapshot.generatedAt))

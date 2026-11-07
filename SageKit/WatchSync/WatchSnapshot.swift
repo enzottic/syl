@@ -82,6 +82,12 @@ extension WatchSnapshot {
         date >= monthEnd || date.timeIntervalSince(generatedAt) >= 86_400
     }
 
+    /// How far through the reporting month `date` is, from 0 to 1, or nil outside the month.
+    public func monthProgress(at date: Date) -> Double? {
+        guard date >= monthStart, date < monthEnd else { return nil }
+        return date.timeIntervalSince(monthStart) / monthEnd.timeIntervalSince(monthStart)
+    }
+
     // Older delivered snapshots contain only this month's cumulative points.
     public var recentDays: [WatchDailySpending] {
         if let recentDailySpending { return recentDailySpending }
