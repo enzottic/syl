@@ -6,6 +6,7 @@ struct ExpenseEntrySheetContainer<Header: View, Content: View, Footer: View, Ove
     var step: Int
     var overlayActive: Bool
     var expandsForOverlay: Bool
+    var onDismissAttempt: (() -> Void)?
     var header: Header
     var content: Content
     var footer: Footer
@@ -19,6 +20,7 @@ struct ExpenseEntrySheetContainer<Header: View, Content: View, Footer: View, Ove
     }
 
     func updateUIViewController(_ controller: ExpenseEntrySheetViewController, context: Context) {
+        controller.onDismissAttempt = onDismissAttempt
         // Sheet-spanning layer: no padding, measurement, or page transitions.
         controller.updateOverlay(
             AnyView(overlay.environment(\.self, context.environment)),

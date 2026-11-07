@@ -59,6 +59,12 @@ final class ExpenseEntrySheetViewController: UIViewController {
     private weak var previousResponder: UIView?
     private var previousResponderFrame: CGRect?
     private weak var managedSheet: UISheetPresentationController?
+    private let dismissAttemptForwarder = DismissAttemptForwarder()
+
+    var onDismissAttempt: (() -> Void)? {
+        get { dismissAttemptForwarder.onAttempt }
+        set { dismissAttemptForwarder.onAttempt = newValue }
+    }
     private let detentIdentifier = UISheetPresentationController.Detent.Identifier("expense-entry-content")
     private var pageGeneration = 0
     private var layoutGeneration = 0
@@ -282,6 +288,7 @@ final class ExpenseEntrySheetViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         hasAppeared = true
+        if let sheet = enclosingSheet() { dismissAttemptForwarder.install(on: sheet) }
         requestMeasurement()
     }
 
