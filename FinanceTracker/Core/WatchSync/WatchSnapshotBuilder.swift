@@ -3,6 +3,7 @@ import SwiftData
 import SageKit
 
 /// Builds the current month's summary that the iPhone sends to the Watch.
+@MainActor
 enum WatchSnapshotBuilder {
     /// Returns nil when the calendar can't describe the current month.
     static func makeSnapshot(
