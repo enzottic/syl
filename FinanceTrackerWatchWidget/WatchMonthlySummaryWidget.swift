@@ -31,6 +31,7 @@ struct WatchMonthlySummaryProvider: TimelineProvider {
 struct WatchMonthlySummaryWidgetView: View {
     let entry: WatchMonthlySummaryEntry
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -39,7 +40,8 @@ struct WatchMonthlySummaryWidgetView: View {
                 Text(snapshot.totalSpent, format: .currency(code: snapshot.currencyCode))
                     .font(.system(.title3, design: .rounded, weight: .semibold))
                     .monospacedDigit().minimumScaleFactor(0.6).lineLimit(1)
-                if snapshot.monthlyBudget > 0 {
+                    .redacted(reason: isLuminanceReduced ? .privacy : [])
+                if snapshot.monthlyBudget > 0, !isLuminanceReduced {
                     if renderingMode == .fullColor {
                         WatchBudgetBar(total: snapshot.totalSpent, budget: snapshot.monthlyBudget, categories: snapshot.categories)
                     } else {
