@@ -4,6 +4,8 @@ struct WatchBudgetBar: View {
     let total: Double
     let budget: Double
     let categories: [WatchCategorySnapshot]
+    /// Fraction of the month elapsed; draws a marker showing where spending would be on an even pace.
+    var pace: Double? = nil
 
     var body: some View {
         GeometryReader { geometry in
@@ -19,6 +21,12 @@ struct WatchBudgetBar: View {
                     }
                 }
                 .clipShape(Capsule())
+                if let pace {
+                    Capsule()
+                        .fill(.primary)
+                        .frame(width: 2, height: geometry.size.height + 6)
+                        .offset(x: geometry.size.width * min(max(pace, 0), 1) - 1)
+                }
             }
         }
         .frame(height: 10)
@@ -32,20 +40,38 @@ struct WatchBudgetRemaining: View {
     let currencyCode: String
     var isSavings = false
 
+    private var status: BudgetStatus {
+        BudgetStatus(spent: spent, budget: budget, goal: isSavings ? .target : .limit)
+    }
+
     var body: some View {
-        switch BudgetStatus(spent: spent, budget: budget, goal: isSavings ? .target : .limit) {
+        text.foregroundStyle(color)
+    }
+
+    private var text: Text {
+        let format = FloatingPointFormatStyle<Double>.Currency(code: currencyCode).precision(.fractionLength(0))
+        switch status {
         case .noBudget:
-            Text("No budget set")
+            return Text("No budget set")
         case .noTarget:
-            Text("No savings target")
+            return Text("No savings target")
         case .underBudget(let remaining):
-            Text("\(remaining.formatted(.currency(code: currencyCode))) left")
+            return Text("\(remaining.formatted(format)) left")
         case .overBudget(let amount):
-            Text("\(amount.formatted(.currency(code: currencyCode))) over budget")
+            return Text("\(amount.formatted(format)) over")
         case .belowTarget(let remaining):
-            Text("\(remaining.formatted(.currency(code: currencyCode))) to target")
+            return Text("\(remaining.formatted(format)) to go")
         case .targetReached:
-            Text("Target reached")
+            return Text("Target reached")
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case .underBudget: .green
+        case .overBudget: .red
+        case .targetReached: .green
+        case .noBudget, .noTarget, .belowTarget: .primary
         }
     }
 }
