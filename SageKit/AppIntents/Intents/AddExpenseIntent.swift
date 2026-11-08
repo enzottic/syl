@@ -27,7 +27,7 @@ public struct AddExpenseAppIntent: AppIntent {
     @Parameter(
         title: "Amount",
         description: "How much was spent. Syl records the number in the ledger's currency and never converts it. A negative amount is a refund.",
-        requestValueDialog: "What is the amount?"
+        requestValueDialog: "What's the amount?"
     )
     var amount: IntentCurrencyAmount
 
@@ -88,6 +88,10 @@ public struct AddExpenseAppIntent: AppIntent {
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
             throw $name.needsValueError("Enter an expense name.")
+        }
+        // Siri can hand over a blank amount instead of asking, so treat it as missing rather than invalid.
+        guard !amount.amount.isNaN, amount.amount != 0 else {
+            throw $amount.needsValueError("What's the amount?")
         }
         guard let expenseAmount = IntentAmount.ledgerValue(of: amount, currencyCode: currencyCode) else {
             throw $amount.needsValueError("\(MonetaryAmount.validationMessage(currencyCode: currencyCode))")
