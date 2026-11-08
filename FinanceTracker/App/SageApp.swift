@@ -53,16 +53,7 @@ struct SageApp: App {
         // Present notifications that fire while the app is foreground
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
 
-        // Make ExpenseStore resolvable via @Dependency in App Intents.
-        switch containerResult {
-        case let .success(container):
-            let expenseStore = ExpenseStore(modelContainer: container)
-            AppDependencyManager.shared.add(dependency: expenseStore)
-        case .failure:
-            if let unavailableStore = try? ExpenseStore.unavailable() {
-                AppDependencyManager.shared.add(dependency: unavailableStore)
-            }
-        }
+        AppIntentDependencies.register(container: containerResult)
 
         // Unit tests are hosted in the app and shouldn't index the simulator's real store.
         let environment = ProcessInfo.processInfo.environment

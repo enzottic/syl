@@ -12,6 +12,10 @@ import SageKit
 
 @main
 struct SageWidgetBundle: WidgetBundle {
+    init() {
+        AppIntentDependencies.register()
+    }
+
     var body: some Widget {
         DailyChartWidget()
         RecentExpensesWidget()
