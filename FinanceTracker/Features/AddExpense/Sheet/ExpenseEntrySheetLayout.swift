@@ -12,6 +12,7 @@ struct ExpenseEntrySheetLayout<Header: View, Content: View, Footer: View, Overla
     var step: Int
     var overlayActive = false
     var expandsForOverlay = false
+    var onDismissAttempt: (() -> Void)?
     @ViewBuilder var header: Header
     @ViewBuilder var content: Content
     @ViewBuilder var footer: Footer
@@ -20,6 +21,7 @@ struct ExpenseEntrySheetLayout<Header: View, Content: View, Footer: View, Overla
     var body: some View {
         ExpenseEntrySheetContainer(animation: animation, step: step,
                                    overlayActive: overlayActive, expandsForOverlay: expandsForOverlay,
+                                   onDismissAttempt: onDismissAttempt,
                                    header: header, content: content, footer: footer, overlay: overlay)
         // UIKit receives the whole sheet and applies the container safe areas
         // itself. SwiftUI must not shorten it again when the keyboard arrives.

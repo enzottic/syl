@@ -18,10 +18,8 @@ struct ReceiptPhotoGrid: View {
 
     var body: some View {
         ZStack {
-            Color.black
+            Color(.systemBackground)
             content
-                // The panel is always black, so its text uses dark-mode colors.
-                .environment(\.colorScheme, .dark)
         }
         .overlay(alignment: .bottom) {
             HStack {

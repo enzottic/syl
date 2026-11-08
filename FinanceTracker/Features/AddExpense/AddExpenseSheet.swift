@@ -48,24 +48,19 @@ struct AddExpenseSheet: View {
     var body: some View {
         ExpenseEntrySheetLayout(animation: pageAnimation, step: currentStep.rawValue,
                                 overlayActive: attachment.isPresented,
-                                expandsForOverlay: attachment.mode.isExpanded) {
-            HStack {
-                Button(action: requestDismissal) {
-                    Image(systemName: "xmark")
-                        .font(.headline)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.circle)
-                .keyboardShortcut(.cancelAction)
-                .accessibilityLabel("Cancel")
-                .accessibilityIdentifier("cancel-expense-button")
-                .disabled(isSaving)
-                Spacer()
-            }
+                                expandsForOverlay: attachment.mode.isExpanded,
+                                onDismissAttempt: requestDismissal) {
+            EmptyView()
         } content: {
             VStack(spacing: 20) {
                 pageContent
+            }
+            .background {
+                Button("Cancel", action: requestDismissal)
+                    .keyboardShortcut(.cancelAction)
+                    .disabled(isSaving)
+                    .hidden()
+                    .accessibilityHidden(true)
             }
             .disabled(importer.isImporting || isSaving)
         } footer: {
@@ -100,7 +95,7 @@ struct AddExpenseSheet: View {
                 onAllPhotos: { showPhotoLibrary = true }
             )
         }
-        .interactiveDismissDisabled(attachment.isPresented || draft.hasChanges)
+        .interactiveDismissDisabled(attachment.isPresented || !isUntouched)
         .confirmationDialog("Discard expense?", isPresented: $showDiscardConfirmation, titleVisibility: .visible) {
             Button("Discard Expense", role: .destructive) { dismiss() }
                 .accessibilityIdentifier("discard-expense-button")
@@ -264,9 +259,14 @@ struct AddExpenseSheet: View {
         }
     }
 
+    private var isUntouched: Bool {
+        currentStep == .name && draft.name.isEmpty
+    }
+
     private func requestDismissal() {
+        guard !isSaving, !attachment.isPresented else { return }
         clearFocus()
-        if draft.hasChanges { showDiscardConfirmation = true } else { dismiss() }
+        if isUntouched { dismiss() } else { showDiscardConfirmation = true }
     }
 
     private func previousStep() {

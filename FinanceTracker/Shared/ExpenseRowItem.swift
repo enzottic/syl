@@ -38,6 +38,14 @@ struct ExpenseRowItem: View {
     }
 
     var body: some View {
+        // A deleted expense's row can re-render during its removal animation,
+        // after saving has detached the model and cleared its attributes.
+        if expense.modelContext != nil && !expense.isDeleted {
+            row
+        }
+    }
+
+    private var row: some View {
         ExpenseRowView(
             name: expense.name,
             amount: expense.amount.currencyString(code: config.ledgerCurrencyCode),
