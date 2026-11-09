@@ -163,7 +163,7 @@ struct AddExpenseSheet: View {
             }
             ExpenseNamePage(name: $draft.name, nameFocus: $isNameFocused, onSubmit: advanceStep) { receiptMenu }
         case .amount:
-            ExpenseAmountPage(amount: $draft.amount)
+            ExpenseAmountPage(amount: $draft.amount, onSubmit: advanceStep)
         case .category:
             ExpenseCategoryPage(category: $draft.category)
         case .date:

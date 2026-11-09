@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExpenseAmountPage: View {
     @Binding var amount: Double?
+    var onSubmit: () -> Void
     @FocusState private var focusedField: Bool?
 
     var body: some View {
@@ -17,6 +18,12 @@ struct ExpenseAmountPage: View {
                 focusValue: true,
                 usesInlineKeypad: true
             )
+        }
+        .background {
+            Button("Next", action: onSubmit)
+                .keyboardShortcut(.return, modifiers: [])
+                .hidden()
+                .accessibilityHidden(true)
         }
     }
 }
