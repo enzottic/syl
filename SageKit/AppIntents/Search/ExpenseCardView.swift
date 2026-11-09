@@ -27,6 +27,7 @@ extension ExpenseRowView {
             name: expense.name,
             amount: expense.amount.currencyString,
             date: expense.date.relative(),
+            categoryName: expense.category.rawValue,
             categoryColor: colors.color(for: expense.category),
             glyph: expense.tags.first?.glyph,
             extraTagCount: max(expense.tags.count - 1, 0),

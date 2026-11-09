@@ -18,8 +18,10 @@ public struct ExpenseRowView: View {
     let name: String
     let amount: String
     let date: String
+    let categoryName: String?
     let categoryColor: Color
     let glyph: TagGlyph?
+    let tagColor: Color?
     let extraTagCount: Int
     let isRecurring: Bool
     let style: Style
@@ -28,8 +30,10 @@ public struct ExpenseRowView: View {
         name: String,
         amount: String,
         date: String,
+        categoryName: String? = nil,
         categoryColor: Color,
         glyph: TagGlyph?,
+        tagColor: Color? = nil,
         extraTagCount: Int = 0,
         isRecurring: Bool,
         style: Style = .regular
@@ -37,11 +41,21 @@ public struct ExpenseRowView: View {
         self.name = name
         self.amount = amount
         self.date = date
+        self.categoryName = categoryName
         self.categoryColor = categoryColor
         self.glyph = glyph
+        self.tagColor = tagColor
         self.extraTagCount = extraTagCount
         self.isRecurring = isRecurring
         self.style = style
+    }
+
+    private var badgeColor: Color { tagColor ?? categoryColor }
+
+    private var badgeFill: Color { badgeColor.opacity(0.18) }
+
+    private var dateLine: String {
+        categoryName.map { "\($0) · \(date)" } ?? date
     }
 
     public var body: some View {
@@ -55,20 +69,21 @@ public struct ExpenseRowView: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(categoryColor.secondary)
+                    .fill(badgeFill)
                     .frame(width: 40, height: 40)
                 if let glyph {
                     TagGlyphView(glyph)
+                        .foregroundStyle(badgeColor)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
                 if extraTagCount > 0 {
                     Text("+\(extraTagCount)")
                         .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(categoryColor.legibleForeground(in: environment))
+                        .foregroundStyle(badgeColor.legibleForeground(in: environment))
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)
-                        .background(Capsule().fill(categoryColor))
+                        .background(Capsule().fill(badgeColor))
                         .offset(x: 4, y: 4)
                 }
             }
@@ -80,9 +95,10 @@ public struct ExpenseRowView: View {
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text(date)
+                    Text(dateLine)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
 
                     if isRecurring {
                         recurringMark
@@ -103,11 +119,12 @@ public struct ExpenseRowView: View {
         HStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(categoryColor.secondary)
+                    .fill(badgeFill)
                     .frame(width: 24, height: 24)
                 if let glyph {
                     TagGlyphView(glyph)
                         .font(.caption)
+                        .foregroundStyle(badgeColor)
                 }
             }
 

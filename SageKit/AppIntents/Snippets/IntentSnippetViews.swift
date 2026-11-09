@@ -80,6 +80,7 @@ struct UpcomingExpensesSnippetView: View {
                     name: item.name,
                     amount: item.amount.currencyString,
                     date: item.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day()),
+                    categoryName: item.category.rawValue,
                     categoryColor: colors.color(for: item.category),
                     glyph: nil,
                     isRecurring: true

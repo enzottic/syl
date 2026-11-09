@@ -191,6 +191,17 @@ struct AppearanceSettingsSection: View {
             }
 
             Section {
+                Picker("Expenses Colored By", selection: $config.expenseColorSource) {
+                    ForEach(ExpenseColorSource.allCases, id: \.self) { source in
+                        Text(source.rawValue).tag(source)
+                    }
+                }
+                .pickerStyle(.menu)
+            } footer: {
+                Text("Untagged expenses always use their category color.")
+            }
+
+            Section {
                 Button("Reorder Widgets", systemImage: "arrow.up.arrow.down") {
                     showingWidgetOrderSheet = true
                 }

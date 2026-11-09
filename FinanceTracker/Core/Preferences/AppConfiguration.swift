@@ -131,6 +131,14 @@ class AppConfiguration {
         }
     }
     
+    var expenseColorSource: ExpenseColorSource = .category {
+        didSet {
+            guard !isPreview else { return }
+            defaults.set(expenseColorSource.rawValue, forKey: ExpenseColorSource.storageKey)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
     var billRemindersEnabled: Bool = false {
         didSet {
             guard !isPreview else { return }
@@ -219,7 +227,7 @@ class AppConfiguration {
         
         LedgerCurrency.reset(defaults: defaults)
         let localKeys = Key.allCases.filter { $0 != .ledgerCurrency }.map(\.storageKey) + [
-            Keys.needsColor, Keys.wantsColor, Keys.savingsColor, Keys.billRemindersEnabled,
+            Keys.needsColor, Keys.wantsColor, Keys.savingsColor, ExpenseColorSource.storageKey, Keys.billRemindersEnabled,
             Keys.billReminderDaysBefore, Keys.hideBillReminderDetails,
             Keys.billReminderTimeMinutes, Keys.dailyExpenseReminderEnabled, Keys.dailyExpenseReminderTimeMinutes,
         ]
@@ -302,6 +310,7 @@ class AppConfiguration {
         _needsColor = defaults.sageColor(forKey: Keys.needsColor) ?? _needsColor
         _wantsColor = defaults.sageColor(forKey: Keys.wantsColor) ?? _wantsColor
         _savingsColor = defaults.sageColor(forKey: Keys.savingsColor) ?? _savingsColor
+        _expenseColorSource = ExpenseColorSource.load(from: defaults)
         
         _billRemindersEnabled = defaults.bool(forKey: Keys.billRemindersEnabled)
         
