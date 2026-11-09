@@ -50,17 +50,17 @@ struct ExpenseList: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("expense-row-\(expense.name)")
                 .swipeActions {
-                    Button("Delete") {
-                        expenseToDelete = expense
-                        showingDeleteConfirmation = true
-                    }
-                    .tint(.red)
-                    .accessibilityIdentifier("delete-expense-action")
+                    Button("Delete") { confirmDeletion(of: expense) }
+                        .tint(.red)
+                        .accessibilityIdentifier("delete-expense-action")
 
-                    Button("Duplicate") {
-                        appRouter.presentSheet(.addExpense(expense))
-                    }
-                    .accessibilityIdentifier("duplicate-expense-action")
+                    Button("Duplicate") { duplicate(expense) }
+                        .accessibilityIdentifier("duplicate-expense-action")
+                }
+                // Swipe isn't reachable with a mouse on Mac.
+                .contextMenu {
+                    Button("Duplicate", systemImage: "plus.square.on.square") { duplicate(expense) }
+                    Button("Delete", systemImage: "trash", role: .destructive) { confirmDeletion(of: expense) }
                 }
             }
         }
@@ -97,6 +97,15 @@ struct ExpenseList: View {
         }
     }
     
+    private func duplicate(_ expense: Expense) {
+        appRouter.presentSheet(.addExpense(expense))
+    }
+
+    private func confirmDeletion(of expense: Expense) {
+        expenseToDelete = expense
+        showingDeleteConfirmation = true
+    }
+
     private func deleteExpense(_ expense: Expense, recurringRule: RecurringExpenseRule? = nil) {
         let expenseID = expense.persistentModelID
 

@@ -50,6 +50,7 @@ class WatchSnapshotSender: NSObject, WCSessionDelegate {
     }
     
     func setContext(to payload: [String: Any]) {
+        guard WCSession.isSupported() else { return }
         pendingPayload = payload
         let session = WCSession.default
         if session.activationState == .activated {

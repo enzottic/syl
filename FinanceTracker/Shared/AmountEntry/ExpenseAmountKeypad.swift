@@ -24,6 +24,7 @@ struct ExpenseAmountKeypad: View {
                 Button("Delete", systemImage: "delete.left") {
                     digits = String(digits.dropLast())
                 }
+                .keyboardShortcut(.delete, modifiers: [])
                 .labelStyle(.iconOnly)
                 .accessibilityLabel("Delete last digit")
             }
@@ -39,5 +40,6 @@ struct ExpenseAmountKeypad: View {
                 .font(.title2.weight(.medium))
                 .monospacedDigit()
         }
+        .keyboardShortcut(KeyEquivalent(Character(String(digit))), modifiers: [])
     }
 }
