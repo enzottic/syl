@@ -9,3 +9,6 @@ fastlane/screenshots_framed/
 fastlane/variant_previews/
 fastlane/screenshots_watch/
 fastlane/bezels/
+fastlane/.env
+.DS_Store
+fastlane/Preview.html

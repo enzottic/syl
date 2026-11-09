@@ -1,6 +1,13 @@
 default_platform(:ios)
 
 platform :ios do
+  before_all do
+    # The Command Line Tools can't build for simulators, so use Xcode when xcode-select points at them.
+    if ENV["DEVELOPER_DIR"].to_s.empty? && `xcode-select -p`.include?("CommandLineTools")
+      ENV["DEVELOPER_DIR"] = "/Applications/Xcode.app/Contents/Developer"
+    end
+  end
+
   desc "Capture fresh iPhone, iPhone Duo, iPad, and Apple Watch screenshots, then compose the App Store pages"
   lane :screenshots do
     capture_screenshots
@@ -27,7 +34,15 @@ platform :ios do
   end
 
   desc "Upload all screenshots to App Store Connect, replacing the existing ones (metadata and binary untouched)"
+  desc "Signs in with the App Store Connect API key from fastlane/.env when set, otherwise asks for your Apple ID"
   lane :upload_screenshots do
+    if ENV["ASC_KEY_ID"]
+      app_store_connect_api_key(
+        key_id: ENV["ASC_KEY_ID"],
+        issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+        key_filepath: File.expand_path(ENV.fetch("ASC_KEY_PATH"))
+      )
+    end
     deliver(
       screenshots_path: "./fastlane/screenshots_framed",
       skip_binary_upload: true,

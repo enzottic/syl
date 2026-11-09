@@ -46,38 +46,11 @@ struct ExpenseBackupSettingsSection: View {
     var body: some View {
         List {
             Section {
-                SettingsListItem(text: "Automatic iCloud Sync", icon: "arrow.triangle.2.circlepath.icloud.fill", color: .blue)
-                    .accessibilityIdentifier("automatic-icloud-sync")
-            } header: {
-                Text("iCloud Sync")
-            } footer: {
-                if !config.supportsCloudSync {
-                    Text("This dev build is local-only. Expenses and preferences do not sync with iCloud or your main Syl install.")
-                } else {
-                    Text("Syl automatically syncs expenses and supported settings with your private iCloud storage when available. Manage Syl’s iCloud access in the Settings app under your Apple Account → iCloud. Turning off access there may remove iCloud-synced data from this device. Export a backup first if you want to keep a separate copy.")
-                    if config.cloudSyncStatus == .accountChanged {
-                        Text("Your iCloud account changed. Syl will check your current account when you return to the app.")
-                    } else if config.cloudSyncStatus == .quotaExceeded {
-                        Text("iCloud preference storage is full. Changes are saved on this device, but new preference uploads are paused.")
-                    } else if config.cloudSyncStatus == .synchronizationUnavailable {
-                        Text("iCloud preferences are currently unavailable. Your settings remain saved on this device.")
-                    }
-                }
-            }
-
-            Section {
-                Button {
-                    guard !isWorking else { return }
-                    showFileImporter = true
-                } label: {
-                    SettingsListItem(text: "Import File", icon: "square.and.arrow.down", color: .green)
-                }
-                .disabled(isWorking)
 
                 Button {
                     exportExpenses(csv: false)
                 } label: {
-                    SettingsListItem(text: "Create Expense Backup", icon: "doc.badge.arrow.up", color: .orange)
+                    SettingsListItem(text: "Create Syl Backup", icon: "doc.badge.arrow.up", color: .orange)
                 }
                 .disabled(isWorking)
                 Button {
@@ -87,10 +60,21 @@ struct ExpenseBackupSettingsSection: View {
                 }
                 .disabled(isWorking)
             } header: {
-                Text("Expense Backup")
+                Text("Backup")
             } footer: {
-                Text("JSON backups preserve saved expenses, recurring rules and their tags, including tag colors and icons, schedule time zones and generation progress. CSV includes expenses only and always adds every row on import. Exports exclude pending edits, accounts, budgets, settings and unused tags. Choose a location in Files to save your export. Files contain readable, unencrypted financial data; store them carefully.")
+                Text("A Syl Backup preserve expenses, recurring rules, and tags. It is meant for importing back into Syl. CSV backups only include expenses and are meant for other uses like in spreadsheets.")
             }
+            
+            Section {
+                Button {
+                    guard !isWorking else { return }
+                    showFileImporter = true
+                } label: {
+                    SettingsListItem(text: "Import File", icon: "square.and.arrow.down", color: .green)
+                }
+                .disabled(isWorking)
+            }
+
             if let operationError {
                 Section("Could Not Complete") {
                     Text(operationError).foregroundStyle(.red).textSelection(.enabled)

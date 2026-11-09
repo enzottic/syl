@@ -55,6 +55,8 @@ Re-compose existing captures after editing screenshot_template.json or a style
 
 Upload all screenshots to App Store Connect, replacing the existing ones (metadata and binary untouched)
 
+Signs in with the App Store Connect API key from fastlane/.env when set, otherwise asks for your Apple ID
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
