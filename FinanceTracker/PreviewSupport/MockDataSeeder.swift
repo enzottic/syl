@@ -325,10 +325,13 @@ nonisolated enum MockDataSeeder {
 
         // Drop anything from the current-month block that lands after today, so the
         // seeder never shows "future" expenses no matter what day of the month it runs.
-        all = all.filter { cal.compare($0.date, to: today, toGranularity: .day) != .orderedDescending }
-
+        // Linking an inserted tag already put each expense in the context, so future ones must be deleted.
         for expense in all {
-            context.insert(expense)
+            if cal.compare(expense.date, to: today, toGranularity: .day) == .orderedDescending {
+                context.delete(expense)
+            } else {
+                context.insert(expense)
+            }
         }
     }
 

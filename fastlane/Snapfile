@@ -1,0 +1,21 @@
+scheme("FinanceTracker-Screenshots")
+project("./FinanceTracker.xcodeproj")
+
+# Required App Store sizes: 6.9" iPhone, iPhone Duo, and 13" iPad.
+# Apple Watch screenshots come from capture_watch.sh, since snapshot can't drive watchOS.
+devices([
+  "iPhone 18 Pro Max",
+  "iPhone Duo",
+  "iPad Pro 13-inch (M5)"
+])
+
+languages(["en-US"])
+
+output_directory("./fastlane/screenshots")
+clear_previous_screenshots(true)
+override_status_bar(true)
+erase_simulator(true)
+reinstall_app(true)
+app_identifier("me.enzottic.FinanceTracker-debug")
+dark_mode(false)
+concurrent_simulators(false)
