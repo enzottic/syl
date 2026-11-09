@@ -49,7 +49,8 @@ struct CategoryDetailView: View {
                     TopSpendingBreakdown(
                         expenses: expenses,
                         accentColor: category.color(in: categoryColors),
-                        untaggedLabel: "Untagged"
+                        untaggedLabel: "Untagged",
+                        showsCardBackground: false
                     )
                 } header: {
                     Text("Top Tags")
