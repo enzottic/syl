@@ -1,0 +1,22 @@
+Syl is a personal budgeting and expense tracking app. No account, login or demo credentials are needed. All features are available right away, and there are no in-app purchases or subscriptions.
+
+GETTING STARTED
+On first launch, onboarding asks for take-home pay, currency and a Needs/Wants/Savings budget split, and lets you pick starter tags. Any values work. Reminders during onboarding are optional, and notification permission is only requested if you turn one on.
+
+ADDING EXPENSES
+Tap the add button to enter an expense step by step: name, amount, category, date and details. Long-press an expense in the Expenses list for Duplicate and Delete. Swipe actions do the same.
+
+RECEIPT SCANNING
+Receipt scanning uses on-device Apple Intelligence (Foundation Models). On devices without Apple Intelligence, or where it is turned off, the receipt button is hidden and the rest of the app works normally. To test it, on an Apple Intelligence device tap the receipt button on the first step of the add-expense sheet and choose or take a photo of a receipt.
+
+APPLE WATCH
+The Watch app and complication show this month’s spending. The iPhone app must be opened and set up first. The Watch then receives its data from the iPhone automatically.
+
+ICLOUD SYNC AND PRIVACY
+If the device is signed in to iCloud, Syl syncs automatically through the user’s private iCloud database. It is not an opt-in setting, and Syl works fully offline or without iCloud. Syl has no servers, no accounts, no analytics and no ads. No data is collected by the developer, matching the App Privacy answers provided (“Data Not Collected”).
+
+DATA MANAGEMENT
+Settings includes backup export and import, CSV export, and an option to delete all data.
+
+PLATFORMS
+iPhone and iPad, with a companion Apple Watch app.
