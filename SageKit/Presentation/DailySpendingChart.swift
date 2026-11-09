@@ -106,6 +106,7 @@ public struct DailySpendingChart: View {
             }
         }
         .chartXScale(domain: 1...daysInMonth)
+        .modifier(BudgetHeadroom(upperBound: budgets.isEmpty ? nil : yUpperBound))
         .chartXAxis {
             AxisMarks(values: [1, 5, 10, 15, 20, 25, daysInMonth]) { _ in AxisValueLabel() }
         }
@@ -123,6 +124,13 @@ public struct DailySpendingChart: View {
         .onChange(of: averageDays.map(\.total)) {
             if !averageDays.isEmpty { retainedAverageDays = averageDays }
         }
+    }
+
+    /// Leaves room above the highest budget line so its label sits above the line instead of on it.
+    private var yUpperBound: Double {
+        let spending = (series.flatMap(\.points) + averageDays + retainedAverageDays).map(\.total)
+        let budgetTop = (budgets.map(\.amount).max() ?? 0) * 1.12
+        return max(spending.max() ?? 0, budgetTop, 1)
     }
 
     @ChartContentBuilder
@@ -181,4 +189,17 @@ public struct DailySpendingChart: View {
     .chartYScale(domain: 0...1_000)
     .frame(height: 200)
     .padding()
+}
+
+/// Charts pins a ceiling-height rule to the plot's top edge, where its label has no room.
+private struct BudgetHeadroom: ViewModifier {
+    let upperBound: Double?
+
+    func body(content: Content) -> some View {
+        if let upperBound {
+            content.chartYScale(domain: 0...upperBound)
+        } else {
+            content
+        }
+    }
 }
