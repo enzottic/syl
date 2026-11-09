@@ -13,6 +13,12 @@ struct CategorySpotlightEntry: WidgetCurrencyEntry {
     var utilization: Double { budget > 0 ? spent / budget : 0 }
     var status: BudgetStatus { BudgetStatus(spent: spent, budget: budget, goal: category.budgetGoal) }
 
+    /// How far through the current month `date` is, from 0 to 1.
+    var monthProgress: Double? {
+        guard let month = Calendar.current.dateInterval(of: .month, for: date) else { return nil }
+        return date.timeIntervalSince(month.start) / month.duration
+    }
+
     static func preview(category: ExpenseCategory) -> CategorySpotlightEntry {
         switch category {
         case .needs:   return CategorySpotlightEntry(date: .now, category: .needs, spent: 2016.91, budget: 3500, currencyCode: "USD")
