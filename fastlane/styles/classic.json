@@ -1,0 +1,8 @@
+{
+  "titleFont": "../FinanceTracker/Resources/MomoTrustDisplay-Regular.ttf",
+  "titleColor": "#404040",
+  "backgroundTop": "#A7BF8E",
+  "backgroundBottom": "#87A96B",
+  "frameColor": "#DCDCDF",
+  "frameHighlight": "#F4F4F6"
+}

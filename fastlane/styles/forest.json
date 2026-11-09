@@ -1,0 +1,13 @@
+{
+  "titleFont": "../FinanceTracker/Resources/MomoTrustDisplay-Regular.ttf",
+  "titleColor": "#F8F4EC",
+  "highlightColor": "#AFCF94",
+  "eyebrowColor": "#AFCF94",
+  "showEyebrows": false,
+  "backgroundTop": "#33452A",
+  "backgroundBottom": "#18220F",
+  "glowColors": ["#87A96B59", "#87A96B40", "#C9DDB533"],
+  "frameColor": "#4C4C50",
+  "frameHighlight": "#86868C",
+  "bezels": "bezels/light"
+}

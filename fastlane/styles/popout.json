@@ -1,0 +1,12 @@
+{
+  "titleFont": "../FinanceTracker/Resources/MomoTrustDisplay-Regular.ttf",
+  "titleColor": "#2F3A28",
+  "highlightColor": "#FFFFFF",
+  "backgroundTop": "#B3CB9C",
+  "backgroundBottom": "#7C9D61",
+  "glowColors": ["#FFFFFF4D", "#F8E3B84D"],
+  "frameColor": "#DCDCDF",
+  "frameHighlight": "#F4F4F6",
+  "showCallouts": true,
+  "deviceTilt": 4
+}

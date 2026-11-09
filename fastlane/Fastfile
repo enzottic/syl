@@ -1,0 +1,39 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Capture fresh iPhone, iPhone Duo, iPad, and Apple Watch screenshots, then compose the App Store pages"
+  lane :screenshots do
+    capture_screenshots
+    capture_duo_open
+    capture_watch
+    frame
+  end
+
+  desc "Capture the unfolded iPhone Duo's Stats screen (unfold the Duo in Device Hub first)"
+  lane :capture_duo_open do
+    sh("./capture_duo_open.sh", "screenshots/en-US")
+  end
+
+  desc "Capture Apple Watch screenshots from the Debug watch app's preview fixture"
+  lane :capture_watch do
+    sh("./capture_watch.sh", "screenshots_watch/en-US")
+  end
+
+  desc "Re-compose existing captures after editing screenshot_template.json or a style"
+  lane :frame do
+    sh("swift", "frame_screenshots.swift", "screenshots", "screenshot_template.json", "screenshots_framed")
+    # Watch screenshots ship as the bare screen, so they're copied in unframed.
+    sh("mkdir -p screenshots_framed/en-US && cp screenshots_watch/en-US/*.png screenshots_framed/en-US/ 2>/dev/null || true")
+  end
+
+  desc "Upload all screenshots to App Store Connect, replacing the existing ones (metadata and binary untouched)"
+  lane :upload_screenshots do
+    deliver(
+      screenshots_path: "./fastlane/screenshots_framed",
+      skip_binary_upload: true,
+      skip_metadata: true,
+      overwrite_screenshots: true,
+      force: false
+    )
+  end
+end

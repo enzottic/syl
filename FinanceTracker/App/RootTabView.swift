@@ -95,6 +95,14 @@ struct RootTabView: View {
             }
         }
         .task {
+            #if DEBUG
+            // Lets fastlane/capture_duo_open.sh open a tab without UI automation, which folds the iPhone Duo simulator.
+            let arguments = ProcessInfo.processInfo.arguments
+            if let index = arguments.firstIndex(of: "-screenshot-tab"), arguments.indices.contains(index + 1) {
+                let tabs: [String: SageTab] = ["home": .home, "expenses": .expenses, "stats": .stats, "settings": .settings]
+                appRouter.selectedTab = tabs[arguments[index + 1]] ?? .home
+            }
+            #endif
             if !reminderNavigation.isRequested && !reminderNavigation.isExpenseEntryRequested {
                 whatsNewRelease = WhatsNewStore.releaseToPresent()
             }
