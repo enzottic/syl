@@ -255,7 +255,7 @@ struct MonthlySummaryWidget: Widget {
             .environment(\.categoryColors, CategoryColors.load())
             .containerBackground(.sageBackground, for: .widget)
         }
-        .configurationDisplayName("Monthly Summary")
+        .configurationDisplayName("Monthly Category Overview")
         .description(Text("View spending across all budget categories"))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }

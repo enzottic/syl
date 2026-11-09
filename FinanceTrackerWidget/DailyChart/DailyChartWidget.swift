@@ -78,30 +78,23 @@ struct DailyChartEntryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Daily Spending")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Text(entry.date, format: .dateTime.month(.abbreviated).year())
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
+            Text(entry.date, format: .dateTime.month(.wide).year())
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
 
             if entry.isUnavailable {
                 ContentUnavailableView("Spending unavailable", systemImage: "exclamationmark.triangle",
                                        description: Text("Open Syl to reload your data."))
             } else if let currencyCode = entry.currencyCode {
-                VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(entry.total, format: .currency(code: currencyCode))
                         .font(.largeTitle.bold())
-                        .lineLimit(1)
                         .minimumScaleFactor(0.65)
-                    Text("Spent so far")
-                        .font(.caption)
+                    Text("spent")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                .lineLimit(1)
 
                 DailySpendingChart(series: [.init(category: nil, points: entry.days, color: .sage)],
                                    averageDays: entry.averageDays, daysInMonth: entry.daysInMonth,
@@ -152,13 +145,13 @@ struct DailyChartWidget: Widget {
                 .privacySensitive()
                 .containerBackground(.sageBackground, for: .widget)
         }
-        .configurationDisplayName("Daily Spending")
+        .configurationDisplayName("Monthly Spending Overview")
         .description("Follow this month's cumulative spending against your recent monthly average.")
         .supportedFamilies([.systemLarge])
     }
 }
 
-#Preview("Daily Spending", as: .systemLarge) {
+#Preview("Monthly Spending Overview", as: .systemLarge) {
     DailyChartWidget()
 } timeline: {
     DailyChartEntry.preview

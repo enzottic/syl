@@ -10,59 +10,80 @@ import WidgetKit
 import SageKit
 
 struct RecentExpensesEntryView: View {
-    @Environment(\.widgetFamily) var family
     @Environment(\.categoryColors) private var categoryColors
 
     let entry: RecentExpensesEntry
 
-    var displayCount: Int { family == .systemSmall ? 2 : 5 }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Recent Expenses")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Recent")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("Today \(entry.currencyString(entry.todayTotal))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
 
             if entry.expenses.isEmpty {
                 Spacer()
-                Text("No expenses yet")
+                Text("No expenses yet. Add one in Syl.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
             } else {
-                ForEach(entry.expenses.prefix(displayCount)) { expense in
-                    HStack(spacing: 6) {
-                        Circle()
-                            .frame(width: 8, height: 8)
-                            .foregroundStyle(expense.category.color(in: categoryColors))
-                        Text(expense.name)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .layoutPriority(-1)
-                        if family != .systemSmall {
-                            Spacer()
-                            Text(entry.currencyString(expense.amount))
-                                .font(.caption.weight(.medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("\(expense.name), \(entry.currencyString(expense.amount)), \(expense.category.rawValue), \(expense.date.formatted(date: .abbreviated, time: .omitted))")
-                    if family == .systemSmall {
-                        Text(entry.currencyString(expense.amount))
-                            .font(.caption.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .padding(.leading, 14)
-                            .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(entry.expenses.prefix(3)) { expense in
+                        row(for: expense)
+                            .frame(maxHeight: .infinity)
                     }
                 }
             }
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func row(for expense: ExpenseSnapshot) -> some View {
+        let tint = expense.tagColor ?? expense.category.color(in: categoryColors)
+        return HStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(tint.opacity(0.18))
+                if let glyph = expense.glyph {
+                    TagGlyphView(glyph)
+                        .font(.system(size: 14))
+                        .foregroundStyle(tint)
+                } else {
+                    Text(expense.category.rawValue.prefix(1))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(tint)
+                }
+            }
+            .frame(width: 30, height: 30)
+            .widgetAccentable()
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(expense.name)
+                    .font(.subheadline)
+                Text("\(expense.category.rawValue) · \(expense.date.relative(to: entry.date))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .layoutPriority(-1)
+
+            Spacer(minLength: 8)
+
+            Text(entry.currencyString(expense.amount))
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(expense.name), \(entry.currencyString(expense.amount)), \(expense.category.rawValue), \(expense.date.formatted(date: .abbreviated, time: .omitted))")
     }
 }
 
@@ -101,14 +122,8 @@ struct RecentExpensesWidget: Widget {
         }
         .configurationDisplayName("Recent Expenses")
         .description(Text("View your most recent expenses"))
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemMedium])
     }
-}
-
-#Preview(as: .systemSmall) {
-    RecentExpensesWidget()
-} timeline: {
-    RecentExpensesEntry.preview
 }
 
 #Preview(as: .systemMedium) {

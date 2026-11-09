@@ -50,8 +50,10 @@ struct ExpenseRowItem: View {
             name: expense.name,
             amount: expense.amount.currencyString(code: config.ledgerCurrencyCode),
             date: expense.date.relative(to: referenceDate),
+            categoryName: expense.category.rawValue,
             categoryColor: expense.category.color(in: categoryColors),
             glyph: tags.first?.glyph,
+            tagColor: config.expenseColorSource == .tag ? tags.first?.color : nil,
             extraTagCount: max(tags.count - 1, 0),
             isRecurring: expense.recurringExpenseId != nil,
             style: style

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import WidgetKit
 import SageKit
 
@@ -23,10 +24,16 @@ struct RecentExpensesProvider: TimelineProvider {
             return RecentExpensesEntry(date: date, expenses: [], isUnavailable: true)
         }
         do {
-            let expenses = try store.fetchRecentExpenses(limit: 5).map {
-                ExpenseSnapshot(id: $0.id, name: $0.name, amount: $0.amount, category: $0.category, date: $0.date)
+            let colorSource = ExpenseColorSource.load()
+            let expenses = try store.fetchRecentExpenses(limit: 3).map { expense in
+                let tag = expense.tags?.first { !$0.isDeleted }
+                return ExpenseSnapshot(id: expense.id, name: expense.name, amount: expense.amount,
+                                       category: expense.category, date: expense.date,
+                                       glyph: tag?.glyph, tagColor: colorSource == .tag ? tag?.color : nil)
             }
-            return RecentExpensesEntry(date: date, expenses: expenses)
+            let today = Calendar.current.dateInterval(of: .day, for: date)
+            let todayTotal = try today.map { try store.fetchExpenses(from: $0.start, to: $0.end).total } ?? 0
+            return RecentExpensesEntry(date: date, expenses: expenses, todayTotal: todayTotal)
         } catch {
             return RecentExpensesEntry(date: date, expenses: [], isUnavailable: true)
         }
